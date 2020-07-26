@@ -23,7 +23,7 @@ def set_brightness(brightness_level,force=False,raw_value=False):
         return brightness_level
     elif platform.system()=='Linux':
         if not force:
-            brightness=str(max(1,int(brightness)))
+            brightness_level=str(max(1,int(brightness_level)))
             
         if not raw_value:
             #this is because many different versions of linux have many different ways to adjust the backlight
@@ -107,5 +107,5 @@ def get_brightness(raw_value=False):
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.3'
+__version__='0.1.4'
 __author__='Crozzers'
