@@ -3,8 +3,7 @@ A Python tool for controlling the brightness of your monitor
 
 ### How to install:
 * Clone/download the repository
-* Enter the folder it has been cloned to and run
-    pip3 install .
+* Enter the folder it has been cloned to and run "pip3 install ."
 * That should be all
 
 ### How to use:
