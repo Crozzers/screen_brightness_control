@@ -15,6 +15,8 @@ def set_brightness(brightness_level,force=False,raw_value=False):
         if current_brightness==False:
             return False
         brightness_level=current_brightness+int(brightness_level)
+    elif type(brightness_level) in (str,float):
+        brightness_level=int(float(str(brightness_level)))
 
     if platform.system()=='Windows':
         wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()[0].WmiSetBrightness(brightness_level,0)
