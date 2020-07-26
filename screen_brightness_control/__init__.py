@@ -61,25 +61,26 @@ def get_brightness(raw_value=False):
     if platform.system()=='Windows':
         return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
     elif platform.system()=='Linux':
-        possible_commands=["light -G","xbacklight -get"]
-        for command in possible_commands:
-            try:
-                res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
-                return int(float(str(res)))
-            except:
-                pass
+        if not raw_value:
+            possible_commands=["light -G","xbacklight -get"]
+            for command in possible_commands:
+                try:
+                    res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
+                    return int(float(str(res)))
+                except:
+                    pass
         #if function has not returned yet try reading the brightness file
-        backlight_dir='/sys/class/backlight'
+        backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
             #if the backlight dir exists and is not empty
-            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(folder)]
+            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
             for folder in folders:
                 try:
                     #try to read the brightness value in the file
                     with open(os.path.join(backlight_dir,folder,'brightness'),'r') as f:
                         brightness_value=int(float(str(f.read().rstrip('\n'))))
 
-                    if not raw_value:
+                    if raw_value:
                         try:
                             #try open the max_brightness file to calculate the value to set the brightness file to
                             with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
@@ -88,13 +89,13 @@ def get_brightness(raw_value=False):
                             #if the file does not exist use 100
                             max_brightness=100
                             brightness_value=(int(brightness_value/max_brightness)*100)
-
                     return brightness_value
+
                 except:
                     pass
         return False
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.0'
+__version__='0.1.1'
 __author__='Crozzers'
