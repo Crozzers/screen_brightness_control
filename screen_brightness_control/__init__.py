@@ -4,35 +4,43 @@ if platform.system()=='Windows':
     
 def set_brightness(brightness_level,force=False,raw_value=False):
     '''
-    brightness_level is a value 0 to 100. This is a percentage
+    brightness_level is a value 0 to 100. This is a percentage or a string as '+5' or '-5'
     force means that if you set the brightness to 0 on linux it will actually apply that value
     this is because on Linux a brightness of 0 often turns the screen off
     raw_value means you have not supplied a percentage but an actual value
     '''
+
+    if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
+        current_brightness=get_brightness(raw_value=raw_value)
+        if current_brightness==False:
+            return False
+        brightness_level=current_brightness+int(brightness_level)
+
     if platform.system()=='Windows':
         wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()[0].WmiSetBrightness(brightness_level,0)
         return brightness_level
     elif platform.system()=='Linux':
-        if force:
+        if not force:
             brightness=str(max(1,int(brightness)))
             
-        #this is because many different versions of linux have many different ways to adjust the backlight
-        possible_commands=["light -S {}","xbacklight -set {}"]
-        for command in possible_commands:
-            try:
-                subprocess.call(command.format(brightness_level).split(" "))
-                return brightness_level
-            except FileNotFoundError:
-                pass
+        if not raw_value:
+            #this is because many different versions of linux have many different ways to adjust the backlight
+            possible_commands=["light -S {}","xbacklight -set {}"]
+            for command in possible_commands:
+                try:
+                    subprocess.call(command.format(brightness_level).split(" "))
+                    return brightness_level
+                except FileNotFoundError:
+                    pass
         #if the function has not already returned it means we could not adjust the backlight using those tools
-        backlight_dir='/sys/class/backlight'
+        backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
             #if the backlight dir exists and is not empty
-            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(folder)]
+            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
             for folder in folders:
                 try:
                     brightness_value=brightness_level
-                    if not raw_value:
+                    if raw_value:
                         try:
                             #try open the max_brightness file to calculate the value to set the brightness file to
                             with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
@@ -46,7 +54,7 @@ def set_brightness(brightness_level,force=False,raw_value=False):
                     with open(os.path.join(backlight_dir,folder,'brightness'),'w') as f:
                         f.write(str(brightness_value))
                     return brightness_value
-                except:
+                except PermissionError:
                     pass
         #if the function has not returned by now then all has failed
         return False
@@ -97,5 +105,5 @@ def get_brightness(raw_value=False):
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.2'
+__version__='0.1.3'
 __author__='Crozzers'

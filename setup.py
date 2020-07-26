@@ -4,7 +4,7 @@ requires=[]
 if platform.system()=='Windows':
     requires+=['wmi']
 setup(name='screen_brightness_control',
-    version='0.1.1',
+    version='0.1.3',
     url='https://github.com/Crozzers/screen-brightness-control',
     license='MIT',
     author='Crozzers',
