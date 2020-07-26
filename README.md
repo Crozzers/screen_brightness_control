@@ -30,5 +30,5 @@ On Linux the brightness goes to a minimum of 1 unless you pass the 'force=True' 
 You can also pass 'raw_value=True' as a kwarg to make the program attempt to write the number you supply directly to the /sys/class/backlight/*/brightness file. However, this will often not work as that file is above user permissions.
 
 
-
 Both functions return False upon failure.
+
