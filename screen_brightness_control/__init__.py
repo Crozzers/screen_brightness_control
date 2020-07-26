@@ -97,5 +97,5 @@ def get_brightness(raw_value=False):
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.1'
+__version__='0.1.2'
 __author__='Crozzers'
