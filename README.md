@@ -11,7 +11,7 @@ A Python tool for controlling the brightness of your monitor
 
 ### How to use:
     import screen_brightness_control as sbc
-    current_brightness = sbc.get_brightnness()
+    current_brightness = sbc.get_brightness()
     if current_brightness<100:
         sbc.set_brightness('+5')
 
