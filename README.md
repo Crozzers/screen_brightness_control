@@ -41,6 +41,9 @@ sbc.set_brightness(50)
 #set brightness to 0%
 sbc.set_brightness(0, force=True)
 
+#increase brightness by 25%
+sbc.set_brightness('+25')
+
 #set brightness as a raw value (Linux only)
 try:
     sbc.set_brightness(2048, raw_value=True)
