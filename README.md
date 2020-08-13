@@ -2,12 +2,13 @@
 A Python tool for controlling the brightness of your monitor
 
 ## Installation
-### Pip:
+#### Pip:
 * Open a terminal and run `pip3 install screen-brightness-control`
 
-### Github:
+#### Github:
 * Clone/download [the repository](https://github.com/Crozzers/screen_brightness_control)
 * Enter the folder it has been cloned to and run `pip3 install .`
+  
 
 ## Documentation
 ### get_brightness(`raw_value=False`)
@@ -20,7 +21,7 @@ Returns `False` upon failure
 ```
 import screen_brightness_control as sbc
 current_brightness = sbc.get_brightness()
-```
+```  
 
 ### set_brightness(`brightness_level, force=False, raw_value=False`)
 #### Summary: 
@@ -33,6 +34,7 @@ Returns `False` upon failure
 #### Usage:
 ```
 import screen_brightness_control as sbc
+
 #set brightness to 50%
 sbc.set_brightness(50)
 
@@ -44,12 +46,12 @@ try:
     sbc.set_brightness(2048, raw_value=True)
 except PermissionError as err:
     print(err)
-```
+```  
 
 ### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True`)
 #### Summary:
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
-If it runs in the main thread it will return the brightness it ends on upon success, `False` upon failure. Otherwise it returns the thread object that the process is running in
+If it runs in the main thread it will return the final brightness upon success, `False` upon failure. Otherwise it returns the thread object that the process is running in
 #### Arguments:
 * `finish` - The brightness value to fade to
 * `start` - The value to start from. If not specified it defaults to the current brightness
@@ -71,4 +73,7 @@ sbc.fade_brightness(100, increment=10)
 
 #fade the brightness from 100% to 90% with time intervals of 0.1 seconds
 sbc.fade_brightness(90, start=100, interval=0.1)
+
+#fade the brightness to 100% in the background
+sbc.fade_brightness(100, blocking=False)
 ```
