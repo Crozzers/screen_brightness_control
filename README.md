@@ -12,20 +12,20 @@ A Python tool for controlling the brightness of your monitor
 ## Documentation
 ### Usage examples:
 Get the current brightness:
-'''
+```
 import screen_brightness_control as sbc
 current_brightness = sbc.get_brightness()
-'''
+```
 Set the brightness 5% higher than the current value
-'''
+```
 import screen_brightness_contol as sbc
 sbc.set_brghtness('+5')
-'''
+```
 Fade the brightness level from 50 to 100
-'''
+```
 import screen_brightness_control as sbc
 sbc.fade_brightness(100, start=50)
-'''
+```
 
 ### get_brightness(`raw_value=False`)
 `raw_value` (Linux only) - returns the value stored in `/sys/class/backlight/*/brightness`  
