@@ -77,12 +77,10 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             val=i
             if start>finish:
                 val = start - (val-finish)
-            print(i,val)
             set_brightness(val)
             time.sleep(interval)
             
         if get_brightness()!=finish:
-            print(finish)
             set_brightness(finish)
         return get_brightness()
 
