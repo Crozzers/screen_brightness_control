@@ -1,20 +1,19 @@
-import os,subprocess,platform
+import os,subprocess,platform,time,threading
 if platform.system()=='Windows':
     import wmi
     
 def set_brightness(brightness_level,force=False,raw_value=False):
     '''
-    brightness_level is a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-    force means that if you set the brightness to 0 on linux it will actually apply that value
-    this is because on Linux a brightness of 0 often turns the screen off
-    raw_value means you have not supplied a percentage but an actual value
+    brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+    force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
+    raw_value (linux only) - means you have not supplied a percentage but an actual brightness value
     '''
 
     if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
         current_brightness=get_brightness(raw_value=raw_value)
         if current_brightness==False:
             return False
-        brightness_level=current_brightness+int(brightness_level)
+        brightness_level=current_brightness+int(float(brightness_level))
     elif type(brightness_level) in (str,float):
         brightness_level=int(float(str(brightness_level)))
 
@@ -31,7 +30,7 @@ def set_brightness(brightness_level,force=False,raw_value=False):
             for command in possible_commands:
                 try:
                     subprocess.call(command.format(brightness_level).split(" "))
-                    return brightness_level
+                    return int(brightness_level)
                 except FileNotFoundError:
                     pass
         #if the function has not already returned it means we could not adjust the backlight using those tools
@@ -63,10 +62,59 @@ def set_brightness(brightness_level,force=False,raw_value=False):
     else:
         #MAC is unsupported as I don't have one to test code on
         return False
-        
+
+def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True):
+    '''
+    A function to somewhat gently fade the screen brightness from start_value to finish_value
+    finish - the brighness level we end on
+    start - where the brightness should fade from
+    interval - the time delay between each step in brightness
+    blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
+    increment - the amount to change the brightness by per loop
+    '''
+    def fade():
+        for i in range(min(start,finish),max(start,finish),increment):
+            val=i
+            if start>finish:
+                val = start - (val-finish)
+            print(i,val)
+            set_brightness(val)
+            time.sleep(interval)
+            
+        if get_brightness()!=finish:
+            print(finish)
+            set_brightness(finish)
+        return get_brightness()
+
+    current = get_brightness()
+
+    #convert strings like '+5' to an actual brightness value
+    if type(finish)==str:
+        if "+" in finish or "-" in finish:
+            finish=current+int(float(finish))
+    if type(start)==str:
+        if "+" in start or "-" in start:
+            start=current+int(float(start))
+
+    start = current if start==None else start
+    #make sure both values are within the correct range
+    finish = min(max(int(finish),0),100)
+    start = min(max(int(start),0),100)
+
+    if finish==start:
+        return
+
+    if not blocking:
+        t1 = threading.Thread(target=fade, daemon=True)
+        t1.start()
+        return t1
+    else:
+         try:return fade()
+         except:return False
+         
 def get_brightness(raw_value=False):
     '''
-    raw_value is a Linux only kwarg that means the brightness will not be returned as a percentage
+    raw_value (linux only) - means the brightness will not be returned as a percentage but directly as it is in /sys/class/backlight/*/brightness
     '''
     if platform.system()=='Windows':
         return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
@@ -107,5 +155,5 @@ def get_brightness(raw_value=False):
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.5'
+__version__='0.1.6'
 __author__='Crozzers'

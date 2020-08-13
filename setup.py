@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='screen_brightness_control',
-    version='0.1.5',
+    version='0.1.6',
     url='https://github.com/Crozzers/screen-brightness-control',
     license='MIT',
     author='Crozzers',
@@ -17,8 +17,5 @@ setup(name='screen_brightness_control',
     'Operating System :: Microsoft :: Windows :: Windows 10',
     'Operating System :: POSIX :: Linux',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.6',
-    'Programming Language :: Python :: 3.7',
-    'Programming Language :: Python :: 3.8']
     )
     

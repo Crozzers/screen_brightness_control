@@ -1,33 +1,50 @@
 # screen_brightness_control
 A Python tool for controlling the brightness of your monitor
 
-### How to install (Pip):
-* Open a terminal and run "pip3 install screen-brightness-control"
+## Installation
+### Pip:
+* Open a terminal and run `pip3 install screen-brightness-control`
 
-### How to install (Github):
+### Github:
 * Clone/download [the repository](https://github.com/Crozzers/screen_brightness_control)
-* Enter the folder it has been cloned to and run "pip3 install ."
-* That should be all
+* Enter the folder it has been cloned to and run `pip3 install .`
 
-### How to use:
-    import screen_brightness_control as sbc
-    current_brightness = sbc.get_brightness()
-    if current_brightness<100:
-        sbc.set_brightness('+5')
+## Documentation
+### Usage examples:
+Get the current brightness:
+'''
+import screen_brightness_control as sbc
+current_brightness = sbc.get_brightness()
+'''
+Set the brightness 5% higher than the current value
+'''
+import screen_brightness_contol as sbc
+sbc.set_brghtness('+5')
+'''
+Fade the brightness level from 50 to 100
+'''
+import screen_brightness_control as sbc
+sbc.fade_brightness(100, start=50)
+'''
 
-The module has 2 basic functions: set_brightness and get_brightness.
+### get_brightness(`raw_value=False`)
+`raw_value` (Linux only) - returns the value stored in `/sys/class/backlight/*/brightness`  
+Returns the current screen brightness as a percentage by default.
+Returns `False` upon failure  
 
+### set_brightness(`brightness_level, force=False, raw_value=False`)
+`brightness_level` - the level to set the brightness to. Can either be an integer or a string.  
+`force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check  
+`raw_value` (Linux only) - if set to 'True' then it attempts to write `brightness_level` directly to `/sys/class/backlight/*/brightness`. This will usually fail due to file permissions but it's here if you need it.  
+Sets the brightness to `brightness_level`. If `brightness_level` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
+Returns `False` upon failure
 
-### get_brightness
-Returns the current screen brightness in percent by default.  
-On Linux you can run get_brightness(raw_value=True) to get the 'actual value' which is usually stored in /sys/class/backlight/*/brightness.
-
-### set_brightness
-Accepts either an integer or a string input. Any floats will be converted to integers.  
-You can also pass strings such as '+5' or '-15'. These are added/subtracted from the current brightness.  
-On Linux the brightness goes to a minimum of 1 unless you pass the 'force=True' kwarg. This is because setting the display brightness to 0 on Linux usually turns the screen off, which is not ideal.  
-You can also pass 'raw_value=True' as a kwarg to make the program attempt to write the number you supply directly to the /sys/class/backlight/*/brightness file. However, this will often not work as that file is above user permissions.
-
-
-Both functions return False upon failure.
+### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True`)
+`finish` - The brightness value to fade to  
+`start` - The value to start from. If not specified it defaults to the current brightness  
+`interval` - The time interval between each step in brightness  
+`increment` - The amount to change the brightness by each step  
+`blocking` - If set to `False` it fades the brightness in a new thread  
+Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
+If it runs in the main thread it will return the brightness it ends on upon success, `False` upon failure. Otherwise it returns the thread object that the process is running in
 
