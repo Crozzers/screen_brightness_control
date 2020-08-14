@@ -1,6 +1,8 @@
-import os,subprocess,platform,time,threading
+import platform,time,threading
 if platform.system()=='Windows':
     import wmi
+else:
+    import subprocess,os
     
 def set_brightness(brightness_level,force=False,raw_value=False):
     '''
@@ -8,7 +10,6 @@ def set_brightness(brightness_level,force=False,raw_value=False):
     force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
     raw_value (linux only) - means you have not supplied a percentage but an actual brightness value
     '''
-
     if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
         current_brightness=get_brightness(raw_value=raw_value)
         if current_brightness==False:
@@ -36,6 +37,8 @@ def set_brightness(brightness_level,force=False,raw_value=False):
         #if the function has not already returned it means we could not adjust the backlight using those tools
         backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
+            #make absolutely sure this var is the correct type
+            brightness_level=int(float(str(brightness_level)))
             #if the backlight dir exists and is not empty
             folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
             for folder in folders:
@@ -69,8 +72,8 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     finish - the brighness level we end on
     start - where the brightness should fade from
     interval - the time delay between each step in brightness
-    blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
     increment - the amount to change the brightness by per loop
+    blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
     '''
     def fade():
         for i in range(min(start,finish),max(start,finish),increment):
@@ -153,5 +156,5 @@ def get_brightness(raw_value=False):
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.6'
+__version__='0.1.7'
 __author__='Crozzers'
