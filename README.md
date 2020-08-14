@@ -1,5 +1,5 @@
 # screen_brightness_control
-A Python tool for controlling the brightness of your monitor
+A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.
 
 ## Installation
 #### Pip:
@@ -11,16 +11,19 @@ A Python tool for controlling the brightness of your monitor
   
 
 ## Documentation
-### get_brightness(`raw_value=False`)
+### get_brightness(`max_value=False, raw_value=False`)
 #### Summary:
 Returns the current screen brightness as a percentage by default.
 Returns `False` upon failure
 #### Arguments:
+* `max_value` - returns the maximum value the brightness can be set to. Always returns 100 on Windows. On Linux it returns the value stored in `/sys/class/backlight/*/max_brightness` if combined with `raw_value=True`
 * `raw_value` (Linux only) - returns the value stored in `/sys/class/backlight/*/brightness`
 ##### Usage:
 ```
 import screen_brightness_control as sbc
 current_brightness = sbc.get_brightness()
+
+max_brightness = sbc.get_brightness(max_value=True)
 ```  
 
 ### set_brightness(`brightness_level, force=False, raw_value=False`)

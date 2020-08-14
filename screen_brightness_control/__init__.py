@@ -113,11 +113,14 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
          try:return fade()
          except:return False
          
-def get_brightness(raw_value=False):
+def get_brightness(max_value=False,raw_value=False):
     '''
+    max_value - returns the maximum brightness the monitor can be set to. Always returns 100 on Windows but on linux it returns the value stored in /sys/class/backlight/*/max_brightness if used with raw_value
     raw_value (linux only) - means the brightness will not be returned as a percentage but directly as it is in /sys/class/backlight/*/brightness
     '''
     if platform.system()=='Windows':
+        if max_value:
+            return 100
         return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
     elif platform.system()=='Linux':
         if not raw_value:
@@ -125,7 +128,10 @@ def get_brightness(raw_value=False):
             for command in possible_commands:
                 try:
                     res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
-                    return int(float(str(res)))
+                    #we run this check here to ensure we can actually set the brightness to said level
+                    if max_value:
+                        return 100
+                    return int(round(float(str(res)),0))
                 except:
                     pass
         #if function has not returned yet try reading the brightness file
@@ -139,19 +145,21 @@ def get_brightness(raw_value=False):
                     with open(os.path.join(backlight_dir,folder,'brightness'),'r') as f:
                         brightness_value=int(float(str(f.read().rstrip('\n'))))
 
-                    if raw_value:
+                    if max_value or not raw_value:
                         try:
                             #try open the max_brightness file to calculate the value to set the brightness file to
                             with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
                                 max_brightness=int(float(str(f.read().rstrip('\n'))))
+                            if max_value:
+                                return max_brightness
                         except:
-                            #if the file does not exist use 100
-                            max_brightness=100
-                            brightness_value=(int(brightness_value/max_brightness)*100)
+                            #if the file does not exist we cannot calculate the brightness
+                            return False
+                        brightness_value=int(round((brightness_value/max_brightness)*100,0))
                     return brightness_value
 
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
         return False
     elif platform.system()=='Darwin':
         return False
