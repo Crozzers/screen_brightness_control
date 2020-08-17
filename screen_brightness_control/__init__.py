@@ -158,11 +158,11 @@ def get_brightness(max_value=False,raw_value=False):
                         brightness_value=int(round((brightness_value/max_brightness)*100,0))
                     return brightness_value
 
-                except Exception as e:
-                    print(e)
+                except:
+                    pass
         return False
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.7'
+__version__='0.1.71'
 __author__='Crozzers'
