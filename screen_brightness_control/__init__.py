@@ -19,8 +19,11 @@ def set_brightness(brightness_level,force=False,raw_value=False):
         brightness_level=int(float(str(brightness_level)))
 
     if platform.system()=='Windows':
-        wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()[0].WmiSetBrightness(brightness_level,0)
-        return brightness_level
+        try:
+            wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()[0].WmiSetBrightness(brightness_level,0)
+            return brightness_level
+        except:
+            return False
     elif platform.system()=='Linux':
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
@@ -80,7 +83,9 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             val=i
             if start>finish:
                 val = start - (val-finish)
-            set_brightness(val)
+            #if the action fails, exit now. No point consuming more resources
+            if set_brightness(val)==False:
+                break
             time.sleep(interval)
             
         if get_brightness()!=finish:
@@ -121,7 +126,8 @@ def get_brightness(max_value=False,raw_value=False):
     if platform.system()=='Windows':
         if max_value:
             return 100
-        return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
+        try:return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
+        except:return False
     elif platform.system()=='Linux':
         if not raw_value:
             possible_commands=["light -G","xbacklight -get"]
@@ -157,12 +163,11 @@ def get_brightness(max_value=False,raw_value=False):
                             return False
                         brightness_value=int(round((brightness_value/max_brightness)*100,0))
                     return brightness_value
-
                 except:
                     pass
         return False
     elif platform.system()=='Darwin':
         return False
     
-__version__='0.1.71'
+__version__='0.1.72'
 __author__='Crozzers'
