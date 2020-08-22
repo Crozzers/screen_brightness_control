@@ -3,50 +3,72 @@ if platform.system()=='Windows':
     import wmi
 else:
     import subprocess,os
-    
-def set_brightness(brightness_level,force=False,raw_value=False):
+ 
+class ScreenBrightnessError(Exception):
+    '''raised when the brightness cannot be set/retrieved'''
+    def __init__(self, message="Cannot set/retrieve brightness level"):
+        self.message=message
+        super().__init__(self.message)
+
+def set_brightness(brightness_level,force=False,raw_value=False, verbose_error=False):
     '''
     brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
     force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
     raw_value (linux only) - means you have not supplied a percentage but an actual brightness value
+    verbose_error - boolean value controls the amount of detail error messages will contain
     '''
     if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
         current_brightness=get_brightness(raw_value=raw_value)
-        if current_brightness==False:
-            return False
         brightness_level=current_brightness+int(float(brightness_level))
     elif type(brightness_level) in (str,float):
         brightness_level=int(float(str(brightness_level)))
 
+    #this variable is used later to control the level of detail that errors produce
+    error=False
+
     if platform.system()=='Windows':
         try:
-            wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()[0].WmiSetBrightness(brightness_level,0)
-            return brightness_level
-        except:
-            return False
+            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+        except Exception as e:
+            msg='Cannot set screen brightness: monitor does not support it' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
+            if verbose_error:raise ScreenBrightnessError(msg)
+            else:error=True
+        else:
+            try:
+                brightness_method[0].WmiSetBrightness(brightness_level,0)
+                return brightness_level
+            except Exception as e:
+                msg='Cannot set screen brightness: {e}' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
+                if verbose_error:raise ScreenBrightnessError(msg)
+                else:error=True
+        #this is where errors are raised if verbose_error==False. Means that only this error will be printed
+        if error:
+            raise ScreenBrightnessError(msg)
+
     elif platform.system()=='Linux':
+        error=[]
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
             
         if not raw_value:
             #this is because many different versions of linux have many different ways to adjust the backlight
-            possible_commands=["light -S {}","xbacklight -set {}"]
-            for command in possible_commands:
+            for command in ["light -S {}","xbacklight -set {}"]:
+                command=command.format(brightness_level)
                 try:
-                    subprocess.call(command.format(brightness_level).split(" "))
+                    subprocess.call(command.split(" "))
                     return int(brightness_level)
                 except FileNotFoundError:
-                    pass
+                    error.append(['FileNotFoundError', command])
         #if the function has not already returned it means we could not adjust the backlight using those tools
         backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
             #make absolutely sure this var is the correct type
             brightness_level=int(float(str(brightness_level)))
+            brightness_value=brightness_level
             #if the backlight dir exists and is not empty
             folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
             for folder in folders:
                 try:
-                    brightness_value=brightness_level
                     if raw_value:
                         try:
                             #try open the max_brightness file to calculate the value to set the brightness file to
@@ -61,13 +83,18 @@ def set_brightness(brightness_level,force=False,raw_value=False):
                     with open(os.path.join(backlight_dir,folder,'brightness'),'w') as f:
                         f.write(str(brightness_value))
                     return brightness_value
-                except PermissionError:
-                    pass
+                except PermissionError as p:
+                    error.append(['PermissionError',p])
         #if the function has not returned by now then all has failed
-        return False
+        msg=f'Cannot set screen brightness: light and xbacklight not found and/or write permission to {backlight_dir} denied'
+        if verbose_error:
+            msg='Cannot set screen brightness:\n'
+            for err in error:
+                msg+=f'   {err[0]}: {err[1]}\n'
+        raise ScreenBrightnessError(msg)
     else:
         #MAC is unsupported as I don't have one to test code on
-        return False
+        raise ScreenBrightnessError('MAC is unsupported')
 
 def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True):
     '''
@@ -115,31 +142,49 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         t1.start()
         return t1
     else:
-         try:return fade()
-         except:return False
+         return fade()
          
-def get_brightness(max_value=False,raw_value=False):
+def get_brightness(max_value=False,raw_value=False,verbose_error=False):
     '''
     max_value - returns the maximum brightness the monitor can be set to. Always returns 100 on Windows but on linux it returns the value stored in /sys/class/backlight/*/max_brightness if used with raw_value
     raw_value (linux only) - means the brightness will not be returned as a percentage but directly as it is in /sys/class/backlight/*/brightness
+    verbose_error - boolean value that controls the level of detail in the error messages
     '''
+    #value used later on to determine error detail level
+    error=False
+
     if platform.system()=='Windows':
-        if max_value:
-            return 100
-        try:return wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0].CurrentBrightness
-        except:return False
+        try:
+            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+            #do this down here to ensure screen brightness can actually be retrieved (in theory)
+            if max_value:return 100
+        except Exception as e:
+            msg='Cannot retrieve screen brightness: monitor does not support it' if not verbose_error else f'Cannot retrieve screen brightness methods - {type(e)}:\n{e}'
+            if verbose_error:raise ScreenBrightnessError(msg)
+            else:error=True
+        else:
+            try:
+                return brightness_method[0].CurrentBrightness
+            except Exception as e:
+                msg='Cannot retrieve screen brightness: {e}' if not verbose_error else f'Cannot retrieve screen brightness - {type(e)}:\n{e}'
+                if verbose_error:raise ScreenBrightnessError(msg)
+                else:error=True
+        #this is where errors are raised if verbose_error==False. Means that only this error will be printed
+        if error:
+            raise ScreenBrightnessError(msg)
+
     elif platform.system()=='Linux':
+        error=[]
         if not raw_value:
-            possible_commands=["light -G","xbacklight -get"]
-            for command in possible_commands:
+            for command in ["light -G","xbacklight -get"]:
                 try:
                     res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
                     #we run this check here to ensure we can actually set the brightness to said level
                     if max_value:
                         return 100
                     return int(round(float(str(res)),0))
-                except:
-                    pass
+                except FileNotFoundError:
+                    error.append(['FileNotFoundError',command])
         #if function has not returned yet try reading the brightness file
         backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
@@ -163,11 +208,17 @@ def get_brightness(max_value=False,raw_value=False):
                             return False
                         brightness_value=int(round((brightness_value/max_brightness)*100,0))
                     return brightness_value
-                except:
-                    pass
-        return False
+                except PermissionError as p:
+                    error.append(['PermissionError',p])
+        #if the function has not returned by now it failed
+        msg=f'Cannot retrieve screen brightness: light and xbacklight not found and/or write permission to {backlight_dir} denied'
+        if verbose_error:
+            msg='Cannot retrieve screen brightness:\n'
+            for err in error:
+                msg+=f'    {err[0]}: {err[1]}\n'
+        raise ScreenBrightnessError(msg)
     elif platform.system()=='Darwin':
-        return False
+        raise ScreenBrightnessError('MAC is unsupported')
     
-__version__='0.1.72'
+__version__='0.1.8'
 __author__='Crozzers'
