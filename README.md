@@ -11,12 +11,18 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
   
 
 ## Documentation
-### ScreenBrightnessError(Exception)
+### ScreenBrightnessError(`Exception`)
+
+***
+
 #### Summary:
 Raised by `set_brightness` and `get_brightness` when the brightness cannot be set or retrieved  
 Used as a unifying class for the multiple error types to make it easier to handle exceptions
 
 ### get_brightness(`max_value=False, raw_value=False, verbose_error=False`)
+
+***
+
 #### Summary:
 Returns the current screen brightness as a percentage by default.
 Raises `ScreenBrightnessError` upon failure
@@ -35,6 +41,9 @@ except ScreenBrightnessError as err:
 ```  
 
 ### set_brightness(`brightness_level, force=False, raw_value=False, verbose_error=False`)
+
+***
+
 #### Summary: 
 Sets the brightness to `brightness_level`. If `brightness_level` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
 Raises `ScreenBrightnessError` upon failure
@@ -64,6 +73,9 @@ except ScreenBrightnessError as err:
 ```  
 
 ### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True`)
+
+***
+
 #### Summary:
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
 If it runs in the main thread it will return the final brightness upon success, `ScreenBrightnessError` upon failure. Otherwise it returns the thread object that the process is running in
