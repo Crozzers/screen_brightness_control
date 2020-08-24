@@ -6,8 +6,9 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 * Open a terminal and run `pip3 install screen-brightness-control`
 
 #### Github:
-* Clone/download [the repository](https://github.com/Crozzers/screen_brightness_control)
-* Enter the folder it has been cloned to and run `pip3 install .`
+* Clone/download the repository by running `git clone https://github.com/Crozzers/screen_brightness_control`
+* Enter the folder it was cloned into with `cd screen_brightness_control`
+* Install using `pip3 install .`
   
 
 ## Documentation
