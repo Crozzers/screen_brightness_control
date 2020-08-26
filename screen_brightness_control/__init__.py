@@ -156,7 +156,7 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
 
     if platform.system()=='Windows':
         try:
-            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
             #do this down here to ensure screen brightness can actually be retrieved (in theory)
             if max_value:return 100
         except Exception as e:
