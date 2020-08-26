@@ -35,7 +35,8 @@ def set_brightness(brightness_level,force=False,raw_value=False, verbose_error=F
             else:error=True
         else:
             try:
-                brightness_method[0].WmiSetBrightness(brightness_level,0)
+                for method in brightness_method:
+                    method.WmiSetBrightness(brightness_level,0)
                 return brightness_level
             except Exception as e:
                 msg='Cannot set screen brightness: {e}' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
@@ -164,9 +165,11 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
             else:error=True
         else:
             try:
-                return brightness_method[0].CurrentBrightness
+                values = [i.CurrentBrightness for i in brightness_method]
+                values = values[0] if len(values)==1 else values
+                return values
             except Exception as e:
-                msg='Cannot retrieve screen brightness: {e}' if not verbose_error else f'Cannot retrieve screen brightness - {type(e)}:\n{e}'
+                msg=f'Cannot retrieve screen brightness: {e}' if not verbose_error else f'Cannot retrieve screen brightness - {type(e)}:\n{e}'
                 if verbose_error:raise ScreenBrightnessError(msg)
                 else:error=True
         #this is where errors are raised if verbose_error==False. Means that only this error will be printed
@@ -220,5 +223,5 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
     
-__version__='0.2.0'
+__version__='0.2.1'
 __author__='Crozzers'
