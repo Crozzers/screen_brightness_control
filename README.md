@@ -25,7 +25,7 @@ Used as a unifying class for the multiple error types to make it easier to handl
 ***
 
 #### Summary:
-Returns the current screen brightness as a percentage by default.
+Returns the current screen brightness as a percentage by default. If you're on Windows it may return a list of values if you have multiple, brightness adjustable monitors.  
 Raises `ScreenBrightnessError` upon failure
 #### Arguments:
 * `max_value` - returns the maximum value the brightness can be set to. Always returns 100 on Windows. On Linux it returns the value stored in `/sys/class/backlight/*/max_brightness` if combined with `raw_value=True`
