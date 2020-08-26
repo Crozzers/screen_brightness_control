@@ -18,6 +18,6 @@ setup(name='screen_brightness_control',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3 :: Only'
     ],
-    python_requires='>-3.6'
+    python_requires='>=3.6'
     )
     
