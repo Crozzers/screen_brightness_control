@@ -105,3 +105,6 @@ sbc.fade_brightness(90, start=100, interval=0.1)
 #fade the brightness to 100% in the background
 sbc.fade_brightness(100, blocking=False)
 ```
+
+## License
+This software is licensed under the [MIT license](https://mit-license.org/)
