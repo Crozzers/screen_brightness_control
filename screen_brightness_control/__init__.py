@@ -111,11 +111,9 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             val=i
             if start>finish:
                 val = start - (val-finish)
-            #if the action fails, exit now. No point consuming more resources
-            if set_brightness(val)==False:
-                break
+            set_brightness(val)
             time.sleep(interval)
-            
+
         if get_brightness()!=finish:
             set_brightness(finish)
         return get_brightness()
@@ -223,5 +221,5 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
     
-__version__='0.2.1'
+__version__='0.2.2'
 __author__='Crozzers'
