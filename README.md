@@ -12,7 +12,7 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 
 #### Note:
 If you are on Linux the setup script will automatically attempt to compile and install [Light](https://github.com/haikarainen/light).
-If you wish for ths not to happen simply tag `--install-options="--no-light"` on the end of your install command.
+If you wish for this not to happen simply tag `--install-options="--no-light"` on the end of your install command.
 
 ## Documentation
 ### ScreenBrightnessError(`Exception`)
