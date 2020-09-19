@@ -8,7 +8,6 @@ if '--no-light' in sys.argv:
     sys.argv.remove('--no-light')
 
 #include the actual code file
-#data_files=[['screen_brightness_control',['screen_brightness_control/__init__.py']]]
 data_files=[]
     
 if platform.system()=='Linux':

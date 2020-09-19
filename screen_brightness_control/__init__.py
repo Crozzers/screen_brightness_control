@@ -1,11 +1,4 @@
 import platform,time,threading,subprocess,os
-if platform.system()=='Windows':
-    import wmi
-else:
-    global light_executable
-    light_executable = os.path.join(os.path.dirname(__file__),'Light/src/light')
-    if not os.path.isfile(light_executable):
-        light_executable='light'
  
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
@@ -228,3 +221,18 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
     
 __version__='0.3.0'
 __author__='Crozzers'
+
+if platform.system()=='Windows':
+    import wmi
+else:
+    global light_executable
+    light_executable = os.path.join(os.path.dirname(__file__),'Light/src/light')
+    if not os.path.isfile(light_executable):
+        light_executable='light'
+    else:
+        #test that this executable has the correct permissions to function
+        try:
+            if os.system(f"{light_executable} -S {get_brightness()}")!=0:
+                light_executable='light'
+        except:
+            light_executable='light'

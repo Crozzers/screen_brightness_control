@@ -113,6 +113,13 @@ Install light or xbacklight using your system package manager (recommended):
 * Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install xbacklight`
 
+#### I call `set_brightness()` and nothing happens on Linux
+###### Why this happens:
+Light requires root access to run, which is usually provided when you manually install it using you package manager.
+The `setup.py` install script cannot use `sudo` to compile Light because pip is usually run as a normal user, thus it is compiled with the regular user's permissions.
+###### How to fix it:
+Install Light by following [these steps](https://github.com/haikarainen/light#manual). Make sure to run the install as sudo
+
 #### When I call `get_brightness()` the returned value isn't what I set it to (Windows)
 Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
 You can likely see this if you open your display settings and very slowly move the brightness slider.  
