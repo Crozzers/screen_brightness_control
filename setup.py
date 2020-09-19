@@ -1,9 +1,6 @@
-from setuptools import setup, find_packages
-from setuptools.command.build_ext import build_ext
-from setuptools.command.install import install
-from setuptools.command.develop import develop
+from setuptools import setup
 from subprocess import run
-import platform, shlex, sys, os
+import platform, sys, os
 
 no_light=False
 if '--no-light' in sys.argv:
