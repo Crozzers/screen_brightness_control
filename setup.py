@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools.command.install import install
 from subprocess import run
-import platform, shlex, sys
+import platform, shlex, sys, os
 
 no_light=False
 if '--no-light' in sys.argv:
