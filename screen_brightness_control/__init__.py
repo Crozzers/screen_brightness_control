@@ -1,8 +1,11 @@
-import platform,time,threading
+import platform,time,threading,subprocess,os
 if platform.system()=='Windows':
     import wmi
 else:
-    import subprocess,os
+    global light_executable
+    light_executable = os.path.join(os.path.dirname(__file__),'Light/src/light')
+    if not os.path.isfile(light_executable):
+        light_executable='light'
  
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
@@ -47,13 +50,14 @@ def set_brightness(brightness_level,force=False,raw_value=False, verbose_error=F
             raise ScreenBrightnessError(msg)
 
     elif platform.system()=='Linux':
+        global light_executable
         error=[]
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
             
         if not raw_value:
             #this is because many different versions of linux have many different ways to adjust the backlight
-            for command in ["light -S {}","xbacklight -set {}"]:
+            for command in ["{} -S {}".format(light_executable,'{}'),"xbacklight -set {}"]:
                 command=command.format(brightness_level)
                 try:
                     subprocess.call(command.split(" "))
@@ -175,9 +179,10 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
             raise ScreenBrightnessError(msg)
 
     elif platform.system()=='Linux':
+        global light_executable
         error=[]
         if not raw_value:
-            for command in ["light -G","xbacklight -get"]:
+            for command in [f"{light_executable} -G","xbacklight -get"]:
                 try:
                     res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
                     #we run this check here to ensure we can actually set the brightness to said level
