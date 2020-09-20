@@ -11,7 +11,10 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 * Install using `pip3 install .`
 
 #### Note:
-If you are on Linux the setup script will automatically attempt to compile and install [Light](https://github.com/haikarainen/light).
+This library relies on the [Light repo](https://github.com/haikarainen/light) to function on Linux.
+If you have not already got that installed then you will need to follow [these steps](https://github.com/haikarainen/light#installation) to install it.
+
+If you are on Linux the setup script will automatically attempt to compile and install [Light](https://github.com/haikarainen/light), however this is often ineffective due to a lack of root permissions.
 If you wish for this not to happen simply tag `--install-options="--no-light"` on the end of your install command.
 
 ## Documentation
