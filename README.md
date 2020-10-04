@@ -14,9 +14,6 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 This library relies on the [Light repo](https://github.com/haikarainen/light) to function on Linux.
 If you have not already got that installed then you will need to follow [these steps](https://github.com/haikarainen/light#installation) to install it.
 
-If you are on Linux the setup script will automatically attempt to compile and install [Light](https://github.com/haikarainen/light), however this is often ineffective due to a lack of root permissions.
-If you wish for this not to happen simply tag `--install-options="--no-light"` on the end of your install command.
-
 ## Usage
 You can call this module from your command line or use it as a python library (see the documentation section below).
 ```
@@ -48,11 +45,10 @@ Raises `ScreenBrightnessError` upon failure
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `kwargs` - absorbs older, removed kwargs without raising an error
 ###### Usage:
-```
+```python
 import screen_brightness_control as sbc
 try:
     current_brightness = sbc.get_brightness()
-    max_brightness = sbc.get_brightness(max_value=True)
 except ScreenBrightnessError as err:
     print(err)
 ```  
@@ -67,7 +63,7 @@ Raises `ScreenBrightnessError` upon failure
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `kwargs` - absorbs older, removed kwargs without raising an error
 ###### Usage:
-```
+```python
 import screen_brightness_control as sbc
 
 #set brightness to 50%
@@ -79,11 +75,8 @@ sbc.set_brightness(0, force=True)
 #increase brightness by 25%
 sbc.set_brightness('+25')
 
-#set brightness as a raw value (Linux only)
-try:
-    sbc.set_brightness(2048, raw_value=True)
-except ScreenBrightnessError as err:
-    print(err)
+#decrease brightness by 30%
+sbc.set_brightness('-30')
 ```  
 
 ### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True`)
@@ -97,7 +90,7 @@ If it runs in the main thread it will return the final brightness upon success, 
 * `increment` - The amount to change the brightness by each step
 * `blocking` - If set to `False` it fades the brightness in a new thread
 ###### Usage:
-```
+```python
 import screen_brightness_control as sbc
 
 #fade brightness from the current brightness to 50%
@@ -112,7 +105,7 @@ sbc.fade_brightness(100, increment=10)
 #fade the brightness from 100% to 90% with time intervals of 0.1 seconds
 sbc.fade_brightness(90, start=100, interval=0.1)
 
-#fade the brightness to 100% in the background
+#fade the brightness to 100% in a new thread
 sbc.fade_brightness(100, blocking=False)
 ```
 
