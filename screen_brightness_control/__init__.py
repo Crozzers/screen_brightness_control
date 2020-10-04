@@ -8,15 +8,15 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
-def set_brightness(brightness_level,force=False,raw_value=False, verbose_error=False):
+def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
     '''
     brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
     force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
-    raw_value (linux only) - means you have not supplied a percentage but an actual brightness value
     verbose_error - boolean value controls the amount of detail error messages will contain
+    kwargs - to absorb older, now removed kwargs without creating errors
     '''
     if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
-        current_brightness=get_brightness(raw_value=raw_value)
+        current_brightness=get_brightness()
         brightness_level=current_brightness+int(float(brightness_level))
     elif type(brightness_level) in (str,float):
         brightness_level=int(float(str(brightness_level)))
@@ -45,48 +45,21 @@ def set_brightness(brightness_level,force=False,raw_value=False, verbose_error=F
             raise ScreenBrightnessError(msg)
 
     elif platform.system()=='Linux':
-        global light_executable
         error=[]
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
             
-        if not raw_value:
-            #this is because many different versions of linux have many different ways to adjust the backlight
-            for command in ["light -S {}","xbacklight -set {}"]:
-                command=command.format(brightness_level)
-                try:
-                    subprocess.call(command.split(" "))
-                    return int(brightness_level)
-                except FileNotFoundError:
-                    error.append(['FileNotFoundError', command])
-        #if the function has not already returned it means we could not adjust the backlight using those tools
-        backlight_dir='/sys/class/backlight/'
-        if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
-            #make absolutely sure this var is the correct type
-            brightness_level=int(float(str(brightness_level)))
-            brightness_value=brightness_level
-            #if the backlight dir exists and is not empty
-            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
-            for folder in folders:
-                try:
-                    if raw_value:
-                        try:
-                            #try open the max_brightness file to calculate the value to set the brightness file to
-                            with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
-                                max_brightness=int(float(str(f.read().rstrip('\n'))))
-                        except:
-                            #if the file does not exist use 100
-                            max_brightness=100
-                        brightness_value=int((brightness_level/max_brightness)*100)
-                        
-                    #try to write the brightness value to the file
-                    with open(os.path.join(backlight_dir,folder,'brightness'),'w') as f:
-                        f.write(str(brightness_value))
-                    return brightness_value
-                except PermissionError as p:
-                    error.append(['PermissionError',p])
+        #this is because many different versions of linux have many different ways to adjust the backlight
+        for command in ["light -S {}","xbacklight -set {}"]:
+            command=command.format(brightness_level)
+            try:
+                subprocess.call(command.split(" "))
+                return int(brightness_level)
+            except FileNotFoundError:
+                error.append(['FileNotFoundError', command])
+       
         #if the function has not returned by now then all has failed
-        msg=f'Cannot set screen brightness: light and xbacklight not found and/or write permission to {backlight_dir} denied'
+        msg='Cannot set screen brightness: light and xbacklight not found'
         if verbose_error:
             msg='Cannot set screen brightness:\n'
             for err in error:
@@ -142,14 +115,17 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     else:
          return fade()
          
-def get_brightness(max_value=False,raw_value=False,verbose_error=False):
+def get_brightness(max_value=False, verbose_error=False,**kwargs):
     '''
-    max_value - returns the maximum brightness the monitor can be set to. Always returns 100 on Windows but on linux it returns the value stored in /sys/class/backlight/*/max_brightness if used with raw_value
-    raw_value (linux only) - means the brightness will not be returned as a percentage but directly as it is in /sys/class/backlight/*/brightness
+    max_value - deprecated kwarg. Always returns 100
     verbose_error - boolean value that controls the level of detail in the error messages
+    kwargs - to absorb older, now removed kwargs without creating errors
     '''
     #value used later on to determine error detail level
     error=False
+
+    if max_value:
+        return 100
 
     if platform.system()=='Windows':
         try:
@@ -174,18 +150,14 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
             raise ScreenBrightnessError(msg)
 
     elif platform.system()=='Linux':
-        global light_executable
         error=[]
-        if not raw_value:
-            for command in [f"light -G","xbacklight -get"]:
-                try:
-                    res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
-                    #we run this check here to ensure we can actually set the brightness to said level
-                    if max_value:
-                        return 100
-                    return int(round(float(str(res)),0))
-                except FileNotFoundError:
-                    error.append(['FileNotFoundError',command])
+        for command in [f"light -G","xbacklight -get"]:
+            try:
+                res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
+                return int(round(float(str(res)),0))
+            except FileNotFoundError:
+                error.append(['FileNotFoundError',command])
+
         #if function has not returned yet try reading the brightness file
         backlight_dir='/sys/class/backlight/'
         if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
@@ -197,22 +169,19 @@ def get_brightness(max_value=False,raw_value=False,verbose_error=False):
                     with open(os.path.join(backlight_dir,folder,'brightness'),'r') as f:
                         brightness_value=int(float(str(f.read().rstrip('\n'))))
 
-                    if max_value or not raw_value:
-                        try:
-                            #try open the max_brightness file to calculate the value to set the brightness file to
-                            with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
-                                max_brightness=int(float(str(f.read().rstrip('\n'))))
-                            if max_value:
-                                return max_brightness
-                        except:
-                            #if the file does not exist we cannot calculate the brightness
-                            return False
-                        brightness_value=int(round((brightness_value/max_brightness)*100,0))
+                    try:
+                        #try open the max_brightness file to calculate the value to set the brightness file to
+                        with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
+                            max_brightness=int(float(str(f.read().rstrip('\n'))))
+                    except:
+                        #if the file does not exist we cannot calculate the brightness
+                        return False
+                    brightness_value=int(round((brightness_value/max_brightness)*100,0))
                     return brightness_value
                 except PermissionError as p:
                     error.append(['PermissionError',p])
         #if the function has not returned by now it failed
-        msg=f'Cannot retrieve screen brightness: light and xbacklight not found and/or write permission to {backlight_dir} denied'
+        msg=f'Cannot retrieve screen brightness: light and xbacklight not found and/or cannot read {backlight_dir}'
         if verbose_error:
             msg='Cannot retrieve screen brightness:\n'
             for err in error:

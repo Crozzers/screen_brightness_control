@@ -39,14 +39,14 @@ python -m screen_brightness_control -s 50
 Raised by `set_brightness` and `get_brightness` when the brightness cannot be set or retrieved  
 Used as a unifying class for the multiple error types to make it easier to handle exceptions
 
-### get_brightness(`max_value=False, raw_value=False, verbose_error=False`)
+### get_brightness(`max_value=False, verbose_error=False, **kwargs`)
 ###### Summary:
 Returns the current screen brightness as a percentage by default. If you're on Windows it may return a list of values if you have multiple, brightness adjustable monitors.  
 Raises `ScreenBrightnessError` upon failure
 ###### Arguments:
-* `max_value` - returns the maximum value the brightness can be set to. Always returns 100 on Windows. On Linux it returns the value stored in `/sys/class/backlight/*/max_brightness` if combined with `raw_value=True`
-* `raw_value` (Linux only) - returns the value stored in `/sys/class/backlight/*/brightness`
+* `max_value` - deprecated kwarg. Always returns 100
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
+* `kwargs` - absorbs older, removed kwargs without raising an error
 ###### Usage:
 ```
 import screen_brightness_control as sbc
@@ -57,15 +57,15 @@ except ScreenBrightnessError as err:
     print(err)
 ```  
 
-### set_brightness(`brightness_level, force=False, raw_value=False, verbose_error=False`)
+### set_brightness(`brightness_level, force=False, verbose_error=False, **kwargs`)
 ###### Summary: 
 Sets the brightness to `brightness_level`. If `brightness_level` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
 Raises `ScreenBrightnessError` upon failure
 ###### Arguments:
 * `brightness_level` - the level to set the brightness to. Can either be an integer or a string.
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
-* `raw_value` (Linux only) - if set to 'True' then it attempts to write `brightness_level` directly to `/sys/class/backlight/*/brightness`. This will usually fail due to file permissions but it's here if you need it.
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
+* `kwargs` - absorbs older, removed kwargs without raising an error
 ###### Usage:
 ```
 import screen_brightness_control as sbc
@@ -128,14 +128,13 @@ If neither command is present it will attempt to write a value directly to `/sys
 If both of these actions failed a `ScreenBrightnessError` is raised
 ###### How to fix it:
 Install light or xbacklight using your system package manager (recommended):
-* Arch: `sudo pacman -S light` or `sudo pacman -S xorg-xbacklight`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xbacklight`
 * Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install xbacklight`
 
 #### I call `set_brightness()` and nothing happens on Linux
 ###### Why this happens:
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
-The `setup.py` install script cannot use `sudo` to compile Light because pip is usually run as a normal user, thus it is compiled with the regular user's permissions.
 ###### How to fix it:
 Install Light by following [these steps](https://github.com/haikarainen/light#manual). Make sure to run the install as sudo
 
