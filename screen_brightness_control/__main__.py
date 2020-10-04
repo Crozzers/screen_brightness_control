@@ -1,5 +1,5 @@
 import argparse
-import __init__ as SBC
+import screen_brightness_control as SBC
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

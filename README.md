@@ -17,6 +17,22 @@ If you have not already got that installed then you will need to follow [these s
 If you are on Linux the setup script will automatically attempt to compile and install [Light](https://github.com/haikarainen/light), however this is often ineffective due to a lack of root permissions.
 If you wish for this not to happen simply tag `--install-options="--no-light"` on the end of your install command.
 
+## Usage
+You can call this module from your command line or use it as a python library (see the documentation section below).
+```
+python -m screen_brightness_control --help
+> usage: __main__.py [-h] [-s SET] [-g] [-f FADE]
+> 
+> optional arguments:
+>   -h, --help            show this help message and exit
+>   -s SET, --set SET     set the brightness to this value
+>   -g, --get             get the current screen brightness
+>   -f FADE, --fade FADE  fade the brightness to this value
+python -m screen_brightness_control -g
+> 100
+python -m screen_brightness_control -s 50
+```
+
 ## Documentation
 ### ScreenBrightnessError(`Exception`)
 ###### Summary:
