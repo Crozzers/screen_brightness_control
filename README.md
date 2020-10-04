@@ -79,7 +79,7 @@ sbc.set_brightness('+25')
 sbc.set_brightness('-30')
 ```  
 
-### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True`)
+### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, verbose_error=False`)
 ###### Summary:
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
 If it runs in the main thread it will return the final brightness upon success, `ScreenBrightnessError` upon failure. Otherwise it returns the thread object that the process is running in
@@ -89,6 +89,7 @@ If it runs in the main thread it will return the final brightness upon success, 
 * `interval` - The time interval between each step in brightness
 * `increment` - The amount to change the brightness by each step in percent.
 * `blocking` - If set to `False` it fades the brightness in a new thread
+* `verbose_error` - Controls the amount of detail any error messages will contain
 ###### Usage:
 ```python
 import screen_brightness_control as sbc
@@ -135,7 +136,7 @@ Install Light by following [these steps](https://github.com/haikarainen/light#in
 Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
 You can likely see this if you open your display settings and very slowly move the brightness slider.  
 You can find out your brightness 'levels' by running the following python code:
-```
+```python
 import wmi
 monitor = wmi.WMI(namespace='wmi').MonitorBrightness[0]
 #the number of levels the monitor can be set to
