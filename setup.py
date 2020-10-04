@@ -1,6 +1,4 @@
 from setuptools import setup
-from subprocess import run
-import platform, sys, os
 
 setup(name='screen_brightness_control',
     version='0.3.0',
