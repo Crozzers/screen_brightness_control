@@ -3,11 +3,7 @@ from subprocess import run
 import platform, sys, os
 
 setup(name='screen_brightness_control',
-<<<<<<< HEAD
-    version='0.2.2',
-=======
     version='0.3.0',
->>>>>>> feature/command-line-calling
     url='https://github.com/Crozzers/screen-brightness-control',
     license='MIT',
     author='Crozzers',
