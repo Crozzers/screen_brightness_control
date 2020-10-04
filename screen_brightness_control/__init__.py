@@ -1,6 +1,6 @@
 import platform,time,threading,subprocess,os
 if platform.system()=='Windows':
-    import wmi
+    import wmi, pythoncom
  
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
@@ -25,6 +25,9 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
     error=False
 
     if platform.system()=='Windows':
+        #WMI calls don't work in new threads so we have to run this check
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
         try:
             brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
         except Exception as e:
@@ -35,7 +38,7 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
             try:
                 for method in brightness_method:
                     method.WmiSetBrightness(brightness_level,0)
-                return brightness_level
+                return get_brightness()
             except Exception as e:
                 msg='Cannot set screen brightness: {e}' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
                 if verbose_error:raise ScreenBrightnessError(msg)
@@ -54,7 +57,7 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
             command=command.format(brightness_level)
             try:
                 subprocess.call(command.split(" "))
-                return int(brightness_level)
+                return get_brightness()
             except FileNotFoundError:
                 error.append(['FileNotFoundError', command])
        
@@ -69,7 +72,7 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
         #MAC is unsupported as I don't have one to test code on
         raise ScreenBrightnessError('MAC is unsupported')
 
-def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True):
+def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, verbose_error=False):
     '''
     A function to somewhat gently fade the screen brightness from start_value to finish_value
     finish - the brighness level we end on
@@ -77,13 +80,14 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     interval - the time delay between each step in brightness
     increment - the amount to change the brightness by per loop
     blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
+    verbose_error - controls the level of detail in any error messages
     '''
-    def fade():
+    def fade(verbose=False):
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
                 val = start - (val-finish)
-            set_brightness(val)
+            set_brightness(val, verbose_error=verbose)
             time.sleep(interval)
 
         if get_brightness()!=finish:
@@ -109,11 +113,11 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         return
 
     if not blocking:
-        t1 = threading.Thread(target=fade, daemon=True)
+        t1 = threading.Thread(target=fade, kwargs={'verbose':verbose_error}, daemon=True)
         t1.start()
         return t1
     else:
-         return fade()
+         return fade(verbose=verbose_error)
          
 def get_brightness(max_value=False, verbose_error=False,**kwargs):
     '''
@@ -128,6 +132,9 @@ def get_brightness(max_value=False, verbose_error=False,**kwargs):
         return 100
 
     if platform.system()=='Windows':
+        #WMI calls don't work in new threads so we have to run this check
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
         try:
             brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
             #do this down here to ensure screen brightness can actually be retrieved (in theory)

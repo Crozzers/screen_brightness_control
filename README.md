@@ -87,7 +87,7 @@ If it runs in the main thread it will return the final brightness upon success, 
 * `finish` - The brightness value to fade to
 * `start` - The value to start from. If not specified it defaults to the current brightness
 * `interval` - The time interval between each step in brightness
-* `increment` - The amount to change the brightness by each step
+* `increment` - The amount to change the brightness by each step in percent.
 * `blocking` - If set to `False` it fades the brightness in a new thread
 ###### Usage:
 ```python
@@ -129,7 +129,7 @@ Install light or xbacklight using your system package manager (recommended):
 ###### Why this happens:
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 ###### How to fix it:
-Install Light by following [these steps](https://github.com/haikarainen/light#manual). Make sure to run the install as sudo
+Install Light by following [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo
 
 #### When I call `get_brightness()` the returned value isn't what I set it to (Windows)
 Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
