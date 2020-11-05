@@ -118,10 +118,9 @@ This software is licensed under the [MIT license](https://mit-license.org/)
 ###### Why this happens:
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
 The programs it attempts to call are "light" and "xbacklight".
-If neither command is present it will attempt to write a value directly to `/sys/class/backlight/*/brightness` (which should fail due to permission errors).
-If both of these actions failed a `ScreenBrightnessError` is raised
+If neither of these programs can be called a `ScreenBrightnessError` is raised
 ###### How to fix it:
-Install light or xbacklight using your system package manager (recommended):
+Install light (recommended) or xbacklight using your system package manager:
 * Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xbacklight`
 * Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install xbacklight`
@@ -129,6 +128,7 @@ Install light or xbacklight using your system package manager (recommended):
 #### I call `set_brightness()` and nothing happens on Linux
 ###### Why this happens:
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
+If you installed xbacklight, it only supports Intel and NVidia graphics, not AMD.
 ###### How to fix it:
 Install Light by following [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo
 
