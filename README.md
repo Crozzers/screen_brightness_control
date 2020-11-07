@@ -11,8 +11,11 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 * Install using `pip3 install .`
 
 #### Note:
-This library relies on the [Light repo](https://github.com/haikarainen/light) to function on Linux.
-If you have not already got that installed then you will need to follow [these steps](https://github.com/haikarainen/light#installation) to install it.
+For running on Linux you will need to install one of these programs: [light](https://github.com/haikarainen/light), `xrandr` or `xbacklight`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S xorg-xbacklight`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install xbacklight`
+* Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
+
 
 ## Usage
 You can call this module from your command line or use it as a python library (see the documentation section below).
@@ -117,13 +120,13 @@ This software is licensed under the [MIT license](https://mit-license.org/)
 #### Why do I always get `ScreenBrightnessError` on Linux?
 ###### Why this happens:
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
-The programs it attempts to call are "light" and "xbacklight".
+The programs it attempts to call are "light", "xrandr" and "xbacklight".
 If neither of these programs can be called a `ScreenBrightnessError` is raised
 ###### How to fix it:
 Install light (recommended) or xbacklight using your system package manager:
-* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install xbacklight`
-* Fedora: `sudo dnf install light` or `sudo dnf install xbacklight`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S xorg-xbacklight`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install xbacklight`
+* Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
 
 #### I call `set_brightness()` and nothing happens on Linux
 ###### Why this happens:
