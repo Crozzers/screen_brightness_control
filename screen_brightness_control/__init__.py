@@ -39,7 +39,7 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
             
-        for m in [methods.light, methods.xbacklight, methods.sysfiles]:
+        for m in [methods.light, methods.xbacklight, methods.xrandr]:
             try:
                 return m.set_brightness(brightness_level, verbose_error=verbose_error)
             except Exception as e:
@@ -124,7 +124,7 @@ def get_brightness(verbose_error=False,**kwargs):
 
     elif platform.system()=='Linux':
         error=[]
-        for m in [methods.light, methods.xbacklight, methods.sysfiles]:
+        for m in [methods.light, methods.xrandr, methods.xbacklight, methods.sysfiles]:
             try:
                 return m.get_brightness()
             except Exception as e:
