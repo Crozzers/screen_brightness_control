@@ -51,7 +51,7 @@ Raises `ScreenBrightnessError` upon failure
 import screen_brightness_control as sbc
 try:
     current_brightness = sbc.get_brightness()
-except ScreenBrightnessError as err:
+except sbc.ScreenBrightnessError as err:
     print(err)
 ```  
 

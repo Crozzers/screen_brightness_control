@@ -53,7 +53,7 @@ def get_brightness(verbose_error = False, display = None):
     if threading.current_thread() != threading.main_thread():
         pythoncom.CoInitialize()
     try:
-        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
     except Exception as e:
         if verbose_error:
             raise e
