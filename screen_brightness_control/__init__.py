@@ -1,5 +1,8 @@
 import platform,time,threading,subprocess,os
-from screen_brightness_control import methods
+if platform.system()=='Windows':
+    from . import windows
+elif platform.system()=='Linux':
+    from . import linux
 
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
@@ -25,33 +28,28 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
 
     if platform.system()=='Windows':
         try:
-            methods.windows.set_brightness(brightness_level, verbose_error=verbose_error)
+            return windows.set_brightness(brightness_level, verbose_error=verbose_error)
         except Exception as e:
-            error=f'Cannot set screen brightness: {e}'
             if verbose_error:
-                raise ScreenBrightnessError(error)
+                raise ScreenBrightnessError from e
+            error = e
         #this is where errors are raised if verbose_error==False. Means that only this error will be printed
         if error:
-            raise ScreenBrightnessError(error)
+            raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
 
     elif platform.system()=='Linux':
-        error=[]
         if not force:
             brightness_level=str(max(1,int(brightness_level)))
             
-        for m in [methods.light, methods.xbacklight, methods.xrandr]:
-            try:
-                return m.set_brightness(brightness_level, verbose_error=verbose_error)
-            except Exception as e:
-                error.append([type(e).__name__, e])
+        try:
+            return linux.set_brightness(brightness_level, verbose_error=verbose_error)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
 
         #if the function has not returned by now it failed
-        msg=f'Cannot set screen brightness: light and xbacklight not found and/or cannot read {methods.sysfiles.backlight_dir}'
-        if verbose_error:
-            msg='Cannot set screen brightness:\n'
-            for err in error:
-                msg+=f'    {err[0]}: {err[1]}\n'
-        raise ScreenBrightnessError(msg)
+        raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
     else:
         #MAC is unsupported as I don't have one to test code on
         raise ScreenBrightnessError('MAC is unsupported')
@@ -113,32 +111,27 @@ def get_brightness(verbose_error=False,**kwargs):
 
     if platform.system()=='Windows':
         try:
-            methods.windows.get_brightness(verbose_error=verbose_error)
+            return windows.get_brightness(verbose_error=verbose_error)
         except Exception as e:
-            msg='Cannot get screen brightness: monitor does not support it' if not verbose_error else f'Cannot get screen brightness - {type(e).__name__}:\n    {e}'
-            if verbose_error:raise ScreenBrightnessError(msg)
-            else:error = msg
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
 
         if error:
             raise ScreenBrightnessError(error)
 
     elif platform.system()=='Linux':
-        error=[]
-        for m in [methods.light, methods.xrandr, methods.xbacklight, methods.sysfiles]:
-            try:
-                return m.get_brightness()
-            except Exception as e:
-                error.append([type(e).__name__, e])
+        try:
+            return linux.get_brightness(verbose_error=verbose_error)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
 
         #if the function has not returned by now it failed
-        msg=f'Cannot retrieve screen brightness: light and xbacklight not found and/or cannot read {methods.sysfiles.backlight_dir}'
-        if verbose_error:
-            msg='Cannot retrieve screen brightness:\n'
-            for err in error:
-                msg+=f'    {err[0]}: {err[1]}\n'
-        raise ScreenBrightnessError(msg)
+        raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
 
-__version__='0.4.0-dev1'
+__version__='0.4.0-dev2'
 __author__='Crozzers'
