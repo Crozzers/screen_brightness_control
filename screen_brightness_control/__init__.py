@@ -12,10 +12,16 @@ class ScreenBrightnessError(Exception):
 
 def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
     '''
-    brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-    force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
-    verbose_error - boolean value controls the amount of detail error messages will contain
-    kwargs - to absorb older, now removed kwargs without creating errors
+    Sets the screen brightness
+
+    Args:
+        brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
+        verbose_error - boolean value controls the amount of detail error messages will contain
+        kwargs - passed to the OS relevant brightness method
+    
+    Returns:
+        Returns the result of get_brightness()
     '''
     if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
         current_brightness=get_brightness()
@@ -23,12 +29,9 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
     elif type(brightness_level) in (str,float):
         brightness_level=int(float(str(brightness_level)))
 
-    #this variable is used later to control the level of detail that errors produce
-    error=False
-
     if platform.system()=='Windows':
         try:
-            return windows.set_brightness(brightness_level, verbose_error=verbose_error)
+            return windows.set_brightness(brightness_level, verbose_error=verbose_error, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -42,7 +45,7 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
             brightness_level=str(max(1,int(brightness_level)))
             
         try:
-            return linux.set_brightness(brightness_level, verbose_error=verbose_error)
+            return linux.set_brightness(brightness_level, verbose_error=verbose_error, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -54,22 +57,27 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
         #MAC is unsupported as I don't have one to test code on
         raise ScreenBrightnessError('MAC is unsupported')
 
-def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, verbose_error=False):
+def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
     A function to somewhat gently fade the screen brightness from start_value to finish_value
-    finish - the brighness level we end on
-    start - where the brightness should fade from
-    interval - the time delay between each step in brightness
-    increment - the amount to change the brightness by per loop
-    blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
-    verbose_error - controls the level of detail in any error messages
+
+    Args:
+        finish - the brighness level we end on
+        start - where the brightness should fade from
+        interval - the time delay between each step in brightness
+        increment - the amount to change the brightness by per loop
+        blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
+        kwargs - passed directly to set_brightness (see set_brightness docstring for available kwargs)
+    
+    Returns:
+        Returns a thread object if blocking is set to False, otherwise it returns the result of get_brightness()
     '''
-    def fade(verbose=False):
+    def fade(**kwargs):
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
                 val = start - (val-finish)
-            set_brightness(val, verbose_error=verbose)
+            set_brightness(val, **kwargs)
             time.sleep(interval)
 
         if get_brightness()!=finish:
@@ -95,23 +103,27 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         return
 
     if not blocking:
-        t1 = threading.Thread(target=fade, kwargs={'verbose':verbose_error}, daemon=True)
+        t1 = threading.Thread(target=fade, kwargs=kwargs, daemon=True)
         t1.start()
         return t1
     else:
-         return fade(verbose=verbose_error)
+         return fade(**kwargs)
          
 def get_brightness(verbose_error=False,**kwargs):
     '''
-    verbose_error - boolean value that controls the level of detail in the error messages
-    kwargs - to absorb older, now removed kwargs without creating errors
+    Returns the current display brightness
+
+    Args:
+        verbose_error - boolean value that controls the level of detail in the error messages
+        kwargs - is passed directly to the OS relevant brightness method
+    
+    Returns:
+        An integer between 0 and 100. On Windows it may return a list of integers if multiple monitors are detected
     '''
-    #value used later on to determine error detail level
-    error=False
 
     if platform.system()=='Windows':
         try:
-            return windows.get_brightness(verbose_error=verbose_error)
+            return windows.get_brightness(verbose_error=verbose_error, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -122,7 +134,7 @@ def get_brightness(verbose_error=False,**kwargs):
 
     elif platform.system()=='Linux':
         try:
-            return linux.get_brightness(verbose_error=verbose_error)
+            return linux.get_brightness(verbose_error=verbose_error, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -133,5 +145,5 @@ def get_brightness(verbose_error=False,**kwargs):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
 
-__version__='0.4.0-dev2'
+__version__='0.4.0-dev3'
 __author__='Crozzers'
