@@ -41,6 +41,15 @@ python -m screen_brightness_control -s 50
 ###### Summary:
 Raised by `set_brightness` and `get_brightness` when the brightness cannot be set or retrieved  
 Used as a unifying class for the multiple error types to make it easier to handle exceptions
+###### Usage:
+```python
+import screen_brightness_control as sbc
+
+try:
+    sbc.set_brightness(50)
+except sbc.ScreenBrightnessError as error:
+    print(error)
+```
 
 ### get_brightness(`verbose_error=False, **kwargs`)
 ###### Summary:
@@ -52,10 +61,13 @@ Raises `ScreenBrightnessError` upon failure
 ###### Usage:
 ```python
 import screen_brightness_control as sbc
-try:
-    current_brightness = sbc.get_brightness()
-except sbc.ScreenBrightnessError as err:
-    print(err)
+
+#get the current screen brightness
+current_brightness = sbc.get_brightness()
+#get the brightness of the primary display
+primary_display_brightness = sbc.get_brightness(display=0)
+#get the brightness of the secondary display (if connected)
+secondary_display_brightness = sbc.get_brightness(display=1)
 ```  
 
 ### set_brightness(`brightness_level, force=False, verbose_error=False, **kwargs`)
@@ -82,6 +94,9 @@ sbc.set_brightness('+25')
 
 #decrease brightness by 30%
 sbc.set_brightness('-30')
+
+#set the brightness of display 0 to 50%
+sbc.set_brightness(50, display=0)
 ```  
 
 ### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs`)
