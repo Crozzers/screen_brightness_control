@@ -21,13 +21,16 @@ For running on Linux you will need to install one of these programs: [light](htt
 You can call this module from your command line or use it as a python library (see the documentation section below).
 ```
 python -m screen_brightness_control --help
-> usage: __main__.py [-h] [-s SET] [-g] [-f FADE]
-> 
+> usage: __main__.py [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
+>
 > optional arguments:
 >   -h, --help            show this help message and exit
+>   -d DISPLAY, --display DISPLAY
+>                         the display to be used
 >   -s SET, --set SET     set the brightness to this value
 >   -g, --get             get the current screen brightness
 >   -f FADE, --fade FADE  fade the brightness to this value
+>   -v, --verbose         any error messages will be more detailed
 python -m screen_brightness_control -g
 > 100
 python -m screen_brightness_control -s 50
