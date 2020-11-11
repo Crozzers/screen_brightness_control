@@ -106,7 +106,7 @@ class XRandr():
             names = [names[display]]
         for name in names:
             subprocess.run(['xrandr','--output', name, '--brightness', value])
-        return self.get_brightness()
+        return self.get_brightness(display=display)
 
 def get_brightness_from_sysfiles(display = None):
     '''

@@ -145,5 +145,5 @@ def get_brightness(verbose_error=False,**kwargs):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
 
-__version__='0.4.0-dev4'
+__version__='0.4.0-dev5'
 __author__='Crozzers'
