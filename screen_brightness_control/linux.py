@@ -58,10 +58,10 @@ class XBacklight():
     def set_brightness(self, value, no_return = False, **kwargs):
         '''
         Sets the screen brightness to a supplied value
-        
+
         Args:
             no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
-        
+
         Returns:
             int (0 to 100) or None
         '''

@@ -72,7 +72,9 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     Returns:
         Returns a thread object if blocking is set to False, otherwise it returns the result of get_brightness()
     '''
-    def fade(**kwargs):
+    def fade(start, finish, increment, **kwargs):
+        if 'no_return' not in kwargs.keys():
+            kwargs['no_return']=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
@@ -80,34 +82,48 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        if get_brightness()!=finish:
-            set_brightness(finish)
-        return get_brightness()
-
-    current = get_brightness()
-
-    #convert strings like '+5' to an actual brightness value
-    if type(finish)==str:
-        if "+" in finish or "-" in finish:
-            finish=current+int(float(finish))
-    if type(start)==str:
-        if "+" in start or "-" in start:
-            start=current+int(float(start))
-
-    start = current if start==None else start
-    #make sure both values are within the correct range
-    finish = min(max(int(finish),0),100)
-    start = min(max(int(start),0),100)
-
-    if finish==start:
+        del(kwargs['no_return'])
+        if get_brightness(**kwargs)!=finish:
+            set_brightness(finish, **kwargs)
         return
 
+    current_vals = get_brightness(**kwargs)
+    current_vals = [current_vals, ] if type(current_vals)==int else current_vals
+
+    threads = []
+    a = 0
+    for current in current_vals:
+        st, fi = start, finish
+        #convert strings like '+5' to an actual brightness value
+        if type(fi)==str:
+            if "+" in fi or "-" in fi:
+                fi=current+int(float(fi))
+        if type(st)==str:
+            if "+" in st or "-" in st:
+                st=current+int(float(st))
+
+        st = current if st==None else st
+        #make sure both values are within the correct range
+        fi = min(max(int(fi),0),100)
+        st = min(max(int(st),0),100)
+
+        kw=kwargs.copy()
+        if 'display' not in kw.keys():
+            kw['display'] = a
+
+        if finish!=start:
+            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw, daemon=True)
+            t1.start()
+            threads.append(t1)
+        a+=1
+
     if not blocking:
-        t1 = threading.Thread(target=fade, kwargs=kwargs, daemon=True)
-        t1.start()
-        return t1
+        return threads
     else:
-         return fade(**kwargs)
+        for t in threads:
+            t.join()
+        return get_brightness(**kwargs)
+
          
 def get_brightness(verbose_error=False,**kwargs):
     '''
@@ -145,5 +161,5 @@ def get_brightness(verbose_error=False,**kwargs):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
 
-__version__='0.4.0-dev5'
+__version__='0.4.0-dev6'
 __author__='Crozzers'
