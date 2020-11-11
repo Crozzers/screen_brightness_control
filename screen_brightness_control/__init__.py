@@ -29,6 +29,8 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
     elif type(brightness_level) in (str,float):
         brightness_level=int(float(str(brightness_level)))
 
+    brightness_level = max(0, min(100, brightness_level))
+
     if platform.system()=='Windows':
         try:
             return windows.set_brightness(brightness_level, verbose_error=verbose_error, **kwargs)
@@ -84,7 +86,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
 
         del(kwargs['no_return'])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, **kwargs)
+            set_brightness(finish, no_return = True, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
@@ -134,7 +136,7 @@ def get_brightness(verbose_error=False,**kwargs):
         kwargs - is passed directly to the OS relevant brightness method
     
     Returns:
-        An integer between 0 and 100. On Windows it may return a list of integers if multiple monitors are detected
+        An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
     '''
 
     if platform.system()=='Windows':
@@ -161,5 +163,5 @@ def get_brightness(verbose_error=False,**kwargs):
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
 
-__version__='0.4.0-dev6'
+__version__='0.4.0-dev7'
 __author__='Crozzers'

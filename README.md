@@ -63,8 +63,8 @@ Raises `ScreenBrightnessError` upon failure
 ```python
 import screen_brightness_control as sbc
 
-#get the current screen brightness
-current_brightness = sbc.get_brightness()
+#get the current screen brightness (for all detected displays)
+all_screens_brightness = sbc.get_brightness()
 #get the brightness of the primary display
 primary_display_brightness = sbc.get_brightness(display=0)
 #get the brightness of the secondary display (if connected)
@@ -130,6 +130,9 @@ sbc.fade_brightness(90, start=100, interval=0.1)
 #fade the brightness to 100% in a new thread
 sbc.fade_brightness(100, blocking=False)
 ```
+
+## A Toast
+To GitHub user `lcharles` for assisting with version `0.4.0` and [DDC/CI support](https://github.com/Crozzers/screen_brightness_control/issues/1) in the library
 
 ## License
 This software is licensed under the [MIT license](https://mit-license.org/)

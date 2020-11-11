@@ -23,15 +23,14 @@ class Light():
             no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
 
         Returns:
-            list, int or None
+            list, int (0 to 100) or None
         '''
-        extras = ''
+        display_names = self.get_display_names()
         if display!=None:
-            display_names = self.get_display_names()
-            name = display_names[display]
-            extras = '-s sysfs/backlight/'+name
-        command = 'light -S {} {}'.format(value, extras)
-        subprocess.call(command.split(" "))
+            display_names = [display_names[display]]
+        for name in display_names:
+            command = f'light -S {value} -s sysfs/backlight/{name}'
+            subprocess.call(command.split(" "))
         return self.get_brightness(display=display) if not no_return else None
 
     def get_brightness(self, display = None):
@@ -42,16 +41,17 @@ class Light():
             display (int): The index of the display you wish to query
         
         Returns:
-            An integer between 0 and 100
+            list or int (0 to 100)
         '''
-        extras = ''
+        display_names = self.get_display_names()
         if display!=None:
-            display_names = self.get_display_names()
-            name = display_names[display]
-            extras = '-s sysfs/backlight/'+name
-        command = 'light -G {}'.format(extras)
-        res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
-        return int(round(float(str(res)),0))
+            display_names = [display_names[display]]
+        results = []
+        for name in display_names:
+            command = f'light -G -s sysfs/backlight/{name}'
+            results.append(subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode())
+        results = [int(round(float(str(i)),0)) for i in results]
+        return results[0] if len(results)==1 else results
 
 class XBacklight():
     '''collection of screen brightness related methods using the xbacklight executable'''
@@ -90,13 +90,13 @@ class XRandr():
             display (int): The index of the display you wish to query
         
         Returns:
-            An integer between 0 and 100
+            list or int (0 to 100)
         '''
         out = subprocess.check_output(['xrandr','--verbose']).decode().split('\n')
         lines = [float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100 for i in out if 'Brightness:' in i]
         if display!=None:
             return lines[display]
-        return lines[0]
+        return lines
 
     def set_brightness(self, value, display = None, no_return = False):
         '''
