@@ -6,16 +6,17 @@ _MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
 
 class WMI():
     '''collection of screen brightness related methods using the wmi API'''
-    def set_brightness(self, value, display = None):
+    def set_brightness(self, value, display = None, no_return = False):
         '''
-        Sets the display brightness for Windows
+        Sets the display brightness for Windows using WMI
 
         Args:
             value (int): The percentage to set the brightness to
             display (int): The index display you wish to set the brightness for
+            no_return (bool): if True, this function returns None, otherwise it returns the result of self.get_brightness()
 
         Returns:
-            The result of get_brightness()
+            list, int or None
         '''
         #WMI calls don't work in new threads so we have to run this check
         if threading.current_thread() != threading.main_thread():
@@ -26,7 +27,7 @@ class WMI():
             brightness_method = brightness_method[display]
         for method in brightness_method:
             method.WmiSetBrightness(value,0)
-        return self.get_brightness()
+        return self.get_brightness(display=display) if not no_return else None
 
     def get_brightness(self, display = None):
         '''
@@ -90,16 +91,36 @@ class CTypes():
                     if not windll.dxva2.DestroyPhysicalMonitor(physical.handle):
                         raise WinError()
 
-    def set_brightness(self, value, display=None):
+    def set_brightness(self, value, display=None, no_return=False):
+        '''
+        Sets the display brightness via ctypes and windll
+
+        Args:
+            value (int): The percentage to set the brightness to
+            display (int): The index display you wish to set the brightness for
+            no_return (bool): if True, this function returns None, otherwise it returns the result of self.get_brightness()
+
+        Returns:
+            list, int or None
+        '''
         #the iter monitors method isn't subscriptable (uses yield) and the code looks too scary to change
         i = 0
         for monitor in self._iter_physical_monitors():
             if display == None or (display!=None and display==i):
                 windll.dxva2.SetVCPFeature(HANDLE(monitor), BYTE(0x10), DWORD(value))
             i+=1
-        return self.get_brightness(display=display)
+        return self.get_brightness(display=display) if not no_return else None
 
     def get_brightness(self, display = None):
+        '''
+        Returns the current screen brightness using ctypes and windll
+
+        Args:
+            display (int): the index display you wish to query
+
+        Returns:
+            list, int or None
+        '''
         values = []
         for monitor in self._iter_physical_monitors():
             cur_out = DWORD()
@@ -117,7 +138,8 @@ def set_brightness(value, verbose_error=False, **kwargs):
         kwargs (dict): passed directly to the chosen brightness method
 
     Returns:
-        The result of get_brightness()
+        Whatever the called methods return.
+        Typically: list, int or None
     '''
     methods = [WMI(), CTypes()]
     errors = []

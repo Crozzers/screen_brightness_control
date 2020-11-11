@@ -13,16 +13,17 @@ class Light():
                 displays.append(r)
         return displays
 
-    def set_brightness(self, value, display = None):
+    def set_brightness(self, value, display = None, no_return = False):
         '''
         Sets the brightness for a display using the light executable
 
         Args:
             value (int): Sets the brightness to this value
             display (int): The index of the display you wish to change
-        
+            no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
+
         Returns:
-            The result of self.get_brightness()
+            list, int or None
         '''
         extras = ''
         if display!=None:
@@ -31,7 +32,7 @@ class Light():
             extras = '-s sysfs/backlight/'+name
         command = 'light -S {} {}'.format(value, extras)
         subprocess.call(command.split(" "))
-        return self.get_brightness(display = display)
+        return self.get_brightness(display=display) if not no_return else None
 
     def get_brightness(self, display = None):
         '''
@@ -54,11 +55,19 @@ class Light():
 
 class XBacklight():
     '''collection of screen brightness related methods using the xbacklight executable'''
-    def set_brightness(self, value, **kwargs):
-        '''Sets the screen brightness to a supplied value'''
+    def set_brightness(self, value, no_return = False, **kwargs):
+        '''
+        Sets the screen brightness to a supplied value
+        
+        Args:
+            no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
+        
+        Returns:
+            int (0 to 100) or None
+        '''
         command = 'xbacklight -set {}'.format(value)
         subprocess.call(command.split(" "))
-        return self.get_brightness()
+        return self.get_brightness() if not no_return else None
 
     def get_brightness(self, **kwargs):
         '''Returns the screen brightness as reported by xbacklight'''
@@ -89,13 +98,14 @@ class XRandr():
             return lines[display]
         return lines[0]
 
-    def set_brightness(self, value, display = None):
+    def set_brightness(self, value, display = None, no_return = False):
         '''
         Sets the brightness for a display using the xrandr executable
 
         Args:
             value (int): Sets the brightness to this value
             display (int): The index of the display you wish to change
+            no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
         
         Returns:
             The result of self.get_brightness()
@@ -106,7 +116,7 @@ class XRandr():
             names = [names[display]]
         for name in names:
             subprocess.run(['xrandr','--output', name, '--brightness', value])
-        return self.get_brightness(display=display)
+        return self.get_brightness(display=display) if not no_return else None
 
 def get_brightness_from_sysfiles(display = None):
     '''

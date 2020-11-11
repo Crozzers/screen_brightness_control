@@ -31,6 +31,7 @@ python -m screen_brightness_control --help
 >   -g, --get             get the current screen brightness
 >   -f FADE, --fade FADE  fade the brightness to this value
 >   -v, --verbose         any error messages will be more detailed
+>   -V, --version         print the current version
 python -m screen_brightness_control -g
 > 100
 python -m screen_brightness_control -s 50
