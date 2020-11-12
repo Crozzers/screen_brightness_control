@@ -2,17 +2,28 @@ import wmi, threading, pythoncom, ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 
-_MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
-
 class WMI():
     '''collection of screen brightness related methods using the wmi API'''
+    def get_display_names(self):
+        '''Returns models of all displays that can be addressed by WMI'''
+        try:
+            models = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
+            m = []
+            for i in models:
+                i = i.InstanceName
+                i = i[i.index('\\')+1:]
+                i = i[:i.index('\\')]
+                m.append(i)
+        except:
+            m = []
+        return m
     def set_brightness(self, value, display = None, no_return = False):
         '''
         Sets the display brightness for Windows using WMI
 
         Args:
             value (int): The percentage to set the brightness to
-            display (int): The index display you wish to set the brightness for
+            display (int or str): The index display you wish to set the brightness for OR the model of the display, as returned by self.get_display_names
             no_return (bool): if True, this function returns None, otherwise it returns the result of self.get_brightness()
 
         Returns:
@@ -24,7 +35,9 @@ class WMI():
 
         brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
         if display!=None:
-            brightness_method = brightness_method[display]
+            if type(display) is str:
+                display = self.get_display_names().index(display)
+            brightness_method = [brightness_method[display]]
         for method in brightness_method:
             method.WmiSetBrightness(value,0)
         return self.get_brightness(display=display) if not no_return else None
@@ -40,14 +53,18 @@ class WMI():
             list or int (0 to 100)
         '''
         #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():###check brightness caps CTYPES
+        if threading.current_thread() != threading.main_thread():
             pythoncom.CoInitialize()
         brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
         values = [i.CurrentBrightness for i in brightness_method]
         if display!=None:
+            if type(display) is str:
+                display = self.get_display_names().index(display)
             values = [values[display]]
         values = values[0] if len(values)==1 else values
         return values
+
+_MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
 
 class _PHYSICAL_MONITOR(Structure):
     _fields_ = [('handle', HANDLE),
@@ -59,17 +76,27 @@ class CTypes():
     https://stackoverflow.com/questions/16588133/sending-ddc-ci-commands-to-monitor-on-windows-using-python
     '''
     class PhysicalMonitors():
+        '''Internal class, do not call'''
         def __init__(self):
+            self.initialized = True
             self.monitors = []
-            ms={}
+            self.monitors_with_caps = {}
             for m in self._iter_physical_monitors(close_handles=False):
-                if m:
-                    ms[CTypes().get_monitor_caps(m)] = m
-            for v in ms.values():
-                self.monitors.append(v)
+                cap = self.get_monitor_caps(m)
+                self.monitors_with_caps[cap] = m
+                self.monitors.append(m)
         def __enter__(self):
-            self.__init__()
+            if not hasattr(self, 'initialized') or getattr(self, 'initialized')==False:
+                self.__init__()
             return self
+        def get_monitor_caps(self, monitor):
+            caps_string_length = DWORD()
+            if not windll.dxva2.GetCapabilitiesStringLength(monitor,ctypes.byref(caps_string_length)):
+                return
+            caps_string = (ctypes.c_char * caps_string_length.value)()
+            if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
+                return
+            return caps_string.value.decode('ASCII')
         def _iter_physical_monitors(self, close_handles=True):
             """Iterates physical monitors.
 
@@ -105,16 +132,27 @@ class CTypes():
             for i in self.monitors:
                  windll.dxva2.DestroyPhysicalMonitor(i)
         def __exit__(self, exc_type, exc_val, exc_tb):
+            self.initialized = False
             self.close()
 
+    def __init__(self):
+        self.physical_monitors = self.PhysicalMonitors()
+
+    def get_display_names(self):
+        '''
+        returns the model numbers for each detected (and addressable) display
+        '''
+        names = []
+        for key in self.physical_monitors.monitors_with_caps.keys():
+            cap = key[key.index('model(')+6:]
+            cap = cap[:cap.index(')')]
+            names.append(cap)
+        return names
+
+
     def get_monitor_caps(self, monitor):
-        caps_string_length = DWORD()
-        if not windll.dxva2.GetCapabilitiesStringLength(monitor,ctypes.byref(caps_string_length)):
-            return
-        caps_string = (ctypes.c_char * caps_string_length.value)()
-        if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
-                return
-        return caps_string.value.decode('ASCII')
+        '''returns the capabilities of each monitor'''
+        return self.physical_monitors.get_monitor_caps(monitor)
 
     def set_brightness(self, value, display=None, no_return=False):
         '''
@@ -122,18 +160,19 @@ class CTypes():
 
         Args:
             value (int): The percentage to set the brightness to
-            display (int): The index display you wish to set the brightness for
+            display (int or str): The index display you wish to set the brightness for OR the model of the display as returned by self.get_display_names()
             no_return (bool): if True, this function returns None, otherwise it returns the result of self.get_brightness()
 
         Returns:
             list, int (0 to 100) or None
         '''
-        with self.PhysicalMonitors() as p:
-            monitors = p.monitors
-            if display!=None:
-                monitors = [monitors[display]]
-            for monitor in monitors:
-                windll.dxva2.SetVCPFeature(HANDLE(monitor), BYTE(0x10), DWORD(value))
+        monitors = self.physical_monitors.monitors
+        if display!=None:
+            if type(display) is str:
+                display = self.get_display_names().index(display)
+            monitors = [monitors[display]]
+        for monitor in monitors:
+            windll.dxva2.SetVCPFeature(HANDLE(monitor), BYTE(0x10), DWORD(value))
 
         return self.get_brightness(display=display) if not no_return else None
 
@@ -148,71 +187,109 @@ class CTypes():
             list, int (0 to 100) or None
         '''
         values = []
-        with self.PhysicalMonitors() as p:
-            monitors = p.monitors
-            for monitor in monitors:
-                cur_out = DWORD()
-                if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(monitor), BYTE(0x10), None, byref(cur_out), None):
-                    values.append(cur_out.value)
-                del(cur_out)
+        for monitor in self.physical_monitors.monitors:
+            cur_out = DWORD()
+            if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(monitor), BYTE(0x10), None, byref(cur_out), None):
+                values.append(cur_out.value)
+            del(cur_out)
         if display!=None:
+            if type(display) is str:
+                display = self.get_display_names().index(display)
             values = [values[display]]
         values = values[0] if len(values)==1 else values
         return values
+    def close(self):
+        '''performs cleanup functions'''
+        self.physical_monitors.close()
 
-def set_brightness(value, verbose_error=False, **kwargs):
+def set_brightness(value, display=None, **kwargs):
     '''
     Sets the brightness for a display
 
     Args:
         value (int): Sets the brightness to this value
-        verbose_error (bool): Controls how much detail any error messages contain
+        display (int or str): the specific display you wish to adjust OR the model of the display
         kwargs (dict): passed directly to the chosen brightness method
 
     Returns:
         Whatever the called methods return.
         Typically: list, int (0 to 100) or None
     '''
-    methods = [WMI(), CTypes()]
+    global methods
+    if type(display) is int:
+        display_names = []
+        for m in methods:
+            try:
+                display_names+=m.get_display_names()
+            except:
+                pass
+        display = display_names[display]
     errors = []
+    output = []
     for m in methods:
         try:
-            return m.set_brightness(value, **kwargs)
+            ret = m.set_brightness(value, display=display, **kwargs)
+            if type(ret) is list:
+                output+=ret
+            else:
+                output.append(ret)
         except Exception as e:
             errors.append([type(e).__name__, e])
+
+    if output!=[]:
+        if len(output) == 1:
+            output = output[0]
+        return output
+
     #if function hasn't already returned it has failed
-    if verbose_error:
-        msg='\n'
-        for e in errors:
-            msg+=f'    {e[0]}: {e[1]}\n'
-    else:
-        msg = 'WMI and ctypes calls failed, monitor(s) unsupported'
+    msg='\n'
+    for e in errors:
+        msg+=f'    {e[0]}: {e[1]}\n'
     raise Exception(msg)
 
-def get_brightness(verbose_error=False, **kwargs):
+def get_brightness(display = None, **kwargs):
     '''
     Returns the brightness for a display
 
     Args:
         value (int): Sets the brightness to this value
-        verbose_error (bool): Controls how much detail any error messages contain
+        display (int or str): the specific display you wish to adjust OR the model of the display
         kwargs (dict): passed directly to chosen brightness method
 
     Returns:
         An int between 0 and 100
     '''
-    methods = [WMI(), CTypes()]
+    global methods
+    if type(display) is int:
+        display_names = []
+        for m in methods:
+            try:
+                display_names+=m.get_display_names()
+            except:
+                pass
+        display = display_names[display]
     errors = []
+    output = []
     for m in methods:
         try:
-            return m.get_brightness(**kwargs)
+            ret = m.get_brightness(display=display, **kwargs)
+            if type(ret) is list:
+                output+=ret
+            else:
+                output.append(ret)
         except Exception as e:
             errors.append([type(e).__name__, e])
+
+    if output!=[]:
+        if len(output) == 1:
+            output = output[0]
+        return output
+
     #if function hasn't already returned it has failed
-    if verbose_error:
-        msg='\n'
-        for e in errors:
-            msg+=f'    {e[0]}: {e[1]}\n'
-    else:
-        msg = 'WMI and ctypes calls failed, monitor(s) unsupported'
+    msg='\n'
+    for e in errors:
+        msg+=f'    {e[0]}: {e[1]}\n'
     raise Exception(msg)
+
+global methods
+methods = [WMI(), CTypes()]
