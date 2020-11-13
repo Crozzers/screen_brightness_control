@@ -1,6 +1,7 @@
 import wmi, threading, pythoncom, ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
+from . import flatten_list
 
 class WMI():
     '''collection of screen brightness related methods using the wmi API'''
@@ -149,7 +150,6 @@ class CTypes():
             names.append(cap)
         return names
 
-
     def get_monitor_caps(self, monitor):
         '''returns the capabilities of each monitor'''
         return self.physical_monitors.get_monitor_caps(monitor)
@@ -228,11 +228,8 @@ def set_brightness(value, display=None, **kwargs):
     output = []
     for m in methods:
         try:
-            ret = m.set_brightness(value, display=display, **kwargs)
-            if type(ret) is list:
-                output+=ret
-            else:
-                output.append(ret)
+            output.append(m.set_brightness(value, display=display, **kwargs))
+            output = flatten_list(output)
         except Exception as e:
             errors.append([type(e).__name__, e])
 
@@ -272,11 +269,8 @@ def get_brightness(display = None, **kwargs):
     output = []
     for m in methods:
         try:
-            ret = m.get_brightness(display=display, **kwargs)
-            if type(ret) is list:
-                output+=ret
-            else:
-                output.append(ret)
+            output.append(m.get_brightness(display=display, **kwargs))
+            output = flatten_list(output)
         except Exception as e:
             errors.append([type(e).__name__, e])
 

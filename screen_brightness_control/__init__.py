@@ -1,14 +1,28 @@
 import platform,time,threading,subprocess,os
-if platform.system()=='Windows':
-    from . import windows
-elif platform.system()=='Linux':
-    from . import linux
 
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
     def __init__(self, message="Cannot set/retrieve brightness level"):
         self.message=message
         super().__init__(self.message)
+
+def flatten_list(thick_list):
+    '''
+    internal function I use to flatten lists, because I do that often
+    
+    Args:
+        thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
+
+    Returns:
+        one dimensional list
+    '''
+    flat_list = []
+    for item in thick_list:
+        if type(item) is list:
+            flat_list+=flatten_list(item)
+        else:
+            flat_list.append(item)
+    return flat_list
 
 def set_brightness(value,force=False,verbose_error=False,**kwargs):
     '''
@@ -28,12 +42,17 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
         raise TypeError(f'value must be int, float or str, not {type(value)}')
 
     if type(value) is str and value.startswith(('+', '-')):
-        current = get_brightness()
-        if type(current) is list:
-            if 'display' in kwargs.keys() and type(kwargs['display']) is int:
-                current = current[kwargs['display']]
-            else:
-                current = current[0]
+        if 'display' in kwargs.keys():
+            current = get_brightness(display=kwargs['display'])
+        else:
+            current = get_brightness()
+            if type(current) is list:
+                out = []
+                for i in range(len(current)):
+                    out.append(set_brightness(current[i] + int(float(str(value))), display = i, **kwargs))
+                #flatten the list output
+                out = flatten_list(out)
+                return out[0] if len(out)==1 else out 
 
         value = current + int(float(str(value)))
     else:
@@ -48,7 +67,7 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
             if verbose_error:
                 raise ScreenBrightnessError from e
             error = e
-        #this is where errors are raised if verbose_error==False. Means that only this error will be printed
+        #this is where errors are raised if verbose_error==False. Means that only this error will be printed, not full traceback
         if error:
             raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
 
@@ -141,8 +160,8 @@ def get_brightness(verbose_error=False,**kwargs):
     Returns the current display brightness
 
     Args:
-        verbose_error - boolean value that controls the level of detail in the error messages
-        kwargs - is passed directly to the OS relevant brightness method
+        verbose_error (bool): controls the level of detail in the error messages
+        kwargs (dict): is passed directly to the OS relevant brightness method
     
     Returns:
         An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
@@ -171,6 +190,11 @@ def get_brightness(verbose_error=False,**kwargs):
         raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
     elif platform.system()=='Darwin':
         raise ScreenBrightnessError('MAC is unsupported')
+
+if platform.system()=='Windows':
+    from . import windows
+elif platform.system()=='Linux':
+    from . import linux
 
 __version__='0.4.0-dev8'
 __author__='Crozzers'
