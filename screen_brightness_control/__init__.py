@@ -154,7 +154,6 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             t.join()
         return get_brightness(**kwargs)
 
-         
 def get_brightness(verbose_error=False,**kwargs):
     '''
     Returns the current display brightness
@@ -196,5 +195,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.4.0-dev8'
+__version__='0.4.0-dev9'
 __author__='Crozzers'

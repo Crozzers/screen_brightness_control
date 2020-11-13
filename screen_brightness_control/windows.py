@@ -48,7 +48,7 @@ class WMI():
         Returns the current display brightness
 
         Args:
-            display (int): The index display you wish to get the brightness of
+            display (int): The index display you wish to get the brightness of OR the model of that display
 
         Returns:
             list or int (0 to 100)
@@ -71,7 +71,7 @@ class _PHYSICAL_MONITOR(Structure):
     _fields_ = [('handle', HANDLE),
                 ('description', WCHAR * 128)]
 
-class CTypes():
+class VCP():
     '''
     Collection of screen brightness related methods using the DDC/CI commands
     https://stackoverflow.com/questions/16588133/sending-ddc-ci-commands-to-monitor-on-windows-using-python
@@ -286,4 +286,4 @@ def get_brightness(display = None, **kwargs):
     raise Exception(msg)
 
 global methods
-methods = [WMI(), CTypes()]
+methods = [WMI(), VCP()]
