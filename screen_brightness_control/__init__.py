@@ -10,30 +10,40 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
-def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
+def set_brightness(value,force=False,verbose_error=False,**kwargs):
     '''
     Sets the screen brightness
 
     Args:
-        brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
-        verbose_error - boolean value controls the amount of detail error messages will contain
-        kwargs - passed to the OS relevant brightness method
+        value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        force (bool): [Linux Only] if false the brightness will never be set lower than 1 (as 0 usually turns the screen off). If True, this check is bypassed
+        verbose_error (bool): boolean value controls the amount of detail error messages will contain
+        kwargs (dict): passed to the OS relevant brightness method
     
     Returns:
         Returns the result of get_brightness()
     '''
-    if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
-        current_brightness=get_brightness()
-        brightness_level=current_brightness+int(float(brightness_level))
-    elif type(brightness_level) in (str,float):
-        brightness_level=int(float(str(brightness_level)))
+    
+    if type(value) not in (int, float, str):
+        raise TypeError(f'value must be int, float or str, not {type(value)}')
 
-    brightness_level = max(0, min(100, brightness_level))
+    if type(value) is str and value.startswith(('+', '-')):
+        current = get_brightness()
+        if type(current) is list:
+            if 'display' in kwargs.keys() and type(kwargs['display']) is int:
+                current = current[kwargs['display']]
+            else:
+                current = current[0]
+
+        value = current + int(float(str(value)))
+    else:
+        value = int(float(str(value)))
+
+    value = max(0, min(100, value))
 
     if platform.system()=='Windows':
         try:
-            return windows.set_brightness(brightness_level, verbose_error=verbose_error, **kwargs)
+            return windows.set_brightness(value, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -44,10 +54,9 @@ def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
 
     elif platform.system()=='Linux':
         if not force:
-            brightness_level=str(max(1,int(brightness_level)))
-            
+            value = max(1, value)
         try:
-            return linux.set_brightness(brightness_level, verbose_error=verbose_error, **kwargs)
+            return linux.set_brightness(value, force=force, verbose_error=verbose_error, **kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
@@ -141,7 +150,7 @@ def get_brightness(verbose_error=False,**kwargs):
 
     if platform.system()=='Windows':
         try:
-            return windows.get_brightness(verbose_error=verbose_error, **kwargs)
+            return windows.get_brightness(**kwargs)
         except Exception as e:
             if verbose_error:
                 raise ScreenBrightnessError from e
