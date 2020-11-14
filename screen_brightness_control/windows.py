@@ -7,6 +7,9 @@ class WMI():
     '''collection of screen brightness related methods using the wmi API'''
     def get_display_names(self):
         '''Returns models of all displays that can be addressed by WMI'''
+        #WMI calls don't work in new threads so we have to run this check
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
         try:
             models = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
             m = []
@@ -80,20 +83,16 @@ class VCP():
         '''Internal class, do not call'''
         def __init__(self):
             self.initialized = True
-            self.monitors = []
             self.monitors_with_caps = {}
-            for m in self._iter_physical_monitors(close_handles=False):
-                #if m:
-                # so for some reason monitors still work even if they are equal to None?
-                # which is why this check is commented out.
+            for m in self.get_monitor_handles():
                 cap = self.get_monitor_caps(m)
                 if cap!=None:
-                    #if a monitor is plugged in but the source is not this machine, the capabilities are 'None'.
-                    #this makes sure we don't add those
+                    # if a monitor is plugged in but the source is not this machine, the capabilities are 'None'.
+                    # this makes sure we don't add those
                     self.monitors_with_caps[cap] = m###fix this
-                    self.monitors.append(m)
                 else:
                     windll.dxva2.DestroyPhysicalMonitor(m)
+            self.monitors = self.monitors_with_caps.values()
         def __enter__(self):
             if not hasattr(self, 'initialized') or getattr(self, 'initialized')==False:
                 self.__init__()
@@ -106,19 +105,12 @@ class VCP():
             if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
                 return
             return caps_string.value.decode('ASCII')
-        def _iter_physical_monitors(self, close_handles=True):
-            """Iterates physical monitors.
-
-            The handles are closed automatically whenever the iterator is advanced.
-            This means that the iterator should always be fully exhausted!
-
-            If you want to keep handles e.g. because you need to store all of them and
-            use them later, set `close_handles` to False and close them manually."""
-
+        def get_monitor_handles(self):
             def callback(hmonitor, hdc, lprect, lparam):
                 monitors.append(HMONITOR(hmonitor))
                 return True
 
+            all_monitors = []
             monitors = []
             if not windll.user32.EnumDisplayMonitors(None, None, _MONITORENUMPROC(callback), None):
                 raise WinError('EnumDisplayMonitors failed')
@@ -127,15 +119,13 @@ class VCP():
                 count = DWORD()
                 if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
                     raise WinError()
-                # Get physical monitor handles
-                physical_array = (_PHYSICAL_MONITOR * count.value)()
-                if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
-                    raise WinError()
-                for physical in physical_array:
-                    yield physical.handle
-                    if close_handles:
-                        if not windll.dxva2.DestroyPhysicalMonitor(physical.handle):
-                            raise WinError()
+                if count.value>0:
+                    # Get physical monitor handles
+                    physical_array = (_PHYSICAL_MONITOR * count.value)()
+                    if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
+                        raise WinError()
+                    all_monitors.append(physical_array[0].handle)
+            return all_monitors
         def close(self):
             for i in self.monitors:
                  windll.dxva2.DestroyPhysicalMonitor(i)
