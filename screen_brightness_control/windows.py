@@ -83,9 +83,17 @@ class VCP():
             self.monitors = []
             self.monitors_with_caps = {}
             for m in self._iter_physical_monitors(close_handles=False):
+                #if m:
+                # so for some reason monitors still work even if they are equal to None?
+                # which is why this check is commented out.
                 cap = self.get_monitor_caps(m)
-                self.monitors_with_caps[cap] = m
-                self.monitors.append(m)
+                if cap!=None:
+                    #if a monitor is plugged in but the source is not this machine, the capabilities are 'None'.
+                    #this makes sure we don't add those
+                    self.monitors_with_caps[cap] = m###fix this
+                    self.monitors.append(m)
+                else:
+                    windll.dxva2.DestroyPhysicalMonitor(m)
         def __enter__(self):
             if not hasattr(self, 'initialized') or getattr(self, 'initialized')==False:
                 self.__init__()
@@ -114,7 +122,6 @@ class VCP():
             monitors = []
             if not windll.user32.EnumDisplayMonitors(None, None, _MONITORENUMPROC(callback), None):
                 raise WinError('EnumDisplayMonitors failed')
-
             for monitor in monitors:
                 # Get physical monitor count
                 count = DWORD()
@@ -152,7 +159,7 @@ class VCP():
 
     def get_monitor_caps(self, monitor):
         '''returns the capabilities of each monitor'''
-        return self.physical_monitors.get_monitor_caps(monitor)
+        return list(self.physical_monitors.monitors_with_caps.keys())[monitor]
 
     def set_brightness(self, value, display=None, no_return=False):
         '''
@@ -216,15 +223,15 @@ def set_brightness(value, display=None, **kwargs):
         Typically: list, int (0 to 100) or None
     '''
     global methods
+    errors=[]
     if type(display) is int:
         display_names = []
         for m in methods:
             try:
                 display_names+=m.get_display_names()
-            except:
-                pass
+            except Exception as e:
+                errors.append([type(e).__name__, e])
         display = display_names[display]
-    errors = []
     output = []
     for m in methods:
         try:
@@ -257,15 +264,16 @@ def get_brightness(display = None, **kwargs):
         An int between 0 and 100
     '''
     global methods
+    errors = []
     if type(display) is int:
         display_names = []
         for m in methods:
             try:
                 display_names+=m.get_display_names()
-            except:
-                pass
+            except Exception as e:
+                errors.append([type(e).__name__, e])
         display = display_names[display]
-    errors = []
+
     output = []
     for m in methods:
         try:
@@ -286,4 +294,6 @@ def get_brightness(display = None, **kwargs):
     raise Exception(msg)
 
 global methods
-methods = [WMI(), VCP()]
+wmi_method = WMI()
+vcp_method = VCP()
+methods = [wmi_method, vcp_method]
