@@ -159,7 +159,7 @@ def get_brightness_from_sysfiles(display = None):
             exc+=f'\n    {e[0]}: {e[1]}'
         raise Exception(exc)
 
-def set_brightness(value, verbose_error=False, **kwargs):
+def set_brightness(value, **kwargs):
     '''
     Sets the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
 
@@ -177,17 +177,14 @@ def set_brightness(value, verbose_error=False, **kwargs):
         try:
             return m.set_brightness(value, **kwargs)
         except Exception as e:
-            errors.append([type(e).__name__, e])
+            errors.append([type(m).__name__, type(e).__name__, e])
     #if function hasn't already returned it has failed
-    if verbose_error:
-        msg=''
-        for e in errors:
-            msg+=f'    {e[0]}: {e[1]}\n'
-    else:
-        msg = 'Could not call light, xrandr or xbacklight executables'
-        raise Exception(msg)
+    msg='\n'
+    for e in errors:
+        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
+    raise Exception(msg)
 
-def get_brightness(verbose_error=False, **kwargs):
+def get_brightness(**kwargs):
     '''
     Returns the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
 
@@ -205,17 +202,13 @@ def get_brightness(verbose_error=False, **kwargs):
         try:
             return m.get_brightness(**kwargs)
         except Exception as e:
-            errors.append([type(e).__name__, e])
+            errors.append([type(m).__name__, type(e).__name__, e])
     #if function hasn't already returned it has failed
     try:
        return get_brightness_from_sysfiles(**kwargs)
     except Exception as e:
-       errors.append([type(e).__name__, e])
-    if verbose_error:
-        msg=''
-        for e in errors:
-            msg+=f'\n    {e[0]}: {e[1]}'
-        raise Exception(msg)
-    else:
-        msg = 'Could not call light, xrandr or xbacklight executables'
-        raise Exception(msg)
+       errors.append(['/sys/class/backlight/*', type(e).__name__, e])
+    msg='\n'
+    for e in errors:
+        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
+    raise Exception(msg)

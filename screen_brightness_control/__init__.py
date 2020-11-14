@@ -60,32 +60,30 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
     value = max(0, min(100, value))
 
-    if platform.system()=='Windows':
-        try:
-            return windows.set_brightness(value, **kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
-        #this is where errors are raised if verbose_error==False. Means that only this error will be printed, not full traceback
-        if error:
-            raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
-
-    elif platform.system()=='Linux':
-        if not force:
-            value = max(1, value)
-        try:
-            return linux.set_brightness(value, force=force, verbose_error=verbose_error, **kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
-
-        #if the function has not returned by now it failed
-        raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
+    if platform.system()=='Darwin':
+        error = 'MAC is unsupported'
     else:
-        #MAC is unsupported as I don't have one to test code on
-        raise ScreenBrightnessError('MAC is unsupported')
+        if platform.system()=='Windows':
+            method = windows.set_brightness
+        elif platform.system()=='Linux':
+            if not force:
+                value = max(1, value)
+            method = linux.set_brightness
+        else:
+            error = f'{platform.system()} is not supported'
+            method = None
+
+        if method!=None:
+            try:
+                return method(value, **kwargs)
+            except Exception as e:
+                if verbose_error:
+                    raise ScreenBrightnessError from e
+                error = e
+
+    #if the function has not returned by now it failed
+    if error:
+        raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
 
 def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
@@ -166,34 +164,34 @@ def get_brightness(verbose_error=False,**kwargs):
         An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
     '''
 
-    if platform.system()=='Windows':
-        try:
-            return windows.get_brightness(**kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
+    if platform.system()=='Darwin':
+        error = 'MAC is unsupported'
+    else:
+        if platform.system()=='Windows':
+            method = windows.get_brightness
+        elif platform.system()=='Linux':
+            method = linux.get_brightness
+        else:
+            error = f'{platform.system()} is not supported'
+            method = None
 
-        if error:
-            raise ScreenBrightnessError(error)
+        if method!=None:
+            try:
+                return method(**kwargs)
+            except Exception as e:
+                if verbose_error:
+                    raise ScreenBrightnessError from e
+                error = e
 
-    elif platform.system()=='Linux':
-        try:
-            return linux.get_brightness(verbose_error=verbose_error, **kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
-
-        #if the function has not returned by now it failed
+    #if the function has not returned by now it failed
+    if error:
         raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
-    elif platform.system()=='Darwin':
-        raise ScreenBrightnessError('MAC is unsupported')
+
 
 if platform.system()=='Windows':
     from . import windows
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.4.0-pre2'
+__version__='0.4.0-pre3'
 __author__='Crozzers'

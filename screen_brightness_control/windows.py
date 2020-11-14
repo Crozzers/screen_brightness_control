@@ -92,7 +92,7 @@ class VCP():
                     self.monitors_with_caps[cap] = m###fix this
                 else:
                     windll.dxva2.DestroyPhysicalMonitor(m)
-            self.monitors = self.monitors_with_caps.values()
+            self.monitors = list(self.monitors_with_caps.values())
         def __enter__(self):
             if not hasattr(self, 'initialized') or getattr(self, 'initialized')==False:
                 self.__init__()
@@ -214,31 +214,35 @@ def set_brightness(value, display=None, **kwargs):
     '''
     global methods
     errors=[]
-    if type(display) is int:
-        display_names = []
+    try:
+        if type(display) is int:
+            display_names = []
+            for m in methods:
+                try:
+                    display_names+=m.get_display_names()
+                except Exception as e:
+                    errors.append([type(e).__name__, e])
+            display = display_names[display]
+    except Exception as e:
+        errors.append(['Failed to get display name', type(e).__name__, e])
+    else:
+        output = []
         for m in methods:
             try:
-                display_names+=m.get_display_names()
+                output.append(m.set_brightness(value, display=display, **kwargs))
+                output = flatten_list(output)
             except Exception as e:
-                errors.append([type(e).__name__, e])
-        display = display_names[display]
-    output = []
-    for m in methods:
-        try:
-            output.append(m.set_brightness(value, display=display, **kwargs))
-            output = flatten_list(output)
-        except Exception as e:
-            errors.append([type(e).__name__, e])
+                errors.append([type(m).__name__, type(e).__name__, e])
 
-    if output!=[]:
-        if len(output) == 1:
-            output = output[0]
-        return output
+        if output!=[]:
+            if len(output) == 1:
+                output = output[0]
+            return output
 
     #if function hasn't already returned it has failed
     msg='\n'
     for e in errors:
-        msg+=f'    {e[0]}: {e[1]}\n'
+        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
 def get_brightness(display = None, **kwargs):
@@ -255,32 +259,35 @@ def get_brightness(display = None, **kwargs):
     '''
     global methods
     errors = []
-    if type(display) is int:
-        display_names = []
+    try:
+        if type(display) is int:
+            display_names = []
+            for m in methods:
+                try:
+                    display_names+=m.get_display_names()
+                except Exception as e:
+                    errors.append([type(m).__name__, type(e).__name__, e])
+            display = display_names[display]
+    except Exception as e:
+        errors.append(['', type(e).__name__, e])
+    else:
+        output = []
         for m in methods:
             try:
-                display_names+=m.get_display_names()
+                output.append(m.get_brightness(display=display, **kwargs))
+                output = flatten_list(output)
             except Exception as e:
-                errors.append([type(e).__name__, e])
-        display = display_names[display]
+                errors.append([type(m).__name__, type(e).__name__, e])
 
-    output = []
-    for m in methods:
-        try:
-            output.append(m.get_brightness(display=display, **kwargs))
-            output = flatten_list(output)
-        except Exception as e:
-            errors.append([type(e).__name__, e])
-
-    if output!=[]:
-        if len(output) == 1:
-            output = output[0]
-        return output
+        if output!=[]:
+            if len(output) == 1:
+                output = output[0]
+            return output
 
     #if function hasn't already returned it has failed
     msg='\n'
     for e in errors:
-        msg+=f'    {e[0]}: {e[1]}\n'
+        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
 global methods
