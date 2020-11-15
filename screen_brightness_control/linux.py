@@ -93,10 +93,10 @@ class XRandr():
             list or int (0 to 100)
         '''
         out = subprocess.check_output(['xrandr','--verbose']).decode().split('\n')
-        lines = [float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100 for i in out if 'Brightness:' in i]
+        lines = [int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100) for i in out if 'Brightness:' in i]
         if display!=None:
             return lines[display]
-        return lines
+        return lines[0] if len(lines)==1 else lines
 
     def set_brightness(self, value, display = None, no_return = False):
         '''
@@ -219,10 +219,11 @@ def get_brightness(method = None, **kwargs):
         except Exception as e:
             errors.append([type(m).__name__, type(e).__name__, e])
     #if function hasn't already returned it has failed
-    try:
-       return get_brightness_from_sysfiles(**kwargs)
-    except Exception as e:
-       errors.append(['/sys/class/backlight/*', type(e).__name__, e])
+    if method==None:
+        try:
+            return get_brightness_from_sysfiles(**kwargs)
+        except Exception as e:
+            errors.append(['/sys/class/backlight/*', type(e).__name__, e])
     msg='\n'
     for e in errors:
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'

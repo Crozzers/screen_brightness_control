@@ -16,7 +16,7 @@ if __name__=='__main__':
             parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'light\' or \'xrandr\' or \'xbacklight\'')
         parser.add_argument('-v', '--verbose', action='store_true', help='any error messages will be more detailed')
         parser.add_argument('-V', '--version', action='store_true', help='print the current version')
-        parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
+        parser.add_argument('-l', '--list', action='store_true', help='list all monitors (windows only)')
 
         args = parser.parse_args()
         kw = {}
