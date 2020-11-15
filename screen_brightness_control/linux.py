@@ -159,19 +159,27 @@ def get_brightness_from_sysfiles(display = None):
             exc+=f'\n    {e[0]}: {e[1]}'
         raise Exception(exc)
 
-def set_brightness(value, **kwargs):
+def set_brightness(value, method = None, **kwargs):
     '''
     Sets the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
 
     Args:
         value (int): Sets the brightness to this value
-        verbose_error (bool): Controls how much detail any error messages contain
+        method (str): the method to use ('light', 'xrandr' or 'xbacklight')
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
         The result of get_brightness()
     '''
-    methods = [Light(), XRandr(), XBacklight()]
+    # use this as we will be modifying this list later and we don't want to change the global version
+    # just the local one
+    methods = globals()['methods'].copy()
+    if method != None:
+        try:
+            method = ('light', 'xrandr', 'xbacklight').index(method)
+            methods = [methods[method]]
+        except:
+            raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
     for m in methods:
         try:
@@ -184,19 +192,26 @@ def set_brightness(value, **kwargs):
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-def get_brightness(**kwargs):
+def get_brightness(method = None, **kwargs):
     '''
     Returns the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
 
     Args:
-        value (int): Sets the brightness to this value
-        verbose_error (bool): Controls how much detail any error messages contain
+        method (str): the method to use ('light', 'xrandr' or 'xbacklight')
         kwargs (dict): passed directly to chosen brightness method
     
     Returns:
         An int between 0 and 100
     '''
-    methods = [Light(), XRandr(), XBacklight()]
+    # use this as we will be modifying this list later and we don't want to change the global version
+    # just the local one
+    methods = globals()['methods'].copy()
+    if method != None:
+        try:
+            method = ('light', 'xrandr', 'xbacklight').index(method)
+            methods = [methods[method]]
+        except:
+            raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
     for m in methods:
         try:
@@ -212,3 +227,8 @@ def get_brightness(**kwargs):
     for e in errors:
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
+
+light_method = Light()
+xrandr_method = XRandr()
+xbacklight_method = XBacklight()
+methods = [light_method, xrandr_method, xbacklight_method]

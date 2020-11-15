@@ -7,6 +7,12 @@ class ScreenBrightnessError(Exception):
         super().__init__(self.message)
 
 def list_monitors():
+    '''
+    list all monitors that are controllable by this library (not yet implemented on Linux)
+
+    Returns:
+        list of strings (Windows) but None on Linux
+    '''
     if platform.system() == 'Windows':
         return windows.list_monitors()
     elif platform.system() == 'Linux':
@@ -195,5 +201,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.4.0'
+__version__='0.4.1-dev1'
 __author__='Crozzers'

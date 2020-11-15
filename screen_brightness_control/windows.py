@@ -200,29 +200,50 @@ class VCP():
         self.physical_monitors.close()
 
 def list_monitors():
+    '''
+    list all addressable monitors names
+
+    Returns:
+        list of strings
+    '''
     global methods
     displays = []
     for m in methods:
-            displays.append(m.get_display_names())
+        displays.append(m.get_display_names())
     return flatten_list(displays)
         
-def list_monitors_with_method(method):
-    return method.get_display_names()
+def list_monitors_with_method():
+    global methods
+    ret = []
+    for m in methods:
+        names = m.get_display_names()
+        for n in names:
+            ret.append((n, m))
+    return ret
 
-def set_brightness(value, display=None, **kwargs):
+def set_brightness(value, display=None, method = None, **kwargs):
     '''
     Sets the brightness for a display
 
     Args:
         value (int): Sets the brightness to this value
         display (int or str): the specific display you wish to adjust OR the model of the display
+        method (str): the method to use ('wmi' or 'vcp')
         kwargs (dict): passed directly to the chosen brightness method
 
     Returns:
         Whatever the called methods return.
         Typically: list, int (0 to 100) or None
     '''
-    global methods
+    # use this as we will be modifying this list later and we don't want to change the global version
+    # just the local one
+    methods = globals()['methods'].copy()
+    if method != None:
+        try:
+            method = ('wmi', 'vcp').index(method)
+            methods = [methods[method]]
+        except:
+            raise IndexError("Chosen method is not valid, must be 'wmi' or 'vcp'")
     errors=[]
     try:
         if type(display) is int:
@@ -255,19 +276,28 @@ def set_brightness(value, display=None, **kwargs):
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-def get_brightness(display = None, **kwargs):
+def get_brightness(display = None, method = None, **kwargs):
     '''
     Returns the brightness for a display
 
     Args:
         value (int): Sets the brightness to this value
         display (int or str): the specific display you wish to adjust OR the model of the display
+        method (str): the method to use ('wmi' or 'vcp')
         kwargs (dict): passed directly to chosen brightness method
 
     Returns:
         An int between 0 and 100
     '''
-    global methods
+    # use this as we will be modifying this list later and we don't want to change the global version
+    # just the local one
+    methods = globals()['methods'].copy()
+    if method != None:
+        try:
+            method = ('wmi', 'vcp').index(method)
+            methods = [methods[method]]
+        except:
+            raise IndexError("Chosen method is not valid, must be 'wmi' or 'vcp'")
     errors = []
     try:
         if type(display) is int:
@@ -300,7 +330,6 @@ def get_brightness(display = None, **kwargs):
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-global methods
 wmi_method = WMI()
 vcp_method = VCP()
 methods = [wmi_method, vcp_method]
