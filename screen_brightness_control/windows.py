@@ -199,6 +199,16 @@ class VCP():
         '''performs cleanup functions'''
         self.physical_monitors.close()
 
+def list_monitors():
+    global methods
+    displays = []
+    for m in methods:
+            displays.append(m.get_display_names())
+    return flatten_list(displays)
+        
+def list_monitors_with_method(method):
+    return method.get_display_names()
+
 def set_brightness(value, display=None, **kwargs):
     '''
     Sets the brightness for a display

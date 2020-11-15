@@ -6,6 +6,12 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
+def list_monitors():
+    if platform.system() == 'Windows':
+        return windows.list_monitors()
+    elif platform.system() == 'Linux':
+        pass #return linux.list_monitors()
+
 def flatten_list(thick_list):
     '''
     internal function I use to flatten lists, because I do that often
