@@ -71,12 +71,12 @@ primary_display_brightness = sbc.get_brightness(display=0)
 secondary_display_brightness = sbc.get_brightness(display=1)
 ```  
 
-### set_brightness(`brightness_level, force=False, verbose_error=False, **kwargs`)
+### set_brightness(`value, force=False, verbose_error=False, **kwargs`)
 ###### Summary: 
-Sets the brightness to `brightness_level`. If `brightness_level` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
+Sets the brightness to `value`. If `value` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
 Raises `ScreenBrightnessError` upon failure
 ###### Arguments:
-* `brightness_level` - the level to set the brightness to. Can either be an integer or a string.
+* `value` - the level to set the brightness to. Can either be an integer or a string.
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `kwargs` - passed to the OS relevant brightness method
@@ -103,7 +103,7 @@ sbc.set_brightness(50, display=0)
 ### fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs`)
 ###### Summary:
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
-If it runs in the main thread it will return the final brightness upon success, `ScreenBrightnessError` upon failure. Otherwise it returns the thread object that the process is running in
+If it runs in the main thread it will return the final brightness upon success, `ScreenBrightnessError` upon failure. Otherwise it returns the list of thread objects that the process is running in
 ###### Arguments:
 * `finish` - The brightness value to fade to
 * `start` - The value to start from. If not specified it defaults to the current brightness
@@ -138,6 +138,9 @@ To GitHub user `lcharles` for assisting with version `0.4.0` and [DDC/CI support
 This software is licensed under the [MIT license](https://mit-license.org/)
 
 ## FAQ
+#### Why is there no support for DDC/CI commands on Linux?
+I'm working on it
+
 #### Why do I always get `ScreenBrightnessError` on Linux?
 ###### Why this happens:
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.

@@ -60,30 +60,28 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
     value = max(0, min(100, value))
 
-    if platform.system()=='Darwin':
+    method = None
+    if platform.system()=='Windows':
+        method = windows.set_brightness
+    elif platform.system()=='Linux':
+        if not force:
+            value = max(1, value)
+        method = linux.set_brightness
+    elif platform.system()=='Darwin':
         error = 'MAC is unsupported'
     else:
-        if platform.system()=='Windows':
-            method = windows.set_brightness
-        elif platform.system()=='Linux':
-            if not force:
-                value = max(1, value)
-            method = linux.set_brightness
-        else:
-            error = f'{platform.system()} is not supported'
-            method = None
+        error = f'{platform.system()} is not supported'
 
-        if method!=None:
-            try:
-                return method(value, **kwargs)
-            except Exception as e:
-                if verbose_error:
-                    raise ScreenBrightnessError from e
-                error = e
+    if method!=None:
+        try:
+            return method(value, **kwargs)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
 
     #if the function has not returned by now it failed
-    if error:
-        raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
+    raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
 
 def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
@@ -140,7 +138,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             kw['display'] = a
 
         if finish!=start:
-            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw, daemon=True)
+            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw)
             t1.start()
             threads.append(t1)
         a+=1
@@ -164,28 +162,26 @@ def get_brightness(verbose_error=False,**kwargs):
         An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
     '''
 
-    if platform.system()=='Darwin':
+    method = None
+    if platform.system()=='Windows':
+        method = windows.get_brightness
+    elif platform.system()=='Linux':
+        method = linux.get_brightness
+    elif platform.system()=='Darwin':
         error = 'MAC is unsupported'
     else:
-        if platform.system()=='Windows':
-            method = windows.get_brightness
-        elif platform.system()=='Linux':
-            method = linux.get_brightness
-        else:
-            error = f'{platform.system()} is not supported'
-            method = None
+        error = f'{platform.system()} is not supported'
 
-        if method!=None:
-            try:
-                return method(**kwargs)
-            except Exception as e:
-                if verbose_error:
-                    raise ScreenBrightnessError from e
-                error = e
+    if method!=None:
+        try:
+            return method(**kwargs)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
 
     #if the function has not returned by now it failed
-    if error:
-        raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
+    raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
 
 
 if platform.system()=='Windows':
@@ -193,5 +189,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.4.0-pre3'
+__version__='0.4.0'
 __author__='Crozzers'

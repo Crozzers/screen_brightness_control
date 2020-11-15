@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(name='screen_brightness_control',
-    version='0.4.0-pre3',
-    url='https://github.com/Crozzers/screen-brightness-control',
+    version='0.4.0',
+    url='https://github.com/Crozzers/screen_brightness_control',
     license='MIT',
     author='Crozzers',
     author_email='captaincrozzers@gmail.com',
