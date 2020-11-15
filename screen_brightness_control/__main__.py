@@ -9,6 +9,7 @@ if __name__=='__main__':
     parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value')
     parser.add_argument('-v', '--verbose', action='store_true', help='any error messages will be more detailed')
     parser.add_argument('-V', '--version', action='store_true', help='print the current version')
+    parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
 
     args = parser.parse_args()
     kw = {}
@@ -25,6 +26,8 @@ if __name__=='__main__':
         SBC.fade_brightness(args.fade, **kw)
     elif args.version:
         print(SBC.__version__)
+    elif args.list:
+        print(SBC.list_monitors())
     else:
         print("No valid arguments")
 
