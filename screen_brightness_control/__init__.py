@@ -1,201 +1,193 @@
 import platform,time,threading,subprocess,os
-if platform.system()=='Windows':
-    import wmi, pythoncom
- 
+
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
     def __init__(self, message="Cannot set/retrieve brightness level"):
         self.message=message
         super().__init__(self.message)
 
-def set_brightness(brightness_level,force=False,verbose_error=False,**kwargs):
+def flatten_list(thick_list):
     '''
-    brightness_level - a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-    force (linux only) - if you set the brightness to 0 on linux it will actually apply that value (which turns the screen off)
-    verbose_error - boolean value controls the amount of detail error messages will contain
-    kwargs - to absorb older, now removed kwargs without creating errors
+    internal function I use to flatten lists, because I do that often
+    
+    Args:
+        thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
+
+    Returns:
+        one dimensional list
     '''
-    if type(brightness_level)==str and any(n in brightness_level for n in ('+','-')):
-        current_brightness=get_brightness()
-        brightness_level=current_brightness+int(float(brightness_level))
-    elif type(brightness_level) in (str,float):
-        brightness_level=int(float(str(brightness_level)))
-
-    #this variable is used later to control the level of detail that errors produce
-    error=False
-
-    if platform.system()=='Windows':
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        try:
-            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
-        except Exception as e:
-            msg='Cannot set screen brightness: monitor does not support it' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
-            if verbose_error:raise ScreenBrightnessError(msg)
-            else:error=True
+    flat_list = []
+    for item in thick_list:
+        if type(item) is list:
+            flat_list+=flatten_list(item)
         else:
-            try:
-                for method in brightness_method:
-                    method.WmiSetBrightness(brightness_level,0)
-                return get_brightness()
-            except Exception as e:
-                msg='Cannot set screen brightness: {e}' if not verbose_error else f'Cannot set screen brightness - {type(e)}:\n{e}'
-                if verbose_error:raise ScreenBrightnessError(msg)
-                else:error=True
-        #this is where errors are raised if verbose_error==False. Means that only this error will be printed
-        if error:
-            raise ScreenBrightnessError(msg)
+            flat_list.append(item)
+    return flat_list
 
-    elif platform.system()=='Linux':
-        error=[]
-        if not force:
-            brightness_level=str(max(1,int(brightness_level)))
-            
-        #this is because many different versions of linux have many different ways to adjust the backlight
-        for command in ["light -S {}","xbacklight -set {}"]:
-            command=command.format(brightness_level)
-            try:
-                subprocess.call(command.split(" "))
-                return get_brightness()
-            except FileNotFoundError:
-                error.append(['FileNotFoundError', command])
-       
-        #if the function has not returned by now then all has failed
-        msg='Cannot set screen brightness: light and xbacklight not found'
-        if verbose_error:
-            msg='Cannot set screen brightness:\n'
-            for err in error:
-                msg+=f'   {err[0]}: {err[1]}\n'
-        raise ScreenBrightnessError(msg)
+def set_brightness(value,force=False,verbose_error=False,**kwargs):
+    '''
+    Sets the screen brightness
+
+    Args:
+        value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        force (bool): [Linux Only] if false the brightness will never be set lower than 1 (as 0 usually turns the screen off). If True, this check is bypassed
+        verbose_error (bool): boolean value controls the amount of detail error messages will contain
+        kwargs (dict): passed to the OS relevant brightness method
+    
+    Returns:
+        Returns the result of get_brightness()
+    '''
+    
+    if type(value) not in (int, float, str):
+        raise TypeError(f'value must be int, float or str, not {type(value)}')
+
+    if type(value) is str and value.startswith(('+', '-')):
+        if 'display' in kwargs.keys():
+            current = get_brightness(display=kwargs['display'])
+        else:
+            current = get_brightness()
+            if type(current) is list:
+                out = []
+                for i in range(len(current)):
+                    out.append(set_brightness(current[i] + int(float(str(value))), display = i, **kwargs))
+                #flatten the list output
+                out = flatten_list(out)
+                return out[0] if len(out)==1 else out 
+
+        value = current + int(float(str(value)))
     else:
-        #MAC is unsupported as I don't have one to test code on
-        raise ScreenBrightnessError('MAC is unsupported')
+        value = int(float(str(value)))
 
-def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, verbose_error=False):
+    value = max(0, min(100, value))
+
+    method = None
+    if platform.system()=='Windows':
+        method = windows.set_brightness
+    elif platform.system()=='Linux':
+        if not force:
+            value = max(1, value)
+        method = linux.set_brightness
+    elif platform.system()=='Darwin':
+        error = 'MAC is unsupported'
+    else:
+        error = f'{platform.system()} is not supported'
+
+    if method!=None:
+        try:
+            return method(value, **kwargs)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
+
+    #if the function has not returned by now it failed
+    raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
+
+def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
     A function to somewhat gently fade the screen brightness from start_value to finish_value
-    finish - the brighness level we end on
-    start - where the brightness should fade from
-    interval - the time delay between each step in brightness
-    increment - the amount to change the brightness by per loop
-    blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
-    verbose_error - controls the level of detail in any error messages
+
+    Args:
+        finish - the brighness level we end on
+        start - where the brightness should fade from
+        interval - the time delay between each step in brightness
+        increment - the amount to change the brightness by per loop
+        blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
+        kwargs - passed directly to set_brightness (see set_brightness docstring for available kwargs)
+    
+    Returns:
+        Returns a thread object if blocking is set to False, otherwise it returns the result of get_brightness()
     '''
-    def fade(verbose=False):
+    def fade(start, finish, increment, **kwargs):
+        if 'no_return' not in kwargs.keys():
+            kwargs['no_return']=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
                 val = start - (val-finish)
-            set_brightness(val, verbose_error=verbose)
+            set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        if get_brightness()!=finish:
-            set_brightness(finish)
-        return get_brightness()
-
-    current = get_brightness()
-
-    #convert strings like '+5' to an actual brightness value
-    if type(finish)==str:
-        if "+" in finish or "-" in finish:
-            finish=current+int(float(finish))
-    if type(start)==str:
-        if "+" in start or "-" in start:
-            start=current+int(float(start))
-
-    start = current if start==None else start
-    #make sure both values are within the correct range
-    finish = min(max(int(finish),0),100)
-    start = min(max(int(start),0),100)
-
-    if finish==start:
+        del(kwargs['no_return'])
+        if get_brightness(**kwargs)!=finish:
+            set_brightness(finish, no_return = True, **kwargs)
         return
 
+    current_vals = get_brightness(**kwargs)
+    current_vals = [current_vals, ] if type(current_vals)==int else current_vals
+
+    threads = []
+    a = 0
+    for current in current_vals:
+        st, fi = start, finish
+        #convert strings like '+5' to an actual brightness value
+        if type(fi)==str:
+            if "+" in fi or "-" in fi:
+                fi=current+int(float(fi))
+        if type(st)==str:
+            if "+" in st or "-" in st:
+                st=current+int(float(st))
+
+        st = current if st==None else st
+        #make sure both values are within the correct range
+        fi = min(max(int(fi),0),100)
+        st = min(max(int(st),0),100)
+
+        kw=kwargs.copy()
+        if 'display' not in kw.keys():
+            kw['display'] = a
+
+        if finish!=start:
+            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw)
+            t1.start()
+            threads.append(t1)
+        a+=1
+
     if not blocking:
-        t1 = threading.Thread(target=fade, kwargs={'verbose':verbose_error}, daemon=True)
-        t1.start()
-        return t1
+        return threads
     else:
-         return fade(verbose=verbose_error)
-         
-def get_brightness(max_value=False, verbose_error=False,**kwargs):
+        for t in threads:
+            t.join()
+        return get_brightness(**kwargs)
+
+def get_brightness(verbose_error=False,**kwargs):
     '''
-    max_value - deprecated kwarg. Always returns 100
-    verbose_error - boolean value that controls the level of detail in the error messages
-    kwargs - to absorb older, now removed kwargs without creating errors
-    '''
-    #value used later on to determine error detail level
-    error=False
+    Returns the current display brightness
 
-    if max_value:
-        return 100
-
-    if platform.system()=='Windows':
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        try:
-            brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
-            #do this down here to ensure screen brightness can actually be retrieved (in theory)
-            if max_value:return 100
-        except Exception as e:
-            msg='Cannot retrieve screen brightness: monitor does not support it' if not verbose_error else f'Cannot retrieve screen brightness methods - {type(e)}:\n{e}'
-            if verbose_error:raise ScreenBrightnessError(msg)
-            else:error=True
-        else:
-            try:
-                values = [i.CurrentBrightness for i in brightness_method]
-                values = values[0] if len(values)==1 else values
-                return values
-            except Exception as e:
-                msg=f'Cannot retrieve screen brightness: {e}' if not verbose_error else f'Cannot retrieve screen brightness - {type(e)}:\n{e}'
-                if verbose_error:raise ScreenBrightnessError(msg)
-                else:error=True
-        #this is where errors are raised if verbose_error==False. Means that only this error will be printed
-        if error:
-            raise ScreenBrightnessError(msg)
-
-    elif platform.system()=='Linux':
-        error=[]
-        for command in [f"light -G","xbacklight -get"]:
-            try:
-                res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
-                return int(round(float(str(res)),0))
-            except FileNotFoundError:
-                error.append(['FileNotFoundError',command])
-
-        #if function has not returned yet try reading the brightness file
-        backlight_dir='/sys/class/backlight/'
-        if os.path.isdir(backlight_dir) and os.listdir(backlight_dir)!=[]:
-            #if the backlight dir exists and is not empty
-            folders=[folder for folder in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir,folder))]
-            for folder in folders:
-                try:
-                    #try to read the brightness value in the file
-                    with open(os.path.join(backlight_dir,folder,'brightness'),'r') as f:
-                        brightness_value=int(float(str(f.read().rstrip('\n'))))
-
-                    try:
-                        #try open the max_brightness file to calculate the value to set the brightness file to
-                        with open(os.path.join(backlight_dir,folder,'max_brightness'),'r') as f:
-                            max_brightness=int(float(str(f.read().rstrip('\n'))))
-                    except:
-                        #if the file does not exist we cannot calculate the brightness
-                        return False
-                    brightness_value=int(round((brightness_value/max_brightness)*100,0))
-                    return brightness_value
-                except PermissionError as p:
-                    error.append(['PermissionError',p])
-        #if the function has not returned by now it failed
-        msg=f'Cannot retrieve screen brightness: light and xbacklight not found and/or cannot read {backlight_dir}'
-        if verbose_error:
-            msg='Cannot retrieve screen brightness:\n'
-            for err in error:
-                msg+=f'    {err[0]}: {err[1]}\n'
-        raise ScreenBrightnessError(msg)
-    elif platform.system()=='Darwin':
-        raise ScreenBrightnessError('MAC is unsupported')
+    Args:
+        verbose_error (bool): controls the level of detail in the error messages
+        kwargs (dict): is passed directly to the OS relevant brightness method
     
-__version__='0.3.1'
+    Returns:
+        An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
+    '''
+
+    method = None
+    if platform.system()=='Windows':
+        method = windows.get_brightness
+    elif platform.system()=='Linux':
+        method = linux.get_brightness
+    elif platform.system()=='Darwin':
+        error = 'MAC is unsupported'
+    else:
+        error = f'{platform.system()} is not supported'
+
+    if method!=None:
+        try:
+            return method(**kwargs)
+        except Exception as e:
+            if verbose_error:
+                raise ScreenBrightnessError from e
+            error = e
+
+    #if the function has not returned by now it failed
+    raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
+
+
+if platform.system()=='Windows':
+    from . import windows
+elif platform.system()=='Linux':
+    from . import linux
+
+__version__='0.4.0'
 __author__='Crozzers'
