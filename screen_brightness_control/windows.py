@@ -1,10 +1,23 @@
-import wmi, threading, pythoncom, ctypes
+import wmi, threading, pythoncom, ctypes, win32api
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import flatten_list
 
 class WMI():
     '''collection of screen brightness related methods using the wmi API'''
+    def get_display_serials(self):
+        '''returns a (hopefully) unique string for each display, as reported by wmi'''
+        #WMI calls don't work in new threads so we have to run this check
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
+        try:
+            monitors = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
+            # this isn't the actual serial number
+            # this is just a value that I can wrangle from BOTH win32api and WMI
+            serials = [i.InstanceName.split('\\')[-1] for i in monitors]
+        except:
+            serials = []
+        return serials
     def get_display_names(self):
         '''Returns models of all displays that can be addressed by WMI'''
         #WMI calls don't work in new threads so we have to run this check
@@ -136,6 +149,17 @@ class VCP():
     def __init__(self):
         self.physical_monitors = self.PhysicalMonitors()
 
+    def get_display_serials(self):
+        '''returns a (hopefully) unique string for each display, as reported by win32api'''
+        monitors = win32api.EnumDisplayMonitors()
+        info = [win32api.GetMonitorInfo(i[0]) for i in monitors]
+        info = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in info]
+        serials = []
+        for i in info:
+            i = i.split('#')[2]
+            serials.append(i)
+        return serials
+
     def get_display_names(self):
         '''
         returns the model numbers for each detected (and addressable) display
@@ -199,6 +223,16 @@ class VCP():
         '''performs cleanup functions'''
         self.physical_monitors.close()
 
+
+def list_monitors_with_method():
+    global methods
+    monitors_with_methods = []
+    for m in methods:
+        names = m.get_display_names()
+        for n in names:
+            monitors_with_methods.append((n, m))
+    return monitors_with_methods
+
 def list_monitors():
     '''
     list all addressable monitors names
@@ -206,20 +240,8 @@ def list_monitors():
     Returns:
         list of strings
     '''
-    global methods
-    displays = []
-    for m in methods:
-        displays.append(m.get_display_names())
+    displays = [i[0] for i in list_monitors_with_method()]
     return flatten_list(displays)
-        
-def list_monitors_with_method():
-    global methods
-    ret = []
-    for m in methods:
-        names = m.get_display_names()
-        for n in names:
-            ret.append((n, m))
-    return ret
 
 def set_brightness(value, display=None, method = None, **kwargs):
     '''
