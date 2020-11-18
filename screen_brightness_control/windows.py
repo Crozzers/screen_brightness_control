@@ -441,7 +441,7 @@ def __filter_monitors(display=None, method=None):
         if type(display) is int:
             monitors = [monitors[display]]
         elif type(display) is str:
-            monitors = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
+            monitors = [i for i in monitors if display in (i.serial, i.name, i.model)]
         else:
             raise TypeError(f'display must be int or str, not {type(display)}')
 
