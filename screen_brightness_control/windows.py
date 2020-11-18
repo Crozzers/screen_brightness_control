@@ -420,6 +420,30 @@ def list_monitors():
     displays = [i['name'] for i in list_monitors_info()]
     return flatten_list(displays)
 
+def reload_monitors():
+    '''
+    re-initializes the brightness methods and Monitor classes
+    '''
+    global methods
+    global monitors
+    global wmi_method
+    global vcp_method
+    try:
+        vcp_method.close()
+    except:
+        pass
+    wmi_method = WMI()
+    vcp_method = VCP()
+    methods = [wmi_method, vcp_method]
+
+    monitors = []
+    a = 0
+    for monitor in list_monitors_info():
+        monitors.append(Monitor(monitor['serial']))
+        a+=1
+    
+    return methods
+
 def __filter_monitors(display=None, method=None):
     '''internal function, do not call'''
     # use this as we will be modifying this list later and we don't want to change the global versions
