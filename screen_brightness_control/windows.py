@@ -253,10 +253,14 @@ class VCP():
         '''returns a dictionary of info about a monitor'''
         info = []
         try:
-            display_names = self.get_display_names()
             monitors = win32api.EnumDisplayMonitors()
             monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors]
             monitors = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in monitors]
+            display_names = self.get_display_names()
+            if len(display_names)!=len(monitors):
+                self.physical_monitors.close()
+                self.physical_monitors = self.PhysicalMonitors()
+                display_names = self.get_display_names()
             for ms in monitors:
                 m = ms.split('#')
                 serial = m[2]
@@ -388,6 +392,12 @@ class Monitor():
     def get_brightness(self, **kwargs):
         kwargs['display'] = self.serial
         return self.method.get_brightness(**kwargs)
+    def is_active(self):
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False
 
 def list_monitors_info():
     '''
@@ -420,10 +430,13 @@ def list_monitors():
     displays = [i['name'] for i in list_monitors_info()]
     return flatten_list(displays)
 
-def reload_monitors():
+def reload_monitors(blocking = True):
     '''
     re-initializes the brightness methods and Monitor classes
     '''
+    if not blocking:
+        threading.Thread(target=reload_monitors, daemon=True).start()
+        return
     global methods
     global monitors
     global wmi_method
@@ -487,7 +500,10 @@ def set_brightness(value, display=None, method = None, **kwargs):
     '''
     errors = []
     try:
-        monitors = __filter_monitors(display = display, method = method)
+        if (display, method)==(None, None):
+            monitors = globals()['monitors']
+        else:
+            monitors = __filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
@@ -497,6 +513,9 @@ def set_brightness(value, display=None, method = None, **kwargs):
                 output.append(m.set_brightness(value, **kwargs))
             except Exception as e:
                 errors.append([f'{m.name} ({m.serial})', type(e).__name__, e])
+
+        if errors!=[]:
+            reload_monitors(blocking=False)
 
         if output!=[]:
             output = flatten_list(output)
