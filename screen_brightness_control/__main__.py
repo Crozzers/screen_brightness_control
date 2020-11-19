@@ -28,7 +28,13 @@ if __name__=='__main__':
             kw['method'] = args.method
 
         if args.get:
-            print(SBC.get_brightness(**kw))
+            values = SBC.get_brightness(**kw)
+            monitors = SBC.list_monitors()
+            if monitors == None:
+                print(values)
+            else:
+                for i in range(len(monitors)):
+                    print(f'{monitors[i]}: {values[i]}')
         elif args.set!=None:
             SBC.set_brightness(args.set, **kw)
         elif args.fade!=None:

@@ -184,7 +184,7 @@ class VCP:
         '''internat class, do not call'''
         _fields_ = [('handle', HANDLE),
                     ('description', WCHAR * 128)]
-    
+
     def iter_physical_monitors():
         '''
         generator to iterate through all physical monitors and then close them again afterwards
@@ -235,10 +235,10 @@ class VCP:
         '''returns a dictionary of info about a monitor'''
         info = []
         try:
-            monitors = win32api.EnumDisplayMonitors()
-            monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors]
+            monitors_enum = win32api.EnumDisplayMonitors()
+            monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors_enum]
             monitors = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in monitors]
-            display_names = VCP.get_display_names()
+            #display_names = VCP.get_display_names()
             a=0
             for ms in monitors:
                 m = ms.split('#')
@@ -251,10 +251,10 @@ class VCP:
                     manufacturer = 'Unknown'
                     man_id = None
 
-                try:
-                    model = display_names[monitors.index(ms)]
-                except:
-                    pass
+                #try:
+                #    model = display_names[monitors.index(ms)]
+                #except:
+                #    pass
                 tmp = {'name':f'{manufacturer} {model}', 'model':model, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
                 info.append(tmp)
                 a+=1
@@ -274,12 +274,17 @@ class VCP:
         if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
             return
         return caps_string.value.decode('ASCII')
-    def get_display_names():
+    def get_display_names(*args):
         '''
         get the actual model names of the displays
         '''
         names = []
-        for monitor in VCP.iter_physical_monitors():
+        if len(args) == 1:
+            monitors = lambda:args
+        else:
+            monitors = VCP.iter_physical_monitors
+
+        for monitor in monitors():
             key = VCP.get_monitor_caps(monitor)
             cap = key[key.index('model(')+6:]
             cap = cap[:cap.index(')')]
@@ -296,7 +301,7 @@ class VCP:
         if display!=None:
             display = VCP.filter_displays(display)
             values = [values[display['index']]]
-        
+
         return values[0] if len(values)==1 else values
     def set_brightness(value, display=None, no_return=False):
         if display!=None:
@@ -316,17 +321,20 @@ class Monitor():
         Args:
             display (int or str): the index/model name/serial of the display you wish to control
         '''
-        info = list_monitors_info()
-        if type(display) is int:
-            info = info[display]
-        elif type(display) is str:
-            for i in info:
-                if display in (i['serial'], i['name'], i['model']):
-                    info = i
-            if type(info) == list:#we haven't found a match
-                raise LookupError('could not match display info to known displays')
+        if type(display) is dict:
+            info = display
         else:
-            raise TypeError(f'display arg must be int or str, not {type(display)}')
+            info = list_monitors_info()
+            if type(display) is int:
+                info = info[display]
+            elif type(display) is str:
+                for i in info:
+                    if display in (i['serial'], i['name'], i['model']):
+                        info = i
+                if type(info) == list:#we haven't found a match
+                    raise LookupError('could not match display info to known displays')
+            else:
+                raise TypeError(f'display arg must be int or str, not {type(display)}')
 
         self.serial = info['serial']
         self.name = info['name']
@@ -348,7 +356,8 @@ class Monitor():
             'serial':self.serial,
             'manufacturer': self.manufacturer,
             'manufacturer_id': self.manufacturer_id,
-            'method': self.method
+            'method': self.method,
+            'index': self.index
         }
     def is_active(self):
         try:
@@ -491,7 +500,10 @@ def get_brightness(display = None, method = None, **kwargs):
     '''
     errors = []
     try:
-        monitors = __filter_monitors(display = display, method = method)
+        if (display, method)==(None, None):
+            monitors = globals()['monitors']
+        else:
+            monitors = __filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
@@ -519,6 +531,6 @@ def get_brightness(display = None, method = None, **kwargs):
 monitors = []
 a = 0
 for monitor in list_monitors_info():
-    monitors.append(Monitor(monitor['serial']))
+    monitors.append(Monitor(monitor))
     a+=1
 del(a)
