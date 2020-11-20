@@ -400,7 +400,10 @@ class Monitor(object):
         '''
         try:
             if self.model_name == None:
-                self.model_name = self.method.get_display_names()[self.index]
+                info = self.method.get_display_info()
+                for i in range(len(info)):
+                    if info[i]['serial']==self.serial:
+                        self.model_name = info[i]
         except:
             pass
         return {
@@ -521,7 +524,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
     #if function hasn't already returned it has failed
     msg='\n'
     for e in errors:
-        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
+        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
 def get_brightness(display = None, method = None, **kwargs):
@@ -529,7 +532,6 @@ def get_brightness(display = None, method = None, **kwargs):
     Returns the brightness for a display
 
     Args:
-        value (int): Sets the brightness to this value
         display (int or str): the specific display you wish to adjust OR the model of the display
         method (str): the method to use ('wmi' or 'vcp')
         kwargs (dict): passed directly to chosen brightness method
@@ -562,5 +564,5 @@ def get_brightness(display = None, method = None, **kwargs):
     #if function hasn't already returned it has failed
     msg='\n'
     for e in errors:
-        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
+        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
