@@ -73,6 +73,7 @@ MONITOR_MANUFACTURER_CODES = {
 class WMI:
     '''collection of screen brightness related methods using the wmi API'''
     def _get_display_index(display, *args):
+        '''internal function, do not call'''
         if len(args)==1:
             info = args[0]
         else:
@@ -84,7 +85,15 @@ class WMI:
             a+=1
         return None
     def get_display_info(*args):
-        '''returns a dictionary of info about a monitor'''
+        '''
+        returns a dictionary of info about all detected monitors
+
+        Args:
+            monitor (str or int) (optional): the monitor to return info about. Pass in the serial number, name, model or index
+
+        Returns:
+            list of dicts or dict
+        '''
         #WMI calls don't work in new threads so we have to run this check
         if threading.current_thread() != threading.main_thread():
             pythoncom.CoInitialize()
@@ -102,7 +111,7 @@ class WMI:
                 else:
                     manufacturer = 'Unknown'
                     man_id = None
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI}
+                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI}
                 info.append(tmp)
                 a+=1
         except:
@@ -232,13 +241,20 @@ class VCP:
                     return i
             raise LookupError('could not find matching display')
     def get_display_info(*args):
-        '''returns a dictionary of info about a monitor'''
+        '''
+        returns a dictionary of info about all detected monitors
+
+        Args:
+            monitor (str or int) (optional): the monitor to return info about. Pass in the serial number, name, model or index
+
+        Returns:
+            list of dicts or dict
+        '''
         info = []
         try:
             monitors_enum = win32api.EnumDisplayMonitors()
             monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors_enum]
             monitors = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in monitors]
-            #display_names = VCP.get_display_names()
             a=0
             for ms in monitors:
                 m = ms.split('#')
@@ -251,11 +267,7 @@ class VCP:
                     manufacturer = 'Unknown'
                     man_id = None
 
-                #try:
-                #    model = display_names[monitors.index(ms)]
-                #except:
-                #    pass
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
+                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
                 info.append(tmp)
                 a+=1
         except:
@@ -267,6 +279,7 @@ class VCP:
                 pass
         return info
     def get_monitor_caps(monitor):
+        #takes 1.2 to 1.7 seconds
         caps_string_length = DWORD()
         if not windll.dxva2.GetCapabilitiesStringLength(monitor,ctypes.byref(caps_string_length)):
             return
@@ -314,7 +327,7 @@ class VCP:
             loops+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
-class Monitor():
+class Monitor(object):
     '''A class to manage a single monitor'''
     def __init__(self, display):
         '''
@@ -342,17 +355,58 @@ class Monitor():
         self.manufacturer = info['manufacturer']
         self.manufacturer_id = info['manufacturer_id']
         self.model = info['model']
+        self.model_name = info['model_name']
         self.index = info['index']
+    def __getitem__(self, item):
+        return getattr(self, item)
+    def __getattribute__(self, attr):
+        if attr == 'model_name' and object.__getattribute__(self, 'model_name')==None:
+            model_name = object.__getattribute__(self, 'method').get_display_names()[object.__getattribute__(self, 'index')]
+            setattr(self, 'model_name', model_name)
+            return model_name
+        else:
+            return object.__getattribute__(self, attr)
     def set_brightness(self, *args, **kwargs):
+        '''
+        sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitors brightness method
+            kwargs (dict): passed directly to this monitors brightness method
+
+        Returns:
+            int (0 to 100)
+        '''
         kwargs['display'] = self.serial
         return self.method.set_brightness(*args, **kwargs)
     def get_brightness(self, **kwargs):
+        '''
+        returns the brightness for this display
+
+        Args:
+            kwargs (dict): passed directly to this monitors brightness method
+
+        Returns:
+            int (0 to 100)
+        '''
         kwargs['display'] = self.serial
         return self.method.get_brightness(**kwargs)
     def get_info(self):
+        '''
+        returns all known information about this monitor instance
+
+        Returns:
+            dict
+        '''
+        try:
+            if self.model_name == None:
+                self.model_name = self.method.get_display_names()[self.index]
+        except:
+            pass
         return {
             'name':self.name,
             'model':self.model,
+            'model_name': self.model_name,
             'serial':self.serial,
             'manufacturer': self.manufacturer,
             'manufacturer_id': self.manufacturer_id,
@@ -360,6 +414,12 @@ class Monitor():
             'index': self.index
         }
     def is_active(self):
+        '''
+        attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool. True means active, False means inactive
+        '''
         try:
             self.get_brightness()
             return True
@@ -396,34 +456,17 @@ def list_monitors():
     displays = [i['name'] for i in list_monitors_info()]
     return flatten_list(displays)
 
-def reload_monitors(blocking = True):
-    '''
-    re-initializes the brightness methods and Monitor classes
-    '''
-    if not blocking:
-        threading.Thread(target=reload_monitors, daemon=True).start()
-        return
-    global monitors
-
-    monitors = []
-    a = 0
-    for monitor in list_monitors_info():
-        monitors.append(Monitor(monitor['serial']))
-        a+=1
-    
-    return monitors
-
 def __filter_monitors(display=None, method=None):
     '''internal function, do not call'''
     # use this as we will be modifying this list later and we don't want to change the global versions
     # just the local ones
     methods = [WMI, VCP]
-    monitors = globals()['monitors'].copy()
+    monitors = list_monitors_info()###fix this to remove reliance on monitors
     if method != None:
         try:
             method = ('wmi', 'vcp').index(method.lower())
             method = methods[method]
-            monitors = [i for i in monitors if i.method == method]
+            monitors = [i for i in monitors if i['method'] == method]
             if monitors == []:
                 raise LookupError('Chosen method is not valid, no detected monitors can utilize it')
         except LookupError as e:
@@ -434,10 +477,9 @@ def __filter_monitors(display=None, method=None):
         if type(display) is int:
             monitors = [monitors[display]]
         elif type(display) is str:
-            monitors = [i for i in monitors if display in (i.serial, i.name, i.model)]
+            monitors = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
         else:
             raise TypeError(f'display must be int or str, not {type(display)}')
-
     return monitors
 
 def set_brightness(value, display=None, method = None, **kwargs):
@@ -457,7 +499,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
     errors = []
     try:
         if (display, method)==(None, None):
-            monitors = globals()['monitors']
+            monitors = list_monitors_info()
         else:
             monitors = __filter_monitors(display = display, method = method)
     except Exception as e:
@@ -466,12 +508,9 @@ def set_brightness(value, display=None, method = None, **kwargs):
         output = []
         for m in monitors:
             try:
-                output.append(m.set_brightness(value, **kwargs))
+                output.append(m['method'].set_brightness(value, display = m['serial'], **kwargs))
             except Exception as e:
-                errors.append([f'{m.name} ({m.serial})', type(e).__name__, e])
-
-        if errors!=[]:
-            reload_monitors(blocking=False)
+                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
 
         if output!=[]:
             output = flatten_list(output)
@@ -501,7 +540,7 @@ def get_brightness(display = None, method = None, **kwargs):
     errors = []
     try:
         if (display, method)==(None, None):
-            monitors = globals()['monitors']
+            monitors = list_monitors_info()
         else:
             monitors = __filter_monitors(display = display, method = method)
     except Exception as e:
@@ -510,9 +549,9 @@ def get_brightness(display = None, method = None, **kwargs):
         output = []
         for m in monitors:
             try:
-                output.append(m.get_brightness(**kwargs))
+                output.append(m['method'].get_brightness(display = m['serial'], **kwargs))
             except Exception as e:
-                errors.append([f'{m.name} ({m.serial})', type(e).__name__, e])
+                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
 
         if output!=[]:
             output = flatten_list(output)
@@ -525,12 +564,3 @@ def get_brightness(display = None, method = None, **kwargs):
     for e in errors:
         msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
-
-#initialize monitor classes at start to make it easier to manipulate
-#brightness later
-monitors = []
-a = 0
-for monitor in list_monitors_info():
-    monitors.append(Monitor(monitor))
-    a+=1
-del(a)

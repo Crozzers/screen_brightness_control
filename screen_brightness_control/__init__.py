@@ -15,6 +15,7 @@ def list_monitors():
     '''
     if platform.system() == 'Windows':
         return windows.list_monitors()
+        
     elif platform.system() == 'Linux':
         pass #return linux.list_monitors()
 
@@ -201,5 +202,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.5.0-alpha.5'
+__version__='0.5.0-alpha.6'
 __author__='Crozzers'
