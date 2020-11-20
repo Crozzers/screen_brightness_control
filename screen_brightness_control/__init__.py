@@ -15,7 +15,6 @@ def list_monitors():
     '''
     if platform.system() == 'Windows':
         return windows.list_monitors()
-        
     elif platform.system() == 'Linux':
         pass #return linux.list_monitors()
 
