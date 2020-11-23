@@ -30,6 +30,9 @@ python -m screen_brightness_control --help
 >   -s SET, --set SET     set the brightness to this value
 >   -g, --get             get the current screen brightness
 >   -f FADE, --fade FADE  fade the brightness to this value
+>   -m METHOD, --method METHOD
+>                         specify which method to use
+>   -l, --list            list all monitors (windows only)
 >   -v, --verbose         any error messages will be more detailed
 >   -V, --version         print the current version
 python -m screen_brightness_control -g
