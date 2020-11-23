@@ -4,7 +4,7 @@ from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHA
 from . import flatten_list
 
 MONITOR_MANUFACTURER_CODES = {
-    "AAC":	"AcerView",
+    "AAC": "AcerView",
     "ACR": "Acer",
     "AOC": "AOC",
     "AIC": "AG Neovo",
@@ -464,7 +464,8 @@ def __filter_monitors(display=None, method=None):
     # use this as we will be modifying this list later and we don't want to change the global versions
     # just the local ones
     methods = [WMI, VCP]
-    monitors = list_monitors_info()###fix this to remove reliance on monitors
+    monitors = list_monitors_info()
+    #parse the method kwarg
     if method != None:
         try:
             method = ('wmi', 'vcp').index(method.lower())
@@ -475,12 +476,22 @@ def __filter_monitors(display=None, method=None):
         except LookupError as e:
             raise e
         except:
-            raise LookupError("Chosen method is not valid, must be 'wmi' or 'vcp'")
+            raise ValueError("Chosen method is not valid, must be 'wmi' or 'vcp'")
+    #parse display kwarg by trying to match given term to known monitors
     if display!=None:
         if type(display) is int:
             monitors = [monitors[display]]
         elif type(display) is str:
-            monitors = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
+            #see if display matches serial names, models or given names for monitors
+            m = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
+            #if no matches found, try to match model_name (takes longer)
+            if m == []:
+                names = [i.get_display_names() for i in methods]
+                names = flatten_list(names)
+                if display in names:
+                    display = names.index(display)
+                    m = [monitors[display]]
+            monitors = m
         else:
             raise TypeError(f'display must be int or str, not {type(display)}')
     return monitors
@@ -525,6 +536,8 @@ def set_brightness(value, display=None, method = None, **kwargs):
     msg='\n'
     for e in errors:
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
+    if msg=='\n':
+        msg+='no output was received from brightness methods'
     raise Exception(msg)
 
 def get_brightness(display = None, method = None, **kwargs):
@@ -565,4 +578,6 @@ def get_brightness(display = None, method = None, **kwargs):
     msg='\n'
     for e in errors:
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
+    if msg=='\n':
+        msg+='no output was received from brightness methods'
     raise Exception(msg)

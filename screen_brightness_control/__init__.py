@@ -1,4 +1,4 @@
-import platform,time,threading,subprocess,os
+import platform,time,threading
 
 class ScreenBrightnessError(Exception):
     '''raised when the brightness cannot be set/retrieved'''
@@ -201,5 +201,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.5.0-alpha.6'
+__version__='0.5.0-pre1'
 __author__='Crozzers'
