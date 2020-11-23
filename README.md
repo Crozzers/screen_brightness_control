@@ -132,7 +132,7 @@ sbc.fade_brightness(100, blocking=False)
 ```
 
 ## A Toast
-To GitHub user `lcharles` for assisting with version `0.4.0` and [DDC/CI support](https://github.com/Crozzers/screen_brightness_control/issues/1) in the library
+To GitHub user `lcharles` for contributing to this project
 
 ## License
 This software is licensed under the [MIT license](https://mit-license.org/)
@@ -167,6 +167,21 @@ Install light (recommended) or xrandr using your system package manager:
 * Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr`
 * Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr`
+
+#### The model of my monitor/display is not what the program says it is (Windows)
+###### Why this happens:
+If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
+If your display is a desktop monitor with a Virtual Control Panel (VCP) then there is a way to get the actual model, but the function call takes
+anywhere between 1 and 2 seconds to run, which is why it doesn't automatically.
+To get the actual model number use this:
+```python
+import screen_brightness_control as sbc
+sbc.list_monitors()
+> ['BenQ BNQ78A7', 'Dell DEL405E']
+monitor = sbc.windows.Monitor('BenQ BNQ78A7') # swap this argument for the preferred monitor name
+print(monitor.model_name)
+> 'GL2450HM'
+```
 
 #### When I call `get_brightness()` the returned value isn't what I set it to (Windows)
 Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
