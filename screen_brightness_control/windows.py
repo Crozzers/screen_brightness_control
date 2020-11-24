@@ -516,6 +516,13 @@ def set_brightness(value, display=None, method = None, **kwargs):
             monitors = list_monitors_info()
         else:
             monitors = __filter_monitors(display = display, method = method)
+        if monitors == []:
+            msg = 'no monitors found'
+            if display!=None:
+               msg+=f' with name/serial/model of "{display}"'
+            if method!=None:
+                msg+=f' with method of "{method}"'
+            raise LookupError(msg)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
@@ -537,7 +544,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
     for e in errors:
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     if msg=='\n':
-        msg+='no output was received from brightness methods'
+        msg+='\tno output was received from brightness methods'
     raise Exception(msg)
 
 def get_brightness(display = None, method = None, **kwargs):
@@ -558,6 +565,13 @@ def get_brightness(display = None, method = None, **kwargs):
             monitors = list_monitors_info()
         else:
             monitors = __filter_monitors(display = display, method = method)
+        if monitors == []:
+            msg = 'no monitors found'
+            if display!=None:
+                msg+=f' with name/serial/model of "{display}"'
+            if method!=None:
+                msg+=f' with method of "{method}"'
+            raise LookupError(msg)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
@@ -579,5 +593,5 @@ def get_brightness(display = None, method = None, **kwargs):
     for e in errors:
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     if msg=='\n':
-        msg+='no output was received from brightness methods'
+        msg+='\tno output was received from brightness methods'
     raise Exception(msg)

@@ -206,3 +206,4 @@ print(monitor.Level)
     2. I do not intend to buy a MAC
     3. From what I have found it is even less straight-forward to adjust the screen brightness from python on MAC  
 * If you own a MAC an you happen to know how to adjust the brightness in python then feel free to contribute
+* DDC/CI command support in Linux is coming at some point in the future, however, I am struggling to find a way to implement it without root being required every time the program is called
