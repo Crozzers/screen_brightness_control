@@ -460,9 +460,10 @@ def list_monitors():
     return flatten_list(displays)
 
 def __filter_monitors(display=None, method=None):
-    '''internal function, do not call'''
-    # use this as we will be modifying this list later and we don't want to change the global versions
-    # just the local ones
+    '''internal function, do not call
+    filters the list of all addressable monitors by:
+        whether their name/model/serial/model_name matches the display kwarg
+        whether they use the method matching the mdthod kwarg'''
     methods = [WMI, VCP]
     monitors = list_monitors_info()
     #parse the method kwarg
@@ -494,7 +495,44 @@ def __filter_monitors(display=None, method=None):
             monitors = m
         else:
             raise TypeError(f'display must be int or str, not {type(display)}')
+    if monitors == []:
+        msg = 'no monitors found'
+        if display!=None:
+            msg+=f' with name/serial/model of "{display}"'
+        if method!=None:
+            msg+=f' with method of "{method}"'
+        raise LookupError(msg)
     return monitors
+
+def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+    '''internal function, do not call.
+    either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
+    errors = []
+    try: # filter knwon list of monitors according to kwargs
+        monitors = __filter_monitors(display = display, method = method)
+    except Exception as e:
+        errors.append(['',type(e).__name__, e])
+    else:
+        output = []
+        for m in monitors: # add the output of each brightness method to the output list
+            try:
+                output.append(
+                    getattr(m['method'], meta_method+'_brightness')(*args, display = m['serial'], **kwargs)
+                )
+            except Exception as e:
+                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
+
+        if output!=[]: # flatten and return any output
+            output = flatten_list(output)
+            return output[0] if len(output)==1 else output
+
+    #if function hasn't already returned it has failed
+    msg='\n'
+    for e in errors:
+        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
+    if msg=='\n':
+        msg+='\tno output was received from brightness methods'
+    raise Exception(msg)
 
 def set_brightness(value, display=None, method = None, **kwargs):
     '''
@@ -510,42 +548,9 @@ def set_brightness(value, display=None, method = None, **kwargs):
         Whatever the called methods return.
         Typically: list, int (0 to 100) or None
     '''
-    errors = []
-    try:
-        if (display, method)==(None, None):
-            monitors = list_monitors_info()
-        else:
-            monitors = __filter_monitors(display = display, method = method)
-        if monitors == []:
-            msg = 'no monitors found'
-            if display!=None:
-               msg+=f' with name/serial/model of "{display}"'
-            if method!=None:
-                msg+=f' with method of "{method}"'
-            raise LookupError(msg)
-    except Exception as e:
-        errors.append(['',type(e).__name__, e])
-    else:
-        output = []
-        for m in monitors:
-            try:
-                output.append(m['method'].set_brightness(value, display = m['serial'], **kwargs))
-            except Exception as e:
-                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
-
-        if output!=[]:
-            output = flatten_list(output)
-            if len(output) == 1:
-                output = output[0]
-            return output
-
-    #if function hasn't already returned it has failed
-    msg='\n'
-    for e in errors:
-        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
-    if msg=='\n':
-        msg+='\tno output was received from brightness methods'
-    raise Exception(msg)
+    # this function is called because set_brightness and get_brightness only differed by 1 line of code
+    # so I made another internal function to reduce the filesize
+    return __set_and_get_brightness(value, display=display, method=method, meta_method='set', **kwargs)
 
 def get_brightness(display = None, method = None, **kwargs):
     '''
@@ -559,39 +564,6 @@ def get_brightness(display = None, method = None, **kwargs):
     Returns:
         An int between 0 and 100
     '''
-    errors = []
-    try:
-        if (display, method)==(None, None):
-            monitors = list_monitors_info()
-        else:
-            monitors = __filter_monitors(display = display, method = method)
-        if monitors == []:
-            msg = 'no monitors found'
-            if display!=None:
-                msg+=f' with name/serial/model of "{display}"'
-            if method!=None:
-                msg+=f' with method of "{method}"'
-            raise LookupError(msg)
-    except Exception as e:
-        errors.append(['',type(e).__name__, e])
-    else:
-        output = []
-        for m in monitors:
-            try:
-                output.append(m['method'].get_brightness(display = m['serial'], **kwargs))
-            except Exception as e:
-                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
-
-        if output!=[]:
-            output = flatten_list(output)
-            if len(output) == 1:
-                output = output[0]
-            return output
-
-    #if function hasn't already returned it has failed
-    msg='\n'
-    for e in errors:
-        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
-    if msg=='\n':
-        msg+='\tno output was received from brightness methods'
-    raise Exception(msg)
+    # this function is called because set_brightness and get_brightness only differed by 1 line of code
+    # so I made another internal function to reduce the filesize
+    return __set_and_get_brightness(display=display, method=method, meta_method='get', **kwargs)

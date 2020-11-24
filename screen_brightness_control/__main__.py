@@ -23,6 +23,8 @@ if __name__=='__main__':
         if args.display!=None:
             if type(args.display) not in (str, int):
                 raise TypeError('display arg must be str or int')
+            if type(args.display) is str and args.display.isdigit():
+                args.display = int(args.display)
             kw['display'] = args.display
         if args.verbose:
             kw['verbose_error']=True
@@ -35,8 +37,11 @@ if __name__=='__main__':
             if monitors == None:
                 print(values)
             else:
-                for i in range(len(monitors)):
-                    print(f'{monitors[i]}: {values[i]}%')
+                if args.display == None:
+                    for i in range(len(monitors)):
+                        print(f'{monitors[i]}: {values[i]}%')
+                else:
+                    print(f'Display {args.display}: {values}')
         elif args.set!=None:
             SBC.set_brightness(args.set, **kw)
         elif args.fade!=None:
