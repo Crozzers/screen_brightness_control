@@ -1,8 +1,8 @@
 import subprocess, os
 
-class Light():
+class Light:
     '''collection of screen brightness related methods using the light executable'''
-    def get_display_names(self):
+    def get_display_names():
         '''returns the names of each display, as reported by light'''
         command = 'light -L'
         res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode().split('\n')
@@ -13,7 +13,7 @@ class Light():
                 displays.append(r)
         return displays
 
-    def set_brightness(self, value, display = None, no_return = False):
+    def set_brightness(value, display = None, no_return = False):
         '''
         Sets the brightness for a display using the light executable
 
@@ -25,15 +25,15 @@ class Light():
         Returns:
             list, int (0 to 100) or None
         '''
-        display_names = self.get_display_names()
+        display_names = Light.get_display_names()
         if display!=None:
             display_names = [display_names[display]]
         for name in display_names:
             command = f'light -S {value} -s sysfs/backlight/{name}'
             subprocess.call(command.split(" "))
-        return self.get_brightness(display=display) if not no_return else None
+        return Light.get_brightness(display=display) if not no_return else None
 
-    def get_brightness(self, display = None):
+    def get_brightness(display = None):
         '''
         Sets the brightness for a display using the light executable
 
@@ -43,7 +43,7 @@ class Light():
         Returns:
             list or int (0 to 100)
         '''
-        display_names = self.get_display_names()
+        display_names = Light.get_display_names()
         if display!=None:
             display_names = [display_names[display]]
         results = []
@@ -53,9 +53,9 @@ class Light():
         results = [int(round(float(str(i)),0)) for i in results]
         return results[0] if len(results)==1 else results
 
-class XBacklight():
+class XBacklight:
     '''collection of screen brightness related methods using the xbacklight executable'''
-    def set_brightness(self, value, no_return = False, **kwargs):
+    def set_brightness(value, no_return = False, **kwargs):
         '''
         Sets the screen brightness to a supplied value
 
@@ -67,22 +67,22 @@ class XBacklight():
         '''
         command = 'xbacklight -set {}'.format(value)
         subprocess.call(command.split(" "))
-        return self.get_brightness() if not no_return else None
+        return XBacklight.get_brightness() if not no_return else None
 
-    def get_brightness(self, **kwargs):
+    def get_brightness(**kwargs):
         '''Returns the screen brightness as reported by xbacklight'''
         command = 'xbacklight -get'
         res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
         return int(round(float(str(res)),0))
 
-class XRandr():
+class XRandr:
     '''collection of screen brightness related methods using the xrandr executable'''
-    def get_display_names(self):
+    def get_display_names():
         '''returns the names of each display, as reported by xrandr'''
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and not 'disconnected' in i]   
 
-    def get_brightness(self, display = None):
+    def get_brightness(display = None):
         '''
         Returns the brightness for a display using the xrandr executable
 
@@ -98,7 +98,7 @@ class XRandr():
             return lines[display]
         return lines[0] if len(lines)==1 else lines
 
-    def set_brightness(self, value, display = None, no_return = False):
+    def set_brightness(value, display = None, no_return = False):
         '''
         Sets the brightness for a display using the xrandr executable
 
@@ -111,12 +111,12 @@ class XRandr():
             The result of self.get_brightness()
         '''
         value = str(float(value)/100)
-        names = self.get_display_names()
+        names = XRandr.get_display_names()
         if display==None:
             names = [names[display]]
         for name in names:
             subprocess.run(['xrandr','--output', name, '--brightness', value])
-        return self.get_brightness(display=display) if not no_return else None
+        return XRandr.get_brightness(display=display) if not no_return else None
 
 def get_brightness_from_sysfiles(display = None):
     '''
@@ -158,6 +158,7 @@ def get_brightness_from_sysfiles(display = None):
         for e in error:
             exc+=f'\n    {e[0]}: {e[1]}'
         raise Exception(exc)
+    raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
 def set_brightness(value, method = None, **kwargs):
     '''
@@ -176,16 +177,15 @@ def set_brightness(value, method = None, **kwargs):
     methods = globals()['methods'].copy()
     if method != None:
         try:
-            method = ('light', 'xrandr', 'xbacklight').index(method)
-            methods = [methods[method]]
+            method = methods[method.lower()]
         except:
             raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
-    for m in methods:
+    for n,m in methods.items():
         try:
             return m.set_brightness(value, **kwargs)
         except Exception as e:
-            errors.append([type(m).__name__, type(e).__name__, e])
+            errors.append([n, type(e).__name__, e])
     #if function hasn't already returned it has failed
     msg='\n'
     for e in errors:
@@ -208,16 +208,15 @@ def get_brightness(method = None, **kwargs):
     methods = globals()['methods'].copy()
     if method != None:
         try:
-            method = ('light', 'xrandr', 'xbacklight').index(method)
-            methods = [methods[method]]
+            method = methods[method.lower()]
         except:
             raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
-    for m in methods:
+    for n,m in methods.items():
         try:
             return m.get_brightness(**kwargs)
         except Exception as e:
-            errors.append([type(m).__name__, type(e).__name__, e])
+            errors.append([n, type(e).__name__, e])
     #if function hasn't already returned it has failed
     if method==None:
         try:
@@ -226,10 +225,7 @@ def get_brightness(method = None, **kwargs):
             errors.append(['/sys/class/backlight/*', type(e).__name__, e])
     msg='\n'
     for e in errors:
-        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
+        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-light_method = Light()
-xrandr_method = XRandr()
-xbacklight_method = XBacklight()
-methods = [light_method, xrandr_method, xbacklight_method]
+methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight}
