@@ -142,13 +142,15 @@ This software is licensed under the [MIT license](https://mit-license.org/)
 
 ## FAQ
 #### Why is there no support for DDC/CI commands on Linux?
-I'm working on it
+I'm working on it, however, I am struggling to find a way to implement it without root being required every time the program is called.
+If you have any suggestions feel free to raise an [issue](https://github.com/Crozzers/screen_brightness_control/issues),
+[pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to [ping me an email](mailto:captaincrozzers@gmail.com)
 
 #### Why do I always get `ScreenBrightnessError` on Linux?
 ###### Why this happens:
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
 The programs it attempts to call are "light", "xrandr" and "xbacklight".
-If neither of these programs can be called a `ScreenBrightnessError` is raised
+If none of these programs can be called a `ScreenBrightnessError` is raised
 ###### How to fix it:
 Install light (recommended), xrandr or xbacklight using your system package manager:
 * Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S xorg-xbacklight`
@@ -158,7 +160,7 @@ Install light (recommended), xrandr or xbacklight using your system package mana
 #### I call `set_brightness()` and nothing happens on Linux
 ###### Why this happens:
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
-If you installed xbacklight, it only supports Intel and NVidia graphics, not AMD.
+If you installed xbacklight or xrandr, it only supports Intel (and sometimes NVidia) graphics, not AMD.
 ###### How to fix it:
 Install Light by following [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo
 
@@ -200,10 +202,9 @@ print(monitor.Level)
 ```
 
 ## Things to note:
-* If you encounter any issues or bugs with this software please do not hesitate to [raise an issue](https://github.com/Crozzers/screen_brightness_control/issues).  
+* If you encounter any issues or bugs with this software please do not hesitate to [raise an issue](https://github.com/Crozzers/screen_brightness_control/issues) or to email me [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com)
 * It is unlikely that this project will support MAC in the forseeable future for 3 reasons.
     1. I do not own a (working) MAC.
     2. I do not intend to buy a MAC
-    3. From what I have found it is even less straight-forward to adjust the screen brightness from python on MAC  
+    3. From what I have found it is even less straight-forward to adjust the screen brightness from python on MAC
 * If you own a MAC an you happen to know how to adjust the brightness in python then feel free to contribute
-* DDC/CI command support in Linux is coming at some point in the future, however, I am struggling to find a way to implement it without root being required every time the program is called
