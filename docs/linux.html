@@ -312,7 +312,7 @@ def set_brightness(value, method = None, **kwargs):
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
-        The result of `get_brightness()`
+        The result of the called method. Typically int, list of ints or None
 
     Raises:
         ValueError: if you pass an invalid value for `method`
@@ -626,7 +626,7 @@ brightness = sbc.linux.get_brightness_from_sysfiles()
 <dd>passed directly to the chosen brightness method</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>The result of <code><a title="screen_brightness_control.linux.get_brightness" href="#screen_brightness_control.linux.get_brightness">get_brightness()</a></code></p>
+<p>The result of the called method. Typically int, list of ints or None</p>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>ValueError</code></dt>
@@ -660,7 +660,7 @@ sbc.linux.set_brightness(25, method='xrandr')
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
-        The result of `get_brightness()`
+        The result of the called method. Typically int, list of ints or None
 
     Raises:
         ValueError: if you pass an invalid value for `method`

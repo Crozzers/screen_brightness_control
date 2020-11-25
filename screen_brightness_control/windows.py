@@ -86,13 +86,31 @@ class WMI:
         return None
     def get_display_info(*args):
         '''
-        returns a dictionary of info about all detected monitors
+        Returns a dictionary of info about all detected monitors
 
         Args:
-            monitor (str or int) (optional): the monitor to return info about. Pass in the serial number, name, model or index
+            monitor (str or int): [optional] the monitor to return info about. Pass in the serial number, name, model or index
 
         Returns:
-            list of dicts or dict
+            list: list of dictonaries
+            dict: one dictionary if a monitor is specified
+        
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            info = sbc.windows.WMI.get_display_info()
+            for i in info:
+                print('================')
+                for key, value in i.items():
+                    print(key, ':', value)
+
+            # get information about the first WMI addressable monitor
+            primary_info = sbc.windows.WMI.get_display_info(0)
+
+            # get information about a monitor with a specific name
+            benq_info = sbc.windows.WMI.get_display_info('BenQ BNQ78A7')
+            ```
         '''
         #WMI calls don't work in new threads so we have to run this check
         if threading.current_thread() != threading.main_thread():
@@ -123,13 +141,21 @@ class WMI:
             else:
                 info = info[index]
         return info
-    def get_display_serials():
-        '''returns a (hopefully) unique string for each display, as reported by wmi'''
-        info = WMI.get_display_info()
-        serials = [i['serial'] for i in info]
-        return serials
     def get_display_names():
-        '''Returns names of all displays that can be addressed by WMI'''
+        '''
+        Returns names of all displays that can be addressed by WMI
+
+        Returns:
+            list: list of strings
+        
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            for name in sbc.windows.WMI.get_display_names():
+                print(name)
+            ```
+        '''
         info = WMI.get_display_info()
         names = [i['name'] for i in info]
         return names
@@ -143,7 +169,26 @@ class WMI:
             no_return (bool): if True, this function returns None, otherwise it returns the result of self.get_brightness()
 
         Returns:
-            list, int (0 to 100) or None
+            int: from 0 to 100 if only one display's brightness is requested
+            list: list of integers if multiple displays are requested
+            None: if `no_return` is set to `True`
+        
+        Raises:
+            LookupError: if the given display cannot be found
+
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            # set brightness of WMI addressable monitors to 50%
+            sbc.windows.WMI.set_brightness(50)
+
+            # set the primary display brightness to 75%
+            sbc.windows.WMI.set_brightness(75, display = 0)
+
+            # set the brightness of a named monitor to 25%
+            sbc.windows.WMI.set_brightness(25, display = 'BenQ BNQ78A7')
+            ```
         '''
         #WMI calls don't work in new threads so we have to run this check
         if threading.current_thread() != threading.main_thread():
@@ -167,7 +212,25 @@ class WMI:
             display (int): The index display you wish to get the brightness of OR the model of that display
 
         Returns:
-            list or int (0 to 100)
+            int: from 0 to 100 if only one display's brightness is requested
+            list: list of integers if multiple displays are requested
+        
+        Raises:
+            LookupError: if the given display cannot be found
+        
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            # get brightness of all WMI addressable monitors
+            current_brightness = sbc.windows.WMI.set_brightness(50)
+
+            # get the primary display brightness
+            primary_brightness = sbc.windows.WMI.set_brightness(75, display = 0)
+
+            # get the brightness of a named monitor
+            benq_brightness = sbc.windows.WMI.set_brightness(25, display = 'BenQ BNQ78A7')
+            ```
         '''
         #WMI calls don't work in new threads so we have to run this check
         if threading.current_thread() != threading.main_thread():
@@ -328,11 +391,32 @@ class VCP:
         return VCP.get_brightness(display=display) if not no_return else None
 
 class Monitor(object):
-    '''A class to manage a single monitor'''
+    '''
+    A class to manage a single monitor and its information
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        # create a class for the primary monitor and then a specificly named monitor
+        primary = sbc.windows.Monitor(0)
+        benq_monitor = sbc.windows.Monitor('BenQ BNQ78A7')
+
+        # check if the benq monitor is the primary one
+        if primary.serial == benq.serial:
+            print('BNQ78A7 is the primary display')
+        else:
+            print('The primary display is', primary.name)
+        ```
+    '''
     def __init__(self, display):
         '''
         Args:
             display (int or str): the index/model name/serial of the display you wish to control
+        
+        Raises:
+            LookupError: if the given display is a string but thta string does not match any known displays
+            TypeError: if the given display type is not int or str
         '''
         if type(display) is dict:
             info = display
@@ -350,13 +434,23 @@ class Monitor(object):
                 raise TypeError(f'display arg must be int or str, not {type(display)}')
 
         self.serial = info['serial']
+        '''a unique string assigned by Windows to this monitor'''
         self.name = info['name']
+        '''the monitors manufacturer name plus its model'''
         self.method = info['method']
+        '''the method by which this monitor can be addressed'''
         self.manufacturer = info['manufacturer']
+        '''the name of the brand of the monitor'''
         self.manufacturer_id = info['manufacturer_id']
+        '''the 3 letter manufacturing code corresponding to the manufacturer name'''
         self.model = info['model']
+        '''the general model of the display'''
         self.model_name = info['model_name']
+        '''the model name of the display. Is always equal to `None` unless the method is `VCP`.
+        If the method is `VCP` and you try to access this variable it will be loaded on-request (because it takes 1-2 seconds)'''
         self.index = info['index']
+        '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
+        This means that if the monitor uses WMI, the index is out of the list of WMI addressable monitors ONLY. Same for VCP'''
     def __getitem__(self, item):
         return getattr(self, item)
     def __getattribute__(self, attr):
@@ -368,35 +462,63 @@ class Monitor(object):
             return object.__getattribute__(self, attr)
     def set_brightness(self, *args, **kwargs):
         '''
-        sets the brightness for this display
+        Sets the brightness for this display
 
         Args:
             args (tuple): passed directly to this monitors brightness method
-            kwargs (dict): passed directly to this monitors brightness method
+            kwargs (dict): passed directly to this monitors brightness method (the `display` kwarg is always overwritrten)
 
         Returns:
-            int (0 to 100)
+            int: from 0 to 100
+
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.windows.Monitor(0)
+            primary_brightness = primary.set_brightness(50)
+            ```
         '''
         kwargs['display'] = self.serial
         return self.method.set_brightness(*args, **kwargs)
     def get_brightness(self, **kwargs):
         '''
-        returns the brightness for this display
+        Returns the brightness for this display
 
         Args:
-            kwargs (dict): passed directly to this monitors brightness method
+            kwargs (dict): passed directly to this monitors brightness method (`display` kwarg is always overwritten)
 
         Returns:
-            int (0 to 100)
+            int: from 0 to 100
+
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.windows.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
         '''
         kwargs['display'] = self.serial
         return self.method.get_brightness(**kwargs)
     def get_info(self):
         '''
-        returns all known information about this monitor instance
+        Returns all known information about this monitor instance
 
         Returns:
             dict
+        
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.windows.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
         '''
         try:
             if self.model_name == None:
@@ -418,10 +540,21 @@ class Monitor(object):
         }
     def is_active(self):
         '''
-        attempts to retrieve the brightness for this display. If it works the display is deemed active
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
 
         Returns:
             bool. True means active, False means inactive
+        
+        Example:
+            ```
+            import screen_brightness_control as sbc
+
+            primary = sbc.windows.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            else:
+                pass
+            ```
         '''
         try:
             self.get_brightness()
@@ -434,7 +567,23 @@ def list_monitors_info():
     list detailed information about all detected monitors
 
     Returns:
-        A list of dictionaries upon success, empty list upon failure
+        list: list of dictionaries upon success, empty list upon failure
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        monitors = sbc.windows.list_monitors_info()
+        for info in monitors:
+            print('=======================')
+            print('Name:', info['name']) # the manufacturer name plus the model
+            print('Model:', info['model']) # the general model of the display
+            print('Serial:', info['serial']) # a unique string assigned by Windows to this display
+            print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
+            print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the breand name, EG: BNQ -> BenQ  
+            print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Method:', info['method']) # the method this monitor can be addressed by
+        ```
     '''
     tmp = []
     for m in [WMI, VCP]:
@@ -454,7 +603,15 @@ def list_monitors():
     list all addressable monitor names
 
     Returns:
-        list of strings
+        list: list of strings
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        monitors = sbc.windows.list_monitors()
+        # EG output: ['BenQ BNQ 78A7', 'Dell DEL405E']
+        ```
     '''
     displays = [i['name'] for i in list_monitors_info()]
     return flatten_list(displays)
@@ -536,7 +693,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
 
 def set_brightness(value, display=None, method = None, **kwargs):
     '''
-    Sets the brightness for a display
+    Sets the brightness of any connected monitors
 
     Args:
         value (int): Sets the brightness to this value
@@ -547,6 +704,29 @@ def set_brightness(value, display=None, method = None, **kwargs):
     Returns:
         Whatever the called methods return.
         Typically: list, int (0 to 100) or None
+    
+    Raises:
+        LookupError: if the chosen display or method is not found
+        ValueError: if the chosen method is invalid
+        TypeError: if the value given for `display` is not int or str
+        Exception: if the brightness could not be set by any method
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        # set the current brightness to 50%
+        sbc.windows.get_brightness(50)
+
+        # set the brightness of the primary display to 75%
+        sbc.windows.get_brightness(75, display = 0)
+
+        # set the brightness of any displays using VCP to 25%
+        sbc.windows.get_brightness(25, method = 'vcp')
+
+        # set the brightness of displays with the model name 'BenQ BNQ78A7' (see `list_monitors` and `list_monitors_info`) to 100%
+        sbc.windows.get_brightness(100, display = 'BenQ BNQ78A7')
+        ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
     # so I made another internal function to reduce the filesize
@@ -554,7 +734,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
 
 def get_brightness(display = None, method = None, **kwargs):
     '''
-    Returns the brightness for a display
+    Returns the brightness of any connected monitors
 
     Args:
         display (int or str): the specific display you wish to adjust OR the model of the display
@@ -562,7 +742,31 @@ def get_brightness(display = None, method = None, **kwargs):
         kwargs (dict): passed directly to chosen brightness method
 
     Returns:
-        An int between 0 and 100
+        int: from 0 to 100 if only one display is detected
+        list: list of integers if multiple displays are detected
+    
+    Raises:
+        LookupError: if the chosen display or method is not found
+        ValueError: if the chosen method is invalid
+        TypeError: if the value given for `display` is not int or str
+        Exception: if the brightness could not be obtained by any method
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        # get the current brightness
+        current_brightness = sbc.windows.get_brightness()
+
+        # get the brightness of the primary display
+        primary_brightness = sbc.windows.get_brightness(display = 0)
+
+        # get the brightness of any displays using VCP
+        vcp_brightness = sbc.windows.get_brightness(method = 'vcp')
+
+        # get the brightness of displays with the model name 'BenQ BNQ78A7' (see `list_monitors` and `list_monitors_info`)
+        benq_brightness = sbc.windows.get_brightness(display = 'BenQ BNQ78A7')
+        ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
     # so I made another internal function to reduce the filesize

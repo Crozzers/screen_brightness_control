@@ -284,7 +284,7 @@ def set_brightness(value, method = None, **kwargs):
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
-        The result of `get_brightness()`
+        The result of the called method. Typically int, list of ints or None
 
     Raises:
         ValueError: if you pass an invalid value for `method`
