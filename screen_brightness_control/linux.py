@@ -27,6 +27,8 @@ class Light:
         '''
         display_names = Light.get_display_names()
         if display!=None:
+            if type(display) is str:
+                display = display_names.index(display)
             display_names = [display_names[display]]
         for name in display_names:
             command = f'light -S {value} -s sysfs/backlight/{name}'
@@ -45,6 +47,8 @@ class Light:
         '''
         display_names = Light.get_display_names()
         if display!=None:
+            if type(display) is str:
+                display = display_names.index(display)
             display_names = [display_names[display]]
         results = []
         for name in display_names:
@@ -95,6 +99,9 @@ class XRandr:
         out = subprocess.check_output(['xrandr','--verbose']).decode().split('\n')
         lines = [int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100) for i in out if 'Brightness:' in i]
         if display!=None:
+            if type(display) is str:
+                names = XRandr.get_display_names()
+                display = names.index(display)
             return lines[display]
         return lines[0] if len(lines)==1 else lines
 
@@ -112,7 +119,9 @@ class XRandr:
         '''
         value = str(float(value)/100)
         names = XRandr.get_display_names()
-        if display==None:
+        if display!=None:
+            if type(display) is str:
+                display = names.index(display)
             names = [names[display]]
         for name in names:
             subprocess.run(['xrandr','--output', name, '--brightness', value])
