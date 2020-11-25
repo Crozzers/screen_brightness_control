@@ -3,7 +3,20 @@ import subprocess, os
 class Light:
     '''collection of screen brightness related methods using the light executable'''
     def get_display_names():
-        '''returns the names of each display, as reported by light'''
+        '''
+        Returns the names of each display, as reported by light
+
+        Returns:
+            list: list of strings
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            names = sbc.linux.Light.get_display_names()
+            # EG output: ['edp-backlight']
+            ```
+        '''
         command = 'light -L'
         res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode().split('\n')
         displays = []
@@ -20,10 +33,21 @@ class Light:
         Args:
             value (int): Sets the brightness to this value
             display (int): The index of the display you wish to change
-            no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
+            no_return (bool): if True, this function returns None
 
         Returns:
-            list, int (0 to 100) or None
+            The result of `Light.get_brightness()` or `None` (see `no_return` kwarg)
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 50%
+            sbc.linux.Light.set_brightness(50)
+
+            # set the primary display brightness to 75%
+            sbc.linux.Light.set_brightness(75, display = 0)
+            ```
         '''
         display_names = Light.get_display_names()
         if display!=None:
@@ -43,7 +67,19 @@ class Light:
             display (int): The index of the display you wish to query
         
         Returns:
-            list or int (0 to 100)
+            int: from 0 to 100 if only one display is detected
+            list: list of integers if multiple displays are detected
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the current display brightness
+            current_brightness = sbc.linux.Light.get_brightness()
+
+            # get the brightness of the primary display
+            primary_brightness = sbc.linux.Light.get_brightness(display = 0)
+            ```
         '''
         display_names = Light.get_display_names()
         if display!=None:
@@ -67,14 +103,35 @@ class XBacklight:
             no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
 
         Returns:
-            int (0 to 100) or None
+            int: from 0 to 100
+            None: if `no_return` is set to `True`
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 100%
+            sbc.linux.XBacklight.set_brightness(100)
+            ```
         '''
         command = 'xbacklight -set {}'.format(value)
         subprocess.call(command.split(" "))
         return XBacklight.get_brightness() if not no_return else None
 
     def get_brightness(**kwargs):
-        '''Returns the screen brightness as reported by xbacklight'''
+        '''
+        Returns the screen brightness as reported by xbacklight
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            current_brightness = sbc.linux.XBacklight.get_brightness()
+            ```
+        '''
         command = 'xbacklight -get'
         res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode()
         return int(round(float(str(res)),0))
@@ -82,7 +139,20 @@ class XBacklight:
 class XRandr:
     '''collection of screen brightness related methods using the xrandr executable'''
     def get_display_names():
-        '''returns the names of each display, as reported by xrandr'''
+        '''
+        Returns the names of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
+        
+        Returns:
+            list: list of strings
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            names = sbc.linux.XRandr.get_display_names()
+            # EG output: ['eDP-1', 'HDMI1', 'HDMI2']
+            ```
+        '''
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and not 'disconnected' in i]   
 
@@ -94,7 +164,19 @@ class XRandr:
             display (int): The index of the display you wish to query
         
         Returns:
-            list or int (0 to 100)
+            int: an integer from 0 to 100 if only one display is detected
+            list: list of integers (from 0 to 100) if there are multiple displays connected
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the current brightness
+            current_brightness = sbc.linux.XRandr.get_brightness()
+
+            # get the current brightness for the primary display
+            primary_brightness = sbc.linux.XRandr.get_brightness(display=0)
+            ```
         '''
         out = subprocess.check_output(['xrandr','--verbose']).decode().split('\n')
         lines = [int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100) for i in out if 'Brightness:' in i]
@@ -112,10 +194,21 @@ class XRandr:
         Args:
             value (int): Sets the brightness to this value
             display (int): The index of the display you wish to change
-            no_return (bool): if True, this function returns None, returns the result of self.get_brightness() otherwise
+            no_return (bool): if True, this function returns None, returns the result of `XRandr.get_brightness()` otherwise
         
         Returns:
-            The result of self.get_brightness()
+            The result of `XRandr.get_brightness()` or `None` (see `no_return` kwarg)
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 50
+            sbc.linux.XRandr.set_brightness(50)
+
+            # set the brightness of the primary display to 75
+            sbc.linux.XRandr.set_brightness(75, display=0)
+            ```
         '''
         value = str(float(value)/100)
         names = XRandr.get_display_names()
@@ -129,13 +222,25 @@ class XRandr:
 
 def get_brightness_from_sysfiles(display = None):
     '''
-    Returns the current display brightness by reading files from /sys/class/backlight
+    Returns the current display brightness by reading files from `/sys/class/backlight`
 
     Args:
         display (int): The index of the display you wish to query
     
     Returns:
-        An integer between 0 and 100
+        int: from 0 to 100
+    
+    Raises:
+        Exception: if no values could be obtained from reading `/sys/class/backlight`
+        FileNotFoundError: if the `/sys/class/backlight` directory doesn't exist or it is empty
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        brightness = sbc.linux.get_brightness_from_sysfiles()
+        # Eg Output: 100
+        ```
     '''
     backlight_dir = '/sys/class/backlight/'
     error = []
@@ -179,7 +284,25 @@ def set_brightness(value, method = None, **kwargs):
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
-        The result of get_brightness()
+        The result of `get_brightness()`
+
+    Raises:
+        ValueError: if you pass an invalid value for `method`
+        Exception: if the brightness cannot be set via any method
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # set brightness to 50%
+        sbc.linux.set_brightness(50)
+
+        # set brightness of the primary display to 75%
+        sbc.linux.set_brightness(75, display=0)
+
+        # set the brightness to 25% via the XRandr method
+        sbc.linux.set_brightness(25, method='xrandr')
+        ```
     '''
     # use this as we will be modifying this list later and we don't want to change the global version
     # just the local one
@@ -188,7 +311,7 @@ def set_brightness(value, method = None, **kwargs):
         try:
             method = methods[method.lower()]
         except:
-            raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
+            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
     for n,m in methods.items():
         try:
@@ -210,7 +333,29 @@ def get_brightness(method = None, **kwargs):
         kwargs (dict): passed directly to chosen brightness method
     
     Returns:
-        An int between 0 and 100
+        int: an integer between 0 and 100 if only one display is detected
+        list: if the brightness method detects multiple displays it may return a list of integers
+
+    Raises:
+        ValueError: if you pass in an invalid value for `method`
+        Exception: if the brightness cannot be retrieved via any method
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # get the current screen brightness
+        current_brightness = sbc.linux.get_brightness()
+
+        # get the brightness of the primary display
+        primary_brightness = sbc.linux.get_brightness(display=0)
+
+        # get the brightness via the XRandr method
+        xrandr_brightness = sbc.linux.get_brightness(method='xrandr')
+
+        # get the brightness of the secondary display using Light
+        light_brightness = sbc.get_brightness(display=1, method='light')
+        ```
     '''
     # use this as we will be modifying this list later and we don't want to change the global version
     # just the local one
@@ -219,7 +364,7 @@ def get_brightness(method = None, **kwargs):
         try:
             method = methods[method.lower()]
         except:
-            raise IndexError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
+            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
     errors = []
     for n,m in methods.items():
         try:

@@ -1,7 +1,19 @@
 import platform,time,threading
 
 class ScreenBrightnessError(Exception):
-    '''raised when the brightness cannot be set/retrieved'''
+    '''
+    Generic error class designed to make catching errors under one umbrella easy.
+    Raised when the brightness cannot be set/retrieved.
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        try:
+            sbc.set_brightness(50)
+        except sbc.ScreenBrightnessError as error:
+            print(error)
+        ```
+    '''
     def __init__(self, message="Cannot set/retrieve brightness level"):
         self.message=message
         super().__init__(self.message)
@@ -12,6 +24,13 @@ def list_monitors():
 
     Returns:
         list of strings (Windows) but None on Linux
+    
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitor_names = sbc.list_monitors()
+        # eg: ['BenQ BNQ78A7', 'Dell DEL405E']
+        ```
     '''
     if platform.system() == 'Windows':
         return windows.list_monitors()
@@ -20,13 +39,21 @@ def list_monitors():
 
 def flatten_list(thick_list):
     '''
-    internal function I use to flatten lists, because I do that often
+    Internal function I use to flatten lists, because I do that often
     
     Args:
         thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
 
     Returns:
-        one dimensional list
+        list: one dimensional
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        thick_list = [1, [2, [3, 4, 5], 6, 7], 8, [9, 10]]
+        flat_list = sbc.flatten_list(thick_list)
+        # Output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        ```
     '''
     flat_list = []
     for item in thick_list:
@@ -42,12 +69,32 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
     Args:
         value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        force (bool): [Linux Only] if false the brightness will never be set lower than 1 (as 0 usually turns the screen off). If True, this check is bypassed
+        force (bool): [Linux Only] if False the brightness will never be set lower than 1 (as 0 usually turns the screen off). If True, this check is bypassed
         verbose_error (bool): boolean value controls the amount of detail error messages will contain
         kwargs (dict): passed to the OS relevant brightness method
     
     Returns:
-        Returns the result of get_brightness()
+        Returns the result of `get_brightness()`
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        # set brightness to 50%
+        sbc.set_brightness(50)
+
+        # set brightness to 0%
+        sbc.set_brightness(0, force=True)
+
+        # increase brightness by 25%
+        sbc.set_brightness('+25')
+
+        # decrease brightness by 30%
+        sbc.set_brightness('-30')
+
+        # set the brightness of display 0 to 50%
+        sbc.set_brightness(50, display=0)
+        ```
     '''
     
     if type(value) not in (int, float, str):
@@ -97,18 +144,38 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
 def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
-    A function to somewhat gently fade the screen brightness from start_value to finish_value
+    A function to somewhat gently fade the screen brightness from `start` (the current brightness or a defined value) to `finish`
 
     Args:
-        finish - the brighness level we end on
-        start - where the brightness should fade from
-        interval - the time delay between each step in brightness
-        increment - the amount to change the brightness by per loop
-        blocking - whether this should occur in the main thread (True) or a new daemonic thread (False)
-        kwargs - passed directly to set_brightness (see set_brightness docstring for available kwargs)
+        finish (int or str): the brighness level to end up on
+        start (int or str): where the brightness should fade from. If not specified the fucntion starts from the current screen brightness
+        interval (float or int): the time delay between each step in brightness
+        increment (int): the amount to change the brightness by per step
+        blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
+        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
     
     Returns:
-        Returns a thread object if blocking is set to False, otherwise it returns the result of get_brightness()
+        Returns a list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of get_brightness()
+
+    Example:
+        ```
+        import screen_brightness_control as sbc
+
+        # fade brightness from the current brightness to 50%
+        sbc.fade_brightness(50)
+
+        # fade the brightness from 25% to 75%
+        sbc.fade_brightness(75, start=25)
+
+        # fade the brightness from the current value to 100% in steps of 10%
+        sbc.fade_brightness(100, increment=10)
+
+        # fade the brightness from 100% to 90% with time intervals of 0.1 seconds
+        sbc.fade_brightness(90, start=100, interval=0.1)
+
+        # fade the brightness to 100% in a new thread
+        sbc.fade_brightness(100, blocking=False)
+        ```
     '''
     def fade(start, finish, increment, **kwargs):
         if 'no_return' not in kwargs.keys():
@@ -171,7 +238,22 @@ def get_brightness(verbose_error=False,**kwargs):
         kwargs (dict): is passed directly to the OS relevant brightness method
     
     Returns:
-        An integer between 0 and 100. However, it may return a list of integers if multiple monitors are detected
+        int: an integer from 0 to 100 if only one display is detected
+        list: if there a multiple displays connected it may return a list of integers
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # get the current screen brightness (for all detected displays)
+        current_brightness = sbc.get_brightness()
+
+        # get the brightness of the primary display
+        primary_brightness = sbc.get_brightness(display=0)
+
+        # get the brightness of the secondary display (if connected)
+        secondary_brightness = sbc.get_brightness(display=1)
+        ```
     '''
 
     method = None
