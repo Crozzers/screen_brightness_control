@@ -3,6 +3,10 @@ from setuptools import setup
 setup(name='screen_brightness_control',
     version='0.5.1',
     url='https://github.com/Crozzers/screen_brightness_control',
+    project_urls={
+        'Documentation': 'https://crozzers.github.io/screen_brightness_control',
+        'Issue Tracker': 'https://github.com/Crozzers/screen_brightness_control/issues'
+    },
     license='MIT',
     author='Crozzers',
     author_email='captaincrozzers@gmail.com',
