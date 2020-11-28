@@ -63,10 +63,9 @@ python -m screen_brightness_control -g
 python -m screen_brightness_control -s 50
 </code></pre>
 <h1>Documentation</h1>
+<p>There is full documentation for this project hosted <a href="https://crozzers.github.io/screen_brightness_control">here</a> but here are the basics</p>
 <h3>ScreenBrightnessError(<code>Exception</code>)</h3>
-<p><strong>Summary:</strong><br />
-Raised by <code>set_brightness</code> and <code>get_brightness</code> when the brightness cannot be set or retrieved<br />
-Used as a unifying class for the multiple error types to make it easier to handle exceptions</p>
+<p>A generic error class designed to make catching errors under one umbrella easy. Raised when the brightness cannot be set/retrieved.</p>
 <p><strong>Usage:</strong>  </p>
 <pre><code class="language-python">import screen_brightness_control as sbc
 
@@ -244,6 +243,7 @@ print(monitor.Level)
 <li><h3><a>Github</a></h3>
 <ul>
 <li><code><a href="https://github.com/Crozzers/screen_brightness_control">Github Repository</a></code></li>
+<li><code><a href="https://github.com/Crozzers/screen_brightness_control/releases">Releases</a></code></li>
 <li><code><a href="https://github.com/Crozzers/screen_brightness_control/issues">Issue Tracker</a></code></li>
 <li><code><a href="https://github.com/Crozzers/screen_brightness_control/pulls">Pull Requests</a></code></li>
 </ul></li>
