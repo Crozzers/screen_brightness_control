@@ -168,10 +168,17 @@ class XRandr:
                       "B")    # checksum (1 byte)
     def __parse_edid(edid):
         '''internal function, do not call'''
+        def filter_hex(st):
+            st = str(st)
+            while '\\x' in st:
+                i = st.index('\\x')
+                st = st[i:i+4]
+            return st.replace('\\n','')[2:-1]
         edid = bytes.fromhex(edid)
         data = struct.unpack(XRandr._EDID_FORMAT, edid)
-        serial = str(data[18]).replace('\\x00','').replace('\\xff','').replace('\\n','')[2:-1]
-        return serial
+        serial = filter_hex(data[18])
+        name = filter_hex(data[20])
+        return name, serial
 
     def get_display_info():
         out = [i for i in subprocess.check_output(['xrandr', '--verbose']).decode().split('\n') if i!='']
@@ -181,19 +188,20 @@ class XRandr:
         for i in out:
             if i.startswith(tuple(names)):
                 data.append(tmp)
-                tmp = {'name':i.split(' ')[0], 'line':i}
+                tmp = {'interface':i.split(' ')[0], 'line':i}
             else:
                 if 'EDID:' in i:
                     st = out[out.index(tmp['line']):]
                     edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
                     edid = ''.join(edid)
-                    tmp['serial'] = XRandr.__parse_edid(edid)
+                    name, serial = XRandr.__parse_edid(edid)
+                    tmp['name'] = name
+                    tmp['manufacturer'] = name.split(' ')[0]
+                    tmp['model'] = name.split(' ')[1]
+                    tmp['serial'] = serial
+
         data.append(tmp)
-        result = []
-        for i in data:
-            if i!={} and '\\x' not in i['serial'] and i['serial']!='':
-                result.append((i['name'], i['serial']))
-        return result
+        return [i for i in data if i!={} and '\\x' not in i['serial'] and i['serial']!='']
 
     def get_display_names():
         '''
