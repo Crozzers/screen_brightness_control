@@ -249,7 +249,8 @@ class DDCUtil:
                 elif 'Model' in line:
                     name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
                     tmp['name'] = ' '.join(name)
-                    tmp['model'] = name[1]
+                    try:tmp['model'] = name[1]
+                    except IndexError:tmp['model'] = None
                 elif 'Serial number' in line:
                     tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
         data.append(tmp)
