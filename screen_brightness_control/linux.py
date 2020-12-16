@@ -245,12 +245,13 @@ class DDCUtil:
                     tmp['i2c_bus'] = line[line.index('/'):]
                     tmp['bus_number'] = tmp['i2c_bus'].replace('/dev/i2c-','')
                 elif 'Mfg id' in line:
-                    tmp['manufacturer_code'] = line.replace('Mfg id', '').replace('\t', '').replace(' ', '')
+                    tmp['manufacturer_code'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
                 elif 'Model' in line:
-                    tmp['name'] = line.replace('Model', '').replace('\t', '').replace(' ', '')
-                    tmp['model'] = tmp['name'].split(' ')[1]
+                    name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
+                    tmp['name'] = ' '.join(name)
+                    tmp['model'] = name[1]
                 elif 'Serial number' in line:
-                    tmp['serial'] = line.replace('Serial number', '').replace('\t', '').replace(' ', '')
+                    tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
         data.append(tmp)
         ret = []
         for i in data:
