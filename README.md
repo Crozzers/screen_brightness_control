@@ -11,10 +11,10 @@ A Python tool for controlling the brightness of your monitor. Supports Windows a
 * Install using `pip3 install .`
 
 #### Note:
-For running on Linux you will need to install one of these programs: [light](https://github.com/haikarainen/light), `xrandr` or `xbacklight`
+For running on Linux you will need to install one of these programs: [light](https://github.com/haikarainen/light), `xrandr`, `ddcutil` or `xbacklight`
 
-* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install xbacklight`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil` or `sudo pacman -S xorg-xbacklight`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
 
 
@@ -165,14 +165,14 @@ If you have any suggestions feel free to raise an [issue](https://github.com/Cro
 ### Why do I always get `ScreenBrightnessError` on Linux?
 **Why this happens:**  
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
-The programs it attempts to call are "light", "xrandr" and "xbacklight".
+The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
 If none of these programs can be called a `ScreenBrightnessError` is raised
 
 **How to fix it:**  
-Install light (recommended), xrandr or xbacklight using your system package manager:
+Install light (recommended), xrandr, ddcutil or xbacklight using your system package manager:
 
-* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install xbacklight`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil` or `sudo pacman -S xorg-xbacklight`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
 
 
@@ -180,6 +180,7 @@ Install light (recommended), xrandr or xbacklight using your system package mana
 **Why this happens:**  
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 If you installed xbacklight or xrandr, it only supports Intel (and sometimes NVidia) graphics, not AMD.
+If you installed ddcutil, this requires root access to run for every query.
 
 **How to fix it:**  
 Install Light by following [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo
@@ -187,13 +188,13 @@ Install Light by following [these steps](https://github.com/haikarainen/light#in
 
 ### Using the `display` kwarg does nothing/creates exceptions on Linux
 **Why this happens:**  
-The `display` kwarg is only supported by the `Light` and `XRandr` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
+The `display` kwarg is only supported by the `Light`, `XRandr` and `DDCUtil` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
 
 **How to fix it:**  
-Install light (recommended) or xrandr using your system package manager:
+Install light (recommended), xrandr or ddcutil using your system package manager:
 
-* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils`
+* Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install ddcutil`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr`
 
 

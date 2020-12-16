@@ -220,6 +220,125 @@ class XRandr:
             subprocess.run(['xrandr','--output', name, '--brightness', value])
         return XRandr.get_brightness(display=display) if not no_return else None
 
+class DDCUtil:
+    '''collection of screen brightness related methods using the ddcutil executable'''
+    def __filter_monitors(display, monitors):
+        '''internal function, do not call'''
+        if type(display) is int:
+            return monitors[display]
+        else:
+            return [i for i in monitors if display in (i['name'], i['serial'], i['i2c_bus'], i['model'])]
+
+    def get_display_info():
+        '''
+        Calls the command 'ddcutil detect' and parses the output
+        '''
+        out = [i for i in subprocess.check_output(['ddcutil', 'detect']).decode().split('\n') if i!='' and not i.startswith(('Open failed', 'No displays found'))]
+        data = []
+        tmp = {}
+        for line in out:
+            if not line.startswith(('\t', ' ')):
+                data.append(tmp)
+                tmp = {'tmp': line}
+            else:
+                if 'I2C bus' in line:
+                    tmp['i2c_bus'] = line[line.index('/'):]
+                    tmp['bus_number'] = tmp['i2c_bus'].replace('/dev/i2c-','')
+                elif 'Mfg id' in line:
+                    tmp['manufacturer_code'] = line.replace('Mfg id', '').replace('\t', '').replace(' ', '')
+                elif 'Model' in line:
+                    tmp['name'] = line.replace('Model', '').replace('\t', '').replace(' ', '')
+                    tmp['model'] = tmp['name'].split(' ')[1]
+                elif 'Serial number' in i:
+                    tmp['serial'] = line.replace('Serial number', '').replace('\t', '').replace(' ', '')
+        data.append(tmp)
+        ret = []
+        for i in data:
+            if i!={} and 'Invalid display' not in i['tmp']:
+                del(i['tmp'])
+                ret+=[i]
+        return ret
+    
+    def get_display_names():
+        '''
+        Returns the names of each display, as reported by ddcutil
+        
+        Returns:
+            list: list of strings
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            names = sbc.linux.DDCUtil.get_display_names()
+            # EG output: ['Dell U2211H', 'BenQ GL2450H']
+            ```
+        '''
+        return [i['name'] for i in DDCUtil.get_display_info()]  
+
+    def get_brightness(display = None):
+        '''
+        Returns the brightness for a display using the ddcutil executable
+
+        Args:
+            display (int or str): the display you wish to query. Can be index, name, model, serial or i2c bus
+        
+        Returns:
+            int: an integer from 0 to 100 if only one display is detected or the `display` kwarg is specified
+            list: list of integers (from 0 to 100) if there are multiple displays connected and the `display` kwarg is not specified
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the current brightness
+            current_brightness = sbc.linux.DDCUtil.get_brightness()
+
+            # get the current brightness for the primary display
+            primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)
+            ```
+        '''
+        monitors = DDCUtil.get_display_info()
+        if display!=None:
+            monitors = DDCUtil.__filter_monitors(display, monitors)
+        res = []
+        for m in monitors:
+            res.append(subprocess.check_output(['ddcutil','getvcp','10','-b',m['bus_number']]))
+        if len(res) == 1:
+            res = res[0]
+        return res
+
+    def set_brightness(value, display = None, no_return = False):
+        '''
+        Sets the brightness for a display using the ddcutil executable
+
+        Args:
+            value (int): Sets the brightness to this value
+            display (int or str): The display you wish to change. Can be index, name, model, serial or i2c bus
+            no_return (bool): if True, this function returns None, returns the result of `DDCUtil.get_brightness()` otherwise
+        
+        Returns:
+            The result of `XRandr.get_brightness()` or `None` (see `no_return` kwarg)
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 50
+            sbc.linux.XRandr.set_brightness(50)
+
+            # set the brightness of the primary display to 75
+            sbc.linux.XRandr.set_brightness(75, display=0)
+            ```
+        '''
+        monitors = DDCUtil.get_display_info()
+        if display!=None:
+            monitors = DDCUtil.__filter_monitors(display, monitors)
+        for m in monitors:
+            subprocess.run(['ddcutil','setvcp','10',value,'-b',m['bus_number']])
+        return DDCUtil.get_brightness(display=display) if not no_return else None
+
+
 def get_brightness_from_sysfiles(display = None):
     '''
     Returns the current display brightness by reading files from `/sys/class/backlight`
@@ -382,4 +501,4 @@ def get_brightness(method = None, **kwargs):
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight}
+methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight, 'ddcutil': DDCUtil}
