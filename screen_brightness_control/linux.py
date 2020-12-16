@@ -1,4 +1,6 @@
-import subprocess, os
+import subprocess, os, struct
+from collections import namedtuple
+
 
 class Light:
     '''collection of screen brightness related methods using the light executable'''
@@ -137,7 +139,57 @@ class XBacklight:
         return int(round(float(str(res)),0))
 
 class XRandr:
-    '''collection of screen brightness related methods using the xrandr executable'''
+    '''collection of screen brightness related methods using the xrandr executable
+    
+    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)'''
+    _EDID_FORMAT = (">"     # big-endian
+                      "8s"    # constant header (8 bytes)
+                      "H"     # manufacturer id (2 bytes)
+                      "H"     # product id (2 bytes)
+                      "I"     # serial number (4 bytes)
+                      "B"     # manufactoring week (1 byte)
+                      "B"     # manufactoring year (1 byte)
+                      "B"     # edid version (1 byte)
+                      "B"     # edid revision (1 byte)
+                      "B"     # video input type (1 byte)
+                      "B"     # horizontal size in cm (1 byte)
+                      "B"     # vertical size in cm (1 byte)
+                      "B"     # display gamma (1 byte)
+                      "B"     # supported features (1 byte)
+                      "10s"   # color characteristics (10 bytes)
+                      "H"     # supported timings (2 bytes)
+                      "B"     # reserved timing (1 byte)
+                      "16s"   # EDID supported timings (16 bytes)
+                      "18s"   # detailed timing block 1 (18 bytes)
+                      "18s"   # detailed timing block 2 (18 bytes)
+                      "18s"   # detailed timing block 3 (18 bytes)
+                      "18s"   # detailed timing block 4 (18 bytes)
+                      "B"     # extension flag (1 byte)
+                      "B")    # checksum (1 byte)
+    def __parse_edid(edid):
+        '''internal function, do not call'''
+        edid = bytes.fromhex(edid)
+        data = struct.unpack(XRandr._EDID_FORMAT, edid)
+        serial = str(data[18]).replace('\\x00','').replace('\\xff','').replace('\\n','')[2:-1]
+        return serial
+
+    def get_display_info():
+        out = [i for i in subprocess.check_output(['xrandr', '--verbose']).decode().split('\n') if i!='']
+        names = XRandr.get_display_names()
+        data = []
+        tmp = {}
+        for i in out:
+            if i.startswith(names):
+                data.append(tmp)
+                tmp = {'name':i.split(' ')[0]}
+            else:
+                if 'EDID:' in i:
+                    edid = [j.replace('\t','').replace(' ', '') for j in range(out.index(i), out.index(i)+8)]
+                    edid = ''.join(edid)
+                    tmp['serial'] = XRandr.__parse_edid(edid)
+        data.append(tmp)
+        return data
+
     def get_display_names():
         '''
         Returns the names of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
