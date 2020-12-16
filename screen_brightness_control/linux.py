@@ -243,7 +243,7 @@ class DDCUtil:
             else:
                 if 'I2C bus' in line:
                     tmp['i2c_bus'] = line[line.index('/'):]
-                    tmp['bus_number'] = tmp['i2c_bus'].replace('/dev/i2c-','')
+                    tmp['bus_number'] = int(tmp['i2c_bus'].replace('/dev/i2c-',''))
                 elif 'Mfg id' in line:
                     tmp['manufacturer_code'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
                 elif 'Model' in line:
@@ -305,7 +305,9 @@ class DDCUtil:
             monitors = DDCUtil.__filter_monitors(display, monitors)
         res = []
         for m in monitors:
-            res.append(subprocess.check_output(['ddcutil','getvcp','10','-b',m['bus_number']]))
+            out = subprocess.check_output(['ddcutil','getvcp','10','-t','-b',str(m['bus_number'])]).decode().split(' ')[-2]
+            try:res.append(int(out))
+            except:pass
         if len(res) == 1:
             res = res[0]
         return res
@@ -337,7 +339,7 @@ class DDCUtil:
         if display!=None:
             monitors = DDCUtil.__filter_monitors(display, monitors)
         for m in monitors:
-            subprocess.run(['ddcutil','setvcp','10',value,'-b',m['bus_number']])
+            subprocess.run(['ddcutil','setvcp','10',str(value),'-b', str(m['bus_number'])])
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
