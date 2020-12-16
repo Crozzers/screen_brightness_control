@@ -179,16 +179,21 @@ class XRandr:
         data = []
         tmp = {}
         for i in out:
-            if i.startswith(names):
+            if i.startswith(tuple(names)):
                 data.append(tmp)
-                tmp = {'name':i.split(' ')[0]}
+                tmp = {'name':i.split(' ')[0], 'line':i}
             else:
                 if 'EDID:' in i:
-                    edid = [j.replace('\t','').replace(' ', '') for j in range(out.index(i), out.index(i)+8)]
+                    st = out[out.index(tmp['line']):]
+                    edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
                     edid = ''.join(edid)
                     tmp['serial'] = XRandr.__parse_edid(edid)
         data.append(tmp)
-        return data
+        result = []
+        for i in data:
+            if '\\x' not in i['serial'] and i['serial']!='':
+                result.append((i['name'], i['serial']))
+        return result
 
     def get_display_names():
         '''
