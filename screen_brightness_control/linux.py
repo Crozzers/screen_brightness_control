@@ -1,5 +1,6 @@
 import subprocess, os, struct
 from collections import namedtuple
+from . import MONITOR_MANUFACTURER_CODES
 
 
 class Light:
@@ -172,12 +173,19 @@ class XRandr:
             st = str(st)
             while '\\x' in st:
                 i = st.index('\\x')
-                st = st[i:i+4]
+                st = st.replace(st[i:i+4], '')
             return st.replace('\\n','')[2:-1]
         edid = bytes.fromhex(edid)
         data = struct.unpack(XRandr._EDID_FORMAT, edid)
         serial = filter_hex(data[18])
-        name = filter_hex(data[20])
+        #other info can be anywhere in this range, I don't know why
+        name = None
+        for i in data[19:22]:
+            try:
+                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
+                if st.index(' ')<len(st)-1:
+                    name = filter_hex(i)
+            except:pass
         return name, serial
 
     def get_display_info():
@@ -195,9 +203,12 @@ class XRandr:
                     edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
                     edid = ''.join(edid)
                     name, serial = XRandr.__parse_edid(edid)
-                    tmp['name'] = name
-                    tmp['manufacturer'] = name.split(' ')[0]
-                    tmp['model'] = name.split(' ')[1]
+                    tmp['name'] = name if name!=None else 'Unknown'
+                    if name!=None:
+                        tmp['manufacturer'] = name.split(' ')[0]
+                        tmp['model'] = name.split(' ')[1]
+                    else:
+                        tmp['manufacturer'] = tmp['model'] = 'Unknown'
                     tmp['serial'] = serial
 
         data.append(tmp)
