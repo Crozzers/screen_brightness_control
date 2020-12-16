@@ -191,7 +191,7 @@ class XRandr:
         data.append(tmp)
         result = []
         for i in data:
-            if '\\x' not in i['serial'] and i['serial']!='':
+            if i!={} and '\\x' not in i['serial'] and i['serial']!='':
                 result.append((i['name'], i['serial']))
         return result
 
