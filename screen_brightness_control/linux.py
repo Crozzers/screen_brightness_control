@@ -204,19 +204,22 @@ class XRandr:
             if i.startswith(tuple(names)):
                 data.append(tmp)
                 tmp = {'interface':i.split(' ')[0], 'line':i}
-            else:
-                if 'EDID:' in i:
-                    st = out[out.index(tmp['line']):]
-                    edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
-                    edid = ''.join(edid)
-                    name, serial = XRandr.__parse_edid(edid)
-                    tmp['name'] = name if name!=None else 'Unknown'
-                    if name!=None:
-                        tmp['manufacturer'] = name.split(' ')[0]
-                        tmp['model'] = name.split(' ')[1]
-                    else:
-                        tmp['manufacturer'] = tmp['model'] = 'Unknown'
+            elif 'EDID:' in i:
+                st = out[out.index(tmp['line']):]
+                edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
+                edid = ''.join(edid)
+                name, serial = XRandr.__parse_edid(edid)
+                tmp['name'] = name if name!=None else tmp['interface']
+                if name!=None:
+                    tmp['manufacturer'] = name.split(' ')[0]
+                    tmp['model'] = name.split(' ')[1]
                     tmp['serial'] = serial
+                else:
+                    tmp['manufacturer'] = None
+                    tmp['model'] = None
+                    tmp['serial'] = None
+            elif 'Brightness:' in i:
+                tmp['brightness'] = int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100)
 
         data.append(tmp)
         return [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and '\\x' not in i['serial'] and i['serial']!='']
@@ -277,13 +280,11 @@ class XRandr:
             primary_brightness = sbc.linux.XRandr.get_brightness(display=0)
             ```
         '''
-        out = subprocess.check_output(['xrandr','--verbose']).decode().split('\n')
-        lines = [int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100) for i in out if 'Brightness:' in i]
+        brightness = XRandr.get_display_info()
         if display!=None:
-            if type(display) is str:
-                display = XRandr.get_display_interfaces().index(display)
-            return lines[display]
-        return lines[0] if len(lines)==1 else lines
+            brightness = XRandr.__filter_monitors(display, brightness)
+
+        return brightness[0] if len(brightness)==1 else brightness
 
     def set_brightness(value, display = None, no_return = False):
         '''
@@ -309,13 +310,11 @@ class XRandr:
             ```
         '''
         value = str(float(value)/100)
-        names = XRandr.get_display_names()
+        interfaces = XRandr.get_display_interfaces()
         if display!=None:
-            if type(display) is str:
-                display = names.index(display)
-            names = [names[display]]
-        for name in names:
-            subprocess.run(['xrandr','--output', name, '--brightness', value])
+            interfaces = [i['interface'] for i in XRandr.__filter_monitors(display)]
+        for interface in interfaces:
+            subprocess.run(['xrandr','--output', interface, '--brightness', value])
         return XRandr.get_brightness(display=display) if not no_return else None
 
 class DDCUtil:
