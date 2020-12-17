@@ -195,7 +195,34 @@ class XRandr:
             except:pass
         return name, serial
 
-    def get_display_info():
+    def get_display_info(*args):
+        '''
+        Returns a dictionary of info about all detected monitors as reported by xrandr
+
+        Args:
+            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface or index
+
+        Returns:
+            list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
+            dict: one dictionary if a monitor is specified and only one match is found
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            info = sbc.linux.XRandr.get_display_info()
+            for i in info:
+                print('================')
+                for key, value in i.items():
+                    print(key, ':', value)
+
+            # get information about the first XRandr addressable monitor
+            primary_info = sbc.linux.XRandr.get_display_info(0)
+
+            # get information about a monitor with a specific name
+            benq_info = sbc.linux.XRandr.get_display_info('BenQ BNQ78A7')
+            ```
+        '''
         out = [i for i in subprocess.check_output(['xrandr', '--verbose']).decode().split('\n') if i!='']
         names = XRandr.get_display_interfaces()
         data = []
@@ -222,12 +249,19 @@ class XRandr:
                 tmp['brightness'] = int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100)
 
         data.append(tmp)
-        return [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and i['serial']not in (None, '') and '\\x' not in i['serial']]
+        data = [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and '\\x' not in i['serial']]
+        if len(args)==1:
+            data = XRandr.__filter_monitors(args[0], data)
+            if data==[]:
+                raise LookupError('display not found')
+            if len(data)==1:
+                data=data[0]
+        return data
 
     def get_display_interfaces():
         '''
-        Returns the interfaces of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
-        
+        Returns the interfaces of each display, as reported by xrandr
+
         Returns:
             list: list of strings
 
@@ -241,10 +275,11 @@ class XRandr:
         '''
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and not 'disconnected' in i]
+
     def get_display_names():
         '''
-        Returns the names of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
-        
+        Returns the names of each display, as reported by xrandr
+
         Returns:
             list: list of strings
 
@@ -264,7 +299,7 @@ class XRandr:
 
         Args:
             display (int): The index of the display you wish to query
-        
+
         Returns:
             int: an integer from 0 to 100 if only one display is detected
             list: list of integers (from 0 to 100) if there are multiple displays connected
@@ -294,7 +329,7 @@ class XRandr:
             value (int): Sets the brightness to this value
             display (int): The index of the display you wish to change
             no_return (bool): if True, this function returns None, returns the result of `XRandr.get_brightness()` otherwise
-        
+
         Returns:
             The result of `XRandr.get_brightness()` or `None` (see `no_return` kwarg)
 
@@ -329,7 +364,32 @@ class DDCUtil:
 
     def get_display_info():
         '''
-        Calls the command 'ddcutil detect' and parses the output
+        Returns information about all DDC compatible monitors shown by DDCUtil
+        Works by calling the command 'ddcutil detect' and parsing the output.
+
+        Args:
+            monitor (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index
+
+        Returns:
+            list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
+            dict: one dictionary if a monitor is specified and only one match is found
+
+        Usage
+            ```python
+            import screen_brightness_control as sbc
+
+            info = sbc.linux.DDCUtil.get_display_info()
+            for i in info:
+                print('================')
+                for key, value in i.items():
+                    print(key, ':', value)
+
+            # get information about the first XRandr addressable monitor
+            primary_info = sbc.linux.DDCUtil.get_display_info(0)
+
+            # get information about a monitor with a specific name
+            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ BNQ78A7')
+            ```
         '''
         out = [i for i in subprocess.check_output(['ddcutil', 'detect']).decode().split('\n') if i!='' and not i.startswith(('Open failed', 'No displays found'))]
         data = []
@@ -352,11 +412,13 @@ class DDCUtil:
                 elif 'Serial number' in line:
                     tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
         data.append(tmp)
-        ret = []
-        for i in data:
-            if i!={} and 'Invalid display' not in i['tmp']:
-                del(i['tmp'])
-                ret+=[i]
+        ret = [{k:v for k,v in i.items() if k!='tmp'} for i in data if i!={} and 'Invalid display' not in i['tmp']]
+        if len(args)==1:
+            ret = DDCUtil.__filter_monitors(args[0], data)
+            if ret==[]:
+                raise LookupError('display not found')
+            if len(ret)==1:
+                ret=ret[0]
         return ret
     
     def get_display_names():
@@ -603,4 +665,4 @@ def get_brightness(method = None, **kwargs):
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight, 'ddcutil': DDCUtil}
+methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight, 'DDCUtil': DDCUtil}

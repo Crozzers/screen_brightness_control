@@ -28,6 +28,73 @@
 </summary>
 <pre><code class="python">import platform,time,threading
 
+MONITOR_MANUFACTURER_CODES = {
+    &#34;AAC&#34;: &#34;AcerView&#34;,
+    &#34;ACR&#34;: &#34;Acer&#34;,
+    &#34;AOC&#34;: &#34;AOC&#34;,
+    &#34;AIC&#34;: &#34;AG Neovo&#34;,
+    &#34;APP&#34;: &#34;Apple Computer&#34;,
+    &#34;AST&#34;: &#34;AST Research&#34;,
+    &#34;AUO&#34;: &#34;Asus&#34;,
+    &#34;BNQ&#34;: &#34;BenQ&#34;,
+    &#34;CMO&#34;: &#34;Acer&#34;,
+    &#34;CPL&#34;: &#34;Compal&#34;,
+    &#34;CPQ&#34;: &#34;Compaq&#34;,
+    &#34;CPT&#34;: &#34;Chunghwa Pciture Tubes, Ltd.&#34;,
+    &#34;CTX&#34;: &#34;CTX&#34;,
+    &#34;DEC&#34;: &#34;DEC&#34;,
+    &#34;DEL&#34;: &#34;Dell&#34;,
+    &#34;DPC&#34;: &#34;Delta&#34;,
+    &#34;DWE&#34;: &#34;Daewoo&#34;,
+    &#34;EIZ&#34;: &#34;EIZO&#34;,
+    &#34;ELS&#34;: &#34;ELSA&#34;,
+    &#34;ENC&#34;: &#34;EIZO&#34;,
+    &#34;EPI&#34;: &#34;Envision&#34;,
+    &#34;FCM&#34;: &#34;Funai&#34;,
+    &#34;FUJ&#34;: &#34;Fujitsu&#34;,
+    &#34;FUS&#34;: &#34;Fujitsu-Siemens&#34;,
+    &#34;GSM&#34;: &#34;LG Electronics&#34;,
+    &#34;GWY&#34;: &#34;Gateway 2000&#34;,
+    &#34;HEI&#34;: &#34;Hyundai&#34;,
+    &#34;HIT&#34;: &#34;Hyundai&#34;,
+    &#34;HSL&#34;: &#34;Hansol&#34;,
+    &#34;HTC&#34;: &#34;Hitachi/Nissei&#34;,
+    &#34;HWP&#34;: &#34;HP&#34;,
+    &#34;IBM&#34;: &#34;IBM&#34;,
+    &#34;ICL&#34;: &#34;Fujitsu ICL&#34;,
+    &#34;IVM&#34;: &#34;Iiyama&#34;,
+    &#34;KDS&#34;: &#34;Korea Data Systems&#34;,
+    &#34;LEN&#34;: &#34;Lenovo&#34;,
+    &#34;LGD&#34;: &#34;Asus&#34;,
+    &#34;LPL&#34;: &#34;Fujitsu&#34;,
+    &#34;MAX&#34;: &#34;Belinea&#34;,
+    &#34;MEI&#34;: &#34;Panasonic&#34;,
+    &#34;MEL&#34;: &#34;Mitsubishi Electronics&#34;,
+    &#34;MS_&#34;: &#34;Panasonic&#34;,
+    &#34;NAN&#34;: &#34;Nanao&#34;,
+    &#34;NEC&#34;: &#34;NEC&#34;,
+    &#34;NOK&#34;: &#34;Nokia Data&#34;,
+    &#34;NVD&#34;: &#34;Fujitsu&#34;,
+    &#34;OPT&#34;: &#34;Optoma&#34;,
+    &#34;PHL&#34;: &#34;Philips&#34;,
+    &#34;REL&#34;: &#34;Relisys&#34;,
+    &#34;SAN&#34;: &#34;Samsung&#34;,
+    &#34;SAM&#34;: &#34;Samsung&#34;,
+    &#34;SBI&#34;: &#34;Smarttech&#34;,
+    &#34;SGI&#34;: &#34;SGI&#34;,
+    &#34;SNY&#34;: &#34;Sony&#34;,
+    &#34;SRC&#34;: &#34;Shamrock&#34;,
+    &#34;SUN&#34;: &#34;Sun Microsystems&#34;,
+    &#34;SEC&#34;: &#34;Hewlett-Packard&#34;,
+    &#34;TAT&#34;: &#34;Tatung&#34;,
+    &#34;TOS&#34;: &#34;Toshiba&#34;,
+    &#34;TSB&#34;: &#34;Toshiba&#34;,
+    &#34;VSC&#34;: &#34;ViewSonic&#34;,
+    &#34;ZCM&#34;: &#34;Zenith&#34;,
+    &#34;UNK&#34;: &#34;Unknown&#34;,
+    &#34;_YV&#34;: &#34;Fujitsu&#34;,
+}
+
 class ScreenBrightnessError(Exception):
     &#39;&#39;&#39;
     Generic error class designed to make catching errors under one umbrella easy.
@@ -311,7 +378,7 @@ if platform.system()==&#39;Windows&#39;:
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
 
-__version__=&#39;0.5.1&#39;
+__version__=&#39;0.6.0-alpha4&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
 </details>
 </section>
