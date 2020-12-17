@@ -36,7 +36,7 @@ python -m screen_brightness_control --help
 >   -f FADE, --fade FADE  fade the brightness to this value
 >   -m METHOD, --method METHOD
 >                         specify which method to use
->   -l, --list            list all monitors (windows only)
+>   -l, --list            list all monitors
 >   -v, --verbose         any error messages will be more detailed
 >   -V, --version         print the current version
 python -m screen_brightness_control -g
@@ -176,9 +176,9 @@ If you installed xrandr or xbacklight, it only supports graphics drivers that su
 If you installed ddcutil, this requires root access to run for every query.
 
 **How to fix it:**  
-If you installed light: install Light by following [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo  
-If you installed xrandr or xbacklight: make sure your graphics drivers support RandR.  
-If you installed ddcutil: make sure to run the script with root permissions
+If you installed `light`: follow [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo  
+If you installed `xrandr` or `xbacklight`: make sure your graphics drivers support RandR.  
+If you installed `ddcutil`: make sure to run the script with root permissions
 
 
 ### Using the `display` kwarg does nothing/creates exceptions on Linux
@@ -186,7 +186,7 @@ If you installed ddcutil: make sure to run the script with root permissions
 The `display` kwarg is only supported by the `Light`, `XRandr` and `DDCUtil` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
 
 **How to fix it:**  
-Install xrandr or ddcutil or light using your system package manager. See the installation section at the top of this document for instructions on how to do so.
+Install `xrandr` or `ddcutil` or `light` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
 
 
 ### The model of my monitor/display is not what the program says it is (Windows)
@@ -203,6 +203,11 @@ monitor = sbc.windows.Monitor('BenQ BNQ78A7') # swap this argument for the prefe
 print(monitor.model_name)
 > 'GL2450HM'
 ```
+
+### The serial number of my monitor/display is not what the program says it is (Windows)
+**Why this happens:**
+I do not know how to get a monitor's serial number using VCP and WMI. If you know and want to contribute then feel free to [raise an issue](https://github.com/Crozzers/screen_brightness_control/issues), [raise a pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to email me [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com).  
+The "serial" reported by this library is a unique identifier that Windows gives each display that I could reliably extract using both VCP and WMI. I decided that, for what I needed it for, it was good enough.
 
 ### When I call `get_brightness()` the returned value isn't what I set it to (Windows)
 Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
