@@ -1,6 +1,5 @@
 import subprocess, os, struct
-from collections import namedtuple
-from . import MONITOR_MANUFACTURER_CODES
+from . import flatten_list, MONITOR_MANUFACTURER_CODES
 
 
 class Light:
@@ -35,7 +34,7 @@ class Light:
 
         Args:
             value (int): Sets the brightness to this value
-            display (int): The index of the display you wish to change
+            display (int or str): The index or name of the display you wish to change
             no_return (bool): if True, this function returns None
 
         Returns:
@@ -67,7 +66,7 @@ class Light:
         Sets the brightness for a display using the light executable
 
         Args:
-            display (int): The index of the display you wish to query
+            display (int or str): The index or name of the display you wish to query
         
         Returns:
             int: from 0 to 100 if only one display is detected
@@ -220,7 +219,7 @@ class XRandr:
             primary_info = sbc.linux.XRandr.get_display_info(0)
 
             # get information about a monitor with a specific name
-            benq_info = sbc.linux.XRandr.get_display_info('BenQ BNQ78A7')
+            benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')
             ```
         '''
         out = [i for i in subprocess.check_output(['xrandr', '--verbose']).decode().split('\n') if i!='']
@@ -388,7 +387,7 @@ class DDCUtil:
             primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
             # get information about a monitor with a specific name
-            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ BNQ78A7')
+            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')
             ```
         '''
         out = [i for i in subprocess.check_output(['ddcutil', 'detect']).decode().split('\n') if i!='' and not i.startswith(('Open failed', 'No displays found'))]
@@ -501,6 +500,62 @@ class DDCUtil:
         for m in monitors:
             subprocess.run(['ddcutil','setvcp','10',str(value),'-b', str(m['bus_number'])])
         return DDCUtil.get_brightness(display=display) if not no_return else None
+
+
+def list_monitors_info():
+    '''
+    Lists detailed information about all detected monitors
+
+    Returns:
+        list: list of dictionaries upon success, empty list upon failure
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        monitors = sbc.linux.list_monitors_info()
+        for info in monitors:
+            print('=======================')
+            print('Name:', info['name']) # the manufacturer name plus the model OR a generic name for the monitor, depending on the method
+            if info['method'] in (sbc.linux.XRandr, sbc.linux.DDCUtil):
+                print('Model:', info['model']) # the general model of the display
+                print('Serial:', info['serial']) # a unique string assigned by Windows to this display
+                print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
+                print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the breand name, EG: BNQ -> BenQ  
+            print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Method:', info['method']) # the method this monitor can be addressed by
+        ```
+    '''
+    tmp = []
+    for m in [XRandr, DDCUtil]:
+        tmp.append(m.get_display_info())
+    tmp = flatten_list(tmp)
+    info = []
+    serials = []
+    #to make sure each display (with unique serial) is only reported once
+    for i in tmp:
+        if i['serial'] not in serials:
+            serials.append(i['serial'])
+            info.append(i)
+    return flatten_list(info)
+
+def list_monitors():
+    '''
+    Returns a list of all addressable monitor names
+
+    Returns:
+        list: list of strings
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        monitors = sbc.linux.list_monitors()
+        # EG output: ['BenQ GL2450HM', 'Dell U2211H']
+        ```
+    '''
+    displays = [i['name'] for i in list_monitors_info()]
+    return flatten_list(displays)
 
 
 def get_brightness_from_sysfiles(display = None):
