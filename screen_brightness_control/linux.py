@@ -248,7 +248,7 @@ class XRandr:
                 tmp['brightness'] = int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100)
 
         data.append(tmp)
-        data = [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and '\\x' not in i['serial']]
+        data = [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and (i['serial']==None or '\\x' not in i['serial'])]
         if len(args)==1:
             data = XRandr.__filter_monitors(args[0], data)
             if data==[]:
