@@ -361,7 +361,7 @@ class DDCUtil:
         else:
             return [i for i in monitors if display in (i['name'], i['serial'], i['i2c_bus'], i['model'])]
 
-    def get_display_info():
+    def get_display_info(*args):
         '''
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command 'ddcutil detect' and parsing the output.
@@ -528,14 +528,18 @@ def list_monitors_info():
     '''
     tmp = []
     for m in [XRandr, DDCUtil]:
-        tmp.append(m.get_display_info())
+        try:tmp.append(m.get_display_info())
+        except:pass
     tmp = flatten_list(tmp)
     info = []
     serials = []
     #to make sure each display (with unique serial) is only reported once
     for i in tmp:
-        if i['serial'] not in serials:
-            serials.append(i['serial'])
+        try:
+            if i['serial'] not in serials:
+                serials.append(i['serial'])
+                info.append(i)
+        except:
             info.append(i)
     return flatten_list(info)
 
