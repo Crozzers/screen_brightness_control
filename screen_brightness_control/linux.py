@@ -167,6 +167,13 @@ class XRandr:
                       "18s"   # detailed timing block 4 (18 bytes)
                       "B"     # extension flag (1 byte)
                       "B")    # checksum (1 byte)
+    def __filter_monitors(display, *args):
+        '''internal function, do not call'''
+        monitors = XRandr.get_display_info() if len(args)==0 else args[0]
+        if type(display) is int:
+            return monitors[display]
+        else:
+            return [i for i in monitors if display in (i['name'], i['serial'], i['interface'], i['model'])]
     def __parse_edid(edid):
         '''internal function, do not call'''
         def filter_hex(st):
@@ -190,7 +197,7 @@ class XRandr:
 
     def get_display_info():
         out = [i for i in subprocess.check_output(['xrandr', '--verbose']).decode().split('\n') if i!='']
-        names = XRandr.get_display_names()
+        names = XRandr.get_display_interfaces()
         data = []
         tmp = {}
         for i in out:
@@ -212,11 +219,11 @@ class XRandr:
                     tmp['serial'] = serial
 
         data.append(tmp)
-        return [i for i in data if i!={} and '\\x' not in i['serial'] and i['serial']!='']
+        return [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and '\\x' not in i['serial'] and i['serial']!='']
 
-    def get_display_names():
+    def get_display_interfaces():
         '''
-        Returns the names of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
+        Returns the interfaces of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
         
         Returns:
             list: list of strings
@@ -230,7 +237,23 @@ class XRandr:
             ```
         '''
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
-        return [i.split(' ')[0] for i in out if 'connected' in i and not 'disconnected' in i]   
+        return [i.split(' ')[0] for i in out if 'connected' in i and not 'disconnected' in i]
+    def get_display_names():
+        '''
+        Returns the names of each display, as reported by xrandr. Not all of the displays returned have adjustable brightness, however
+        
+        Returns:
+            list: list of strings
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            names = sbc.linux.XRandr.get_display_names()
+            # EG output: ['BenQ GL2450HM', 'Dell U2211H']
+            ```
+        '''
+        return [i['name'] for i in XRandr.get_display_info()] 
 
     def get_brightness(display = None):
         '''
@@ -258,8 +281,7 @@ class XRandr:
         lines = [int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100) for i in out if 'Brightness:' in i]
         if display!=None:
             if type(display) is str:
-                names = XRandr.get_display_names()
-                display = names.index(display)
+                display = XRandr.get_display_interfaces().index(display)
             return lines[display]
         return lines[0] if len(lines)==1 else lines
 
@@ -298,8 +320,9 @@ class XRandr:
 
 class DDCUtil:
     '''collection of screen brightness related methods using the ddcutil executable'''
-    def __filter_monitors(display, monitors):
+    def __filter_monitors(display, *args):
         '''internal function, do not call'''
+        monitors = DDCUtil.get_display_info() if len(args)==0 else args[0]
         if type(display) is int:
             return monitors[display]
         else:
