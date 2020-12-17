@@ -16,7 +16,7 @@ If you are using a desktop computer with proper monitors, install `ddcutil`. If 
 If you're using a laptop with a display driver that doesn't support RandR, use `light`.
 
 * Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-server-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
+* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-xserver-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
 
 
@@ -205,7 +205,7 @@ print(monitor.model_name)
 ```
 
 ### The serial number of my monitor/display is not what the program says it is (Windows)
-**Why this happens:**
+**Why this happens:**  
 I do not know how to get a monitor's serial number using VCP and WMI. If you know and want to contribute then feel free to [raise an issue](https://github.com/Crozzers/screen_brightness_control/issues), [raise a pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to email me [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com).  
 The "serial" reported by this library is a unique identifier that Windows gives each display that I could reliably extract using both VCP and WMI. I decided that, for what I needed it for, it was good enough.
 
