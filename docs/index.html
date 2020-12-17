@@ -115,10 +115,10 @@ class ScreenBrightnessError(Exception):
 
 def list_monitors():
     &#39;&#39;&#39;
-    list all monitors that are controllable by this library (not yet implemented on Linux)
+    list all monitors that are controllable by this library
 
     Returns:
-        list of strings (Windows) but None on Linux
+        list: list of strings
     
     Example:
         ```python
@@ -130,7 +130,7 @@ def list_monitors():
     if platform.system() == &#39;Windows&#39;:
         return windows.list_monitors()
     elif platform.system() == &#39;Linux&#39;:
-        pass #return linux.list_monitors()
+        return linux.list_monitors()
 
 def flatten_list(thick_list):
     &#39;&#39;&#39;
@@ -378,7 +378,7 @@ if platform.system()==&#39;Windows&#39;:
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
 
-__version__=&#39;0.6.0-alpha4&#39;
+__version__=&#39;0.6.0-dev1&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
 </details>
 </section>
@@ -672,9 +672,12 @@ secondary_brightness = sbc.get_brightness(display=1)
 <span>def <span class="ident">list_monitors</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>list all monitors that are controllable by this library (not yet implemented on Linux)</p>
+<div class="desc"><p>list all monitors that are controllable by this library</p>
 <h2 id="returns">Returns</h2>
-<p>list of strings (Windows) but None on Linux</p>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of strings</dd>
+</dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
 monitor_names = sbc.list_monitors()
@@ -686,10 +689,10 @@ monitor_names = sbc.list_monitors()
 </summary>
 <pre><code class="python">def list_monitors():
     &#39;&#39;&#39;
-    list all monitors that are controllable by this library (not yet implemented on Linux)
+    list all monitors that are controllable by this library
 
     Returns:
-        list of strings (Windows) but None on Linux
+        list: list of strings
     
     Example:
         ```python
@@ -701,7 +704,7 @@ monitor_names = sbc.list_monitors()
     if platform.system() == &#39;Windows&#39;:
         return windows.list_monitors()
     elif platform.system() == &#39;Linux&#39;:
-        pass #return linux.list_monitors()</code></pre>
+        return linux.list_monitors()</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.set_brightness"><code class="name flex">

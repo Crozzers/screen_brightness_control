@@ -12,9 +12,9 @@ if __name__=='__main__':
         parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value')
         if platform.system() == 'Windows':
             parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'wmi\' or \'vcp\')')
-            parser.add_argument('-l', '--list', action='store_true', help='list all monitors (windows only)')
         elif platform.system() == 'Linux':
-            parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'light\' or \'xrandr\' or \'xbacklight\')')
+            parser.add_argument('-m', '--method', type=str, help='specify which method to use ( \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\')')
+        parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
         parser.add_argument('-v', '--verbose', action='store_true', help='any error messages will be more detailed')
         parser.add_argument('-V', '--version', action='store_true', help='print the current version')
 

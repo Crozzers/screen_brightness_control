@@ -238,6 +238,10 @@ class XRandr:
                 tmp['name'] = name if name!=None else tmp['interface']
                 if name!=None:
                     tmp['manufacturer'] = name.split(' ')[0]
+                    if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
+                        tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
+                    else:
+                        tmp['manufacturer_id'] = None
                     tmp['model'] = name.split(' ')[1]
                     tmp['serial'] = serial
                 else:
@@ -402,7 +406,9 @@ class DDCUtil:
                     tmp['i2c_bus'] = line[line.index('/'):]
                     tmp['bus_number'] = int(tmp['i2c_bus'].replace('/dev/i2c-',''))
                 elif 'Mfg id' in line:
-                    tmp['manufacturer_code'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
+                    tmp['manufacturer_id'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
+                    try:tmp['manufacturer'] = MONITOR_MANUFACTURER_CODES[tmp['manufacturer_id'].upper()]
+                    except:tmp['manufacturer']=None
                 elif 'Model' in line:
                     name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
                     tmp['name'] = ' '.join(name)
@@ -618,11 +624,11 @@ def get_brightness_from_sysfiles(display = None):
 
 def set_brightness(value, method = None, **kwargs):
     '''
-    Sets the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
+    Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods untill one works
 
     Args:
         value (int): Sets the brightness to this value
-        method (str): the method to use ('light', 'xrandr' or 'xbacklight')
+        method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
@@ -653,7 +659,7 @@ def set_brightness(value, method = None, **kwargs):
         try:
             method = methods[method.lower()]
         except:
-            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
+            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
     errors = []
     for n,m in methods.items():
         try:
@@ -668,10 +674,10 @@ def set_brightness(value, method = None, **kwargs):
 
 def get_brightness(method = None, **kwargs):
     '''
-    Returns the brightness for a display, cycles through Light, XRandr and XBacklight methods untill one works
+    Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods untill one works
 
     Args:
-        method (str): the method to use ('light', 'xrandr' or 'xbacklight')
+        method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
         kwargs (dict): passed directly to chosen brightness method
     
     Returns:
@@ -706,7 +712,7 @@ def get_brightness(method = None, **kwargs):
         try:
             method = methods[method.lower()]
         except:
-            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr' or 'xbacklight'")
+            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
     errors = []
     for n,m in methods.items():
         try:

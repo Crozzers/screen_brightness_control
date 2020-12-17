@@ -87,10 +87,10 @@ class ScreenBrightnessError(Exception):
 
 def list_monitors():
     '''
-    list all monitors that are controllable by this library (not yet implemented on Linux)
+    list all monitors that are controllable by this library
 
     Returns:
-        list of strings (Windows) but None on Linux
+        list: list of strings
     
     Example:
         ```python
@@ -102,7 +102,7 @@ def list_monitors():
     if platform.system() == 'Windows':
         return windows.list_monitors()
     elif platform.system() == 'Linux':
-        pass #return linux.list_monitors()
+        return linux.list_monitors()
 
 def flatten_list(thick_list):
     '''
@@ -350,5 +350,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.6.0-alpha4'
+__version__='0.6.0-dev1'
 __author__='Crozzers'
