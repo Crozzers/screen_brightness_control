@@ -222,7 +222,7 @@ class XRandr:
                 tmp['brightness'] = int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100)
 
         data.append(tmp)
-        return [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and '\\x' not in i['serial'] and i['serial']!='']
+        return [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and i['serial']not in (None, '') and '\\x' not in i['serial']]
 
     def get_display_interfaces():
         '''
