@@ -657,7 +657,9 @@ def set_brightness(value, method = None, **kwargs):
     methods = globals()['methods'].copy()
     if method != None:
         try:
-            method = methods[method.lower()]
+            method=method.lower()
+            mkeys = [i.lower() for i in methods.keys()]
+            methods = [methods[mkeys.index(method)]]
         except:
             raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
     errors = []
@@ -710,7 +712,9 @@ def get_brightness(method = None, **kwargs):
     methods = globals()['methods'].copy()
     if method != None:
         try:
-            method = methods[method.lower()]
+            method=method.lower()
+            mkeys = [i.lower() for i in methods.keys()]
+            methods = [methods[mkeys.index(method)]]
         except:
             raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
     errors = []
