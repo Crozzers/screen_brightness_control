@@ -229,7 +229,7 @@ class XRandr:
         for i in out:
             if i.startswith(tuple(names)):
                 data.append(tmp)
-                tmp = {'interface':i.split(' ')[0], 'line':i}
+                tmp = {'interface':i.split(' ')[0], 'line':i, 'method':XRandr}
             elif 'EDID:' in i:
                 st = out[out.index(tmp['line']):]
                 edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
@@ -400,7 +400,7 @@ class DDCUtil:
         for line in out:
             if not line.startswith(('\t', ' ')):
                 data.append(tmp)
-                tmp = {'tmp': line}
+                tmp = {'tmp': line, 'method':DDCUtil}
             else:
                 if 'I2C bus' in line:
                     tmp['i2c_bus'] = line[line.index('/'):]
@@ -527,7 +527,7 @@ def list_monitors_info():
                 print('Model:', info['model']) # the general model of the display
                 print('Serial:', info['serial']) # a unique string assigned by Windows to this display
                 print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
-                print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the breand name, EG: BNQ -> BenQ  
+                print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
             print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Method:', info['method']) # the method this monitor can be addressed by
         ```

@@ -665,7 +665,7 @@ def list_monitors_info():
             print('Model:', info['model']) # the general model of the display
             print('Serial:', info['serial']) # a unique string assigned by Windows to this display
             print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
-            print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the breand name, EG: BNQ -> BenQ  
+            print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
             print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Method:', info['method']) # the method this monitor can be addressed by
         ```
