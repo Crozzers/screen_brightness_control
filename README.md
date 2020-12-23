@@ -16,7 +16,7 @@ If you are using a desktop computer with proper monitors, install `ddcutil`. If 
 If you're using a laptop with a display driver that doesn't support RandR, use `light`.
 
 * Arch: `sudo pacman -S light-git` or `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: [Light install instructions](https://github.com/haikarainen/light) or `sudo apt install x11-xserver-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
+* Debian/Ubuntu: `sudo apt install light` or `sudo apt install x11-xserver-utils` or `sudo apt install ddcutil` or `sudo apt install xbacklight`
 * Fedora: `sudo dnf install light` or `sudo dnf install libXrandr` or `sudo dnf install xbacklight`
 
 

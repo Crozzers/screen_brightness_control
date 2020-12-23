@@ -1,7 +1,6 @@
 import subprocess, os, struct
 from . import flatten_list, MONITOR_MANUFACTURER_CODES
 
-
 class Light:
     '''collection of screen brightness related methods using the light executable'''
     def get_display_names():
@@ -140,32 +139,31 @@ class XBacklight:
 
 class XRandr:
     '''collection of screen brightness related methods using the xrandr executable
-    
     The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)'''
     _EDID_FORMAT = (">"     # big-endian
-                      "8s"    # constant header (8 bytes)
-                      "H"     # manufacturer id (2 bytes)
-                      "H"     # product id (2 bytes)
-                      "I"     # serial number (4 bytes)
-                      "B"     # manufactoring week (1 byte)
-                      "B"     # manufactoring year (1 byte)
-                      "B"     # edid version (1 byte)
-                      "B"     # edid revision (1 byte)
-                      "B"     # video input type (1 byte)
-                      "B"     # horizontal size in cm (1 byte)
-                      "B"     # vertical size in cm (1 byte)
-                      "B"     # display gamma (1 byte)
-                      "B"     # supported features (1 byte)
-                      "10s"   # color characteristics (10 bytes)
-                      "H"     # supported timings (2 bytes)
-                      "B"     # reserved timing (1 byte)
-                      "16s"   # EDID supported timings (16 bytes)
-                      "18s"   # detailed timing block 1 (18 bytes)
-                      "18s"   # detailed timing block 2 (18 bytes)
-                      "18s"   # detailed timing block 3 (18 bytes)
-                      "18s"   # detailed timing block 4 (18 bytes)
-                      "B"     # extension flag (1 byte)
-                      "B")    # checksum (1 byte)
+                    "8s"    # constant header (8 bytes)
+                    "H"     # manufacturer id (2 bytes)
+                    "H"     # product id (2 bytes)
+                    "I"     # serial number (4 bytes)
+                    "B"     # manufactoring week (1 byte)
+                    "B"     # manufactoring year (1 byte)
+                    "B"     # edid version (1 byte)
+                    "B"     # edid revision (1 byte)
+                    "B"     # video input type (1 byte)
+                    "B"     # horizontal size in cm (1 byte)
+                    "B"     # vertical size in cm (1 byte)
+                    "B"     # display gamma (1 byte)
+                    "B"     # supported features (1 byte)
+                    "10s"   # color characteristics (10 bytes)
+                    "H"     # supported timings (2 bytes)
+                    "B"     # reserved timing (1 byte)
+                    "16s"   # EDID supported timings (16 bytes)
+                    "18s"   # detailed timing block 1 (18 bytes)
+                    "18s"   # detailed timing block 2 (18 bytes)
+                    "18s"   # detailed timing block 3 (18 bytes)
+                    "18s"   # detailed timing block 4 (18 bytes)
+                    "B"     # extension flag (1 byte)
+                    "B")    # checksum (1 byte)
     def __filter_monitors(display, *args):
         '''internal function, do not call'''
         monitors = XRandr.get_display_info() if len(args)==0 else args[0]
@@ -181,6 +179,8 @@ class XRandr:
                 i = st.index('\\x')
                 st = st.replace(st[i:i+4], '')
             return st.replace('\\n','')[2:-1]
+        if ' ' in edid:
+            edid = edid.replace(' ','')
         edid = bytes.fromhex(edid)
         data = struct.unpack(XRandr._EDID_FORMAT, edid)
         serial = filter_hex(data[18])
@@ -234,6 +234,7 @@ class XRandr:
                 st = out[out.index(tmp['line']):]
                 edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
                 edid = ''.join(edid)
+                tmp['edid'] = edid
                 name, serial = XRandr.__parse_edid(edid)
                 tmp['name'] = name if name!=None else tmp['interface']
                 if name!=None:
@@ -394,10 +395,15 @@ class DDCUtil:
             benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')
             ```
         '''
-        out = [i for i in subprocess.check_output(['ddcutil', 'detect']).decode().split('\n') if i!='' and not i.startswith(('Open failed', 'No displays found'))]
+        out = []
+        #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
+        for line in str(subprocess.check_output(['ddcutil', 'detect', '-v']))[2:-1].split('\\n'):
+            if line!='' and line.startswith(('Invalid display', 'Display', '\t', ' ')):
+                out.append(line)
         data = []
         tmp = {}
-        for line in out:
+        for i in range(len(out)):
+            line = out[i]
             if not line.startswith(('\t', ' ')):
                 data.append(tmp)
                 tmp = {'tmp': line, 'method':DDCUtil}
@@ -416,6 +422,9 @@ class DDCUtil:
                     except IndexError:tmp['model'] = None
                 elif 'Serial number' in line:
                     tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
+                elif 'EDID hex dump:' in line:
+                    try:tmp['edid'] = ''.join([j[j.index('+0')+8:j.index('+0')+55].replace(' ','') for j in out[i+2:i+10]])
+                    except:tmp['edid'] = None
         data.append(tmp)
         ret = [{k:v for k,v in i.items() if k!='tmp'} for i in data if i!={} and 'Invalid display' not in i['tmp']]
         if len(args)==1:
@@ -734,4 +743,4 @@ def get_brightness(method = None, **kwargs):
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     raise Exception(msg)
 
-methods = {'Light': Light, 'XRandr': XRandr, 'XBacklight': XBacklight, 'DDCUtil': DDCUtil}
+methods = {'XRandr': XRandr, 'DDCUtil': DDCUtil, 'Light': Light, 'XBacklight': XBacklight}
