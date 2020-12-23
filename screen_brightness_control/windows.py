@@ -647,9 +647,12 @@ class Monitor(object):
         except:
             return False
 
-def list_monitors_info():
+def list_monitors_info(method=None):
     '''
     Lists detailed information about all detected monitors
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -671,7 +674,12 @@ def list_monitors_info():
         ```
     '''
     tmp = []
-    for m in [WMI, VCP]:
+    methods = [WMI,VCP]
+    if method!=None:
+        if method.lower()=='wmi':methods=[WMI]
+        elif method.lower()=='vcp':methods=[VCP]
+        else:raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
+    for m in methods:
         tmp.append(m.get_display_info())
     tmp = flatten_list(tmp)
     info = []
@@ -683,9 +691,12 @@ def list_monitors_info():
             info.append(i)
     return flatten_list(info)
 
-def list_monitors():
+def list_monitors(method=None):
     '''
     Returns a list of all addressable monitor names
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
 
     Returns:
         list: list of strings
@@ -698,7 +709,7 @@ def list_monitors():
         # EG output: ['BenQ BNQ78A7', 'Dell DEL405E']
         ```
     '''
-    displays = [i['name'] for i in list_monitors_info()]
+    displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
 def __filter_monitors(display=None, method=None):

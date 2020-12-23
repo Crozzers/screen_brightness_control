@@ -85,9 +85,12 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
-def list_monitors():
+def list_monitors(**kwargs):
     '''
     list all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
 
     Returns:
         list: list of strings
@@ -100,9 +103,9 @@ def list_monitors():
         ```
     '''
     if platform.system() == 'Windows':
-        return windows.list_monitors()
+        return windows.list_monitors(**kwargs)
     elif platform.system() == 'Linux':
-        return linux.list_monitors()
+        return linux.list_monitors(**kwargs)
 
 def flatten_list(thick_list):
     '''

@@ -398,7 +398,7 @@ class DDCUtil:
         '''
         out = []
         #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
-        for line in str(subprocess.check_output(['ddcutil', 'detect', '-v']))[2:-1].split('\\n'):
+        for line in str(subprocess.check_output(['ddcutil', 'detect', '-v'], stderr=subprocess.DEVNULL))[2:-1].split('\\n'):
             if line!='' and line.startswith(('Invalid display', 'Display', '\t', ' ')):
                 out.append(line)
         data = []
@@ -518,9 +518,12 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info():
+def list_monitors_info(method=None):
     '''
     Lists detailed information about all detected monitors
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil'
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -543,7 +546,12 @@ def list_monitors_info():
         ```
     '''
     tmp = []
-    for m in [XRandr, DDCUtil]:
+    methods = [XRandr, DDCUtil]
+    if method!=None:
+        if method.lower()=='xrandr':methods = [XRandr]
+        elif method.lower()=='ddcutil':methods = [DDCUtil]
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\'')
+    for m in methods:
         try:tmp.append(m.get_display_info())
         except:pass
     tmp = flatten_list(tmp)
@@ -559,9 +567,12 @@ def list_monitors_info():
             info.append(i)
     return flatten_list(info)
 
-def list_monitors():
+def list_monitors(method=None):
     '''
     Returns a list of all addressable monitor names
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil'
 
     Returns:
         list: list of strings
@@ -574,7 +585,7 @@ def list_monitors():
         # EG output: ['BenQ GL2450HM', 'Dell U2211H']
         ```
     '''
-    displays = [i['name'] for i in list_monitors_info()]
+    displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
 

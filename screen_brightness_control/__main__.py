@@ -49,7 +49,7 @@ if __name__=='__main__':
         elif args.version:
             print(SBC.__version__)
         elif args.list:
-            monitors = SBC.list_monitors()
+            monitors = SBC.list_monitors(**kw)
             for i in range(len(monitors)):
                 print(f'Display {i}: {monitors[i]}')
         else:
