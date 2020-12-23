@@ -191,7 +191,7 @@ class XRandr:
                 st = str(i)[2:-1].rstrip(' ').rstrip('\t')
                 if st.index(' ')<len(st)-1:
                     name = filter_hex(i).split(' ')
-                    name = name[0].lower.capitalize()+' '+name[1]
+                    name = name[0].lower().capitalize()+' '+name[1]
             except:pass
         return name, serial
 
