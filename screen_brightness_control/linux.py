@@ -734,10 +734,10 @@ def set_brightness(value, method = None, **kwargs):
     # just the local one
     methods = globals()['methods'].copy()
     if method != None:
-        if method.lower()=='xrandr':methods = [XRandr]
-        elif method.lower()=='ddcutil':methods = [DDCUtil]
-        elif method.lower()=='light':methods = [Light]
-        elif method.lower()=='xbacklight':methods = [XBacklight]
+        if method.lower()=='xrandr':methods = {'XRandr':XRandr}
+        elif method.lower()=='ddcutil':methods = {'DDCUtil':DDCUtil}
+        elif method.lower()=='light':methods = {'Light':Light}
+        elif method.lower()=='xbacklight':methods = {'XBacklight':XBacklight}
         else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
     errors = []
     for n,m in methods.items():
@@ -788,10 +788,10 @@ def get_brightness(method = None, **kwargs):
     # just the local one
     methods = globals()['methods'].copy()
     if method != None:
-        if method.lower()=='xrandr':methods = [XRandr]
-        elif method.lower()=='ddcutil':methods = [DDCUtil]
-        elif method.lower()=='light':methods = [Light]
-        elif method.lower()=='xbacklight':methods = [XBacklight]
+        if method.lower()=='xrandr':methods = {'XRandr':XRandr}
+        elif method.lower()=='ddcutil':methods = {'DDCUtil':DDCUtil}
+        elif method.lower()=='light':methods = {'Light':Light}
+        elif method.lower()=='xbacklight':methods = {'XBacklight':XBacklight}
         else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
     errors = []
     for n,m in methods.items():
