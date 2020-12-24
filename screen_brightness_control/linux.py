@@ -27,7 +27,7 @@ class Light:
 
             # get info about all monitors
             info = sbc.linux.Light.get_display_info()
-            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffffffffff00'...}]
+            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffffffffffff00'...}]
 
             # get info about the primary monitor
             primary_info = sbc.linux.Light.get_display_info(0)
@@ -734,12 +734,11 @@ def set_brightness(value, method = None, **kwargs):
     # just the local one
     methods = globals()['methods'].copy()
     if method != None:
-        try:
-            method=method.lower()
-            mkeys = [i.lower() for i in methods.keys()]
-            methods = [methods[mkeys.index(method)]]
-        except:
-            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
+        if method.lower()=='xrandr':methods = [XRandr]
+        elif method.lower()=='ddcutil':methods = [DDCUtil]
+        elif method.lower()=='light':methods = [Light]
+        elif method.lower()=='xbacklight':methods = [XBacklight]
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
     errors = []
     for n,m in methods.items():
         try:
@@ -789,12 +788,11 @@ def get_brightness(method = None, **kwargs):
     # just the local one
     methods = globals()['methods'].copy()
     if method != None:
-        try:
-            method=method.lower()
-            mkeys = [i.lower() for i in methods.keys()]
-            methods = [methods[mkeys.index(method)]]
-        except:
-            raise ValueError("Chosen method is not valid, must be 'light', 'xrandr', 'ddcutil' or 'xbacklight'")
+        if method.lower()=='xrandr':methods = [XRandr]
+        elif method.lower()=='ddcutil':methods = [DDCUtil]
+        elif method.lower()=='light':methods = [Light]
+        elif method.lower()=='xbacklight':methods = [XBacklight]
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
     errors = []
     for n,m in methods.items():
         try:
