@@ -3,6 +3,65 @@ from . import flatten_list, MONITOR_MANUFACTURER_CODES
 
 class Light:
     '''collection of screen brightness related methods using the light executable'''
+    def __filter_monitors(display, *args):
+        '''internal function, do not call'''
+        monitors = Light.get_display_info() if len(args)==0 else args[0]
+        if type(display) is int:
+            return monitors[display]
+        else:
+            return [i for i in monitors if display in (i['name'], i['edid'], i['path'])]
+    def get_display_info(*args):
+        '''
+        Returns information about detected displays as reported by Light
+
+        Args:
+            monitor (str or int): [*Optional*] the monitor to return information about. Can be index, name, path or edid
+
+        Returns:
+            list: list of dictionaries if no monitor is specified
+            dict: if a monitor is specified
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get info about all monitors
+            info = sbc.linux.Light.get_display_info()
+            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffffffffff00'...}]
+
+            # get info about the primary monitor
+            primary_info = sbc.linux.Light.get_display_info(0)
+
+            # get info about a monitor called 'edp-backlight'
+            edp_info = sbc.linux.Light.get_display_info('edp-backlight')
+            ```
+        '''
+        res=subprocess.run(['light', '-L'],stdout=subprocess.PIPE).stdout.decode().split('\n')
+        displays = []
+        for r in res:
+            if 'backlight' in r and 'sysfs/backlight/auto' not in r:
+                r = r[r.index('backlight/')+10:]
+                if os.path.isdir(f'/sys/class/backlight/{r}'):
+                    tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'method': Light}
+                    try:
+                        out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
+                        #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
+                        edid = ''
+                        for line in out:
+                            line = line.split(' ')
+                            for i in line:
+                                if len(i)==4:
+                                    edid+=i[2:]+i[:2]
+                        tmp['edid'] = edid
+                    except:
+                        tmp['edid'] = None
+                    displays.append(tmp)
+        if len(args)==1:
+            displays = Light.__filter_monitors(args[0], displays)
+            if len(displays)==1:
+                displays = displays[0]
+        return displays
+
     def get_display_names():
         '''
         Returns the names of each display, as reported by light
@@ -18,14 +77,7 @@ class Light:
             # EG output: ['edp-backlight']
             ```
         '''
-        command = 'light -L'
-        res=subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode().split('\n')
-        displays = []
-        for r in res:
-            if 'backlight' in r and 'sysfs/backlight/auto' not in r:
-                r = r[r.index('backlight/')+10:]
-                displays.append(r)
-        return displays
+        return [i['name'] for i in Light.get_display_info()]
 
     def set_brightness(value, display = None, no_return = False):
         '''
@@ -33,7 +85,7 @@ class Light:
 
         Args:
             value (int): Sets the brightness to this value
-            display (int or str): The index or name of the display you wish to change
+            display (int or str): The index, name, edid or path of the display you wish to change
             no_return (bool): if True, this function returns None
 
         Returns:
@@ -48,14 +100,16 @@ class Light:
 
             # set the primary display brightness to 75%
             sbc.linux.Light.set_brightness(75, display = 0)
+
+            # set the display called 'edp-backlight' to 25%
+            sbc.linux.Light.set_brightness(75, display = 'edp-backlight')
             ```
         '''
-        display_names = Light.get_display_names()
+        info = Light.get_display_info()
         if display!=None:
-            if type(display) is str:
-                display = display_names.index(display)
-            display_names = [display_names[display]]
-        for name in display_names:
+            info = Light.__filter_monitors(display, info)
+        for i in info:
+            name = i['name']
             command = f'light -S {value} -s sysfs/backlight/{name}'
             subprocess.call(command.split(" "))
         return Light.get_brightness(display=display) if not no_return else None
@@ -65,7 +119,7 @@ class Light:
         Sets the brightness for a display using the light executable
 
         Args:
-            display (int or str): The index or name of the display you wish to query
+            display (int or str): display (int or str): The index, name, edid or path of the display you wish to query
         
         Returns:
             int: from 0 to 100 if only one display is detected
@@ -80,15 +134,17 @@ class Light:
 
             # get the brightness of the primary display
             primary_brightness = sbc.linux.Light.get_brightness(display = 0)
+
+            # get the brightness of the display called 'edp-backlight'
+            edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')
             ```
         '''
-        display_names = Light.get_display_names()
+        info = Light.get_display_info()
         if display!=None:
-            if type(display) is str:
-                display = display_names.index(display)
-            display_names = [display_names[display]]
+            info = Light.__filter_monitors(display, info)
         results = []
-        for name in display_names:
+        for i in info:
+            name = i['name']
             command = f'light -G -s sysfs/backlight/{name}'
             results.append(subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode())
         results = [int(round(float(str(i)),0)) for i in results]
@@ -546,22 +602,23 @@ def list_monitors_info(method=None):
         ```
     '''
     tmp = []
-    methods = [XRandr, DDCUtil]
+    methods = [XRandr, DDCUtil, Light]
     if method!=None:
         if method.lower()=='xrandr':methods = [XRandr]
         elif method.lower()=='ddcutil':methods = [DDCUtil]
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\'')
+        elif method.lower()=='light':methods = [Light]
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\'')
     for m in methods:
         try:tmp.append(m.get_display_info())
         except:pass
     tmp = flatten_list(tmp)
     info = []
-    serials = []
-    #to make sure each display (with unique serial) is only reported once
+    edids = []
+    #to make sure each display (with unique EDID) is only reported once
     for i in tmp:
         try:
-            if i['serial'] not in serials:
-                serials.append(i['serial'])
+            if i['edid'] not in edids:
+                edids.append(i['edid'])
                 info.append(i)
         except:
             info.append(i)
@@ -582,7 +639,7 @@ def list_monitors(method=None):
         import screen_brightness_control as sbc
 
         monitors = sbc.linux.list_monitors()
-        # EG output: ['BenQ GL2450HM', 'Dell U2211H']
+        # EG output: ['BenQ GL2450HM', 'Dell U2211H', 'edp-backlight']
         ```
     '''
     displays = [i['name'] for i in list_monitors_info(method=method)]
