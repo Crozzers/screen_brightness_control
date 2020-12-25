@@ -1,6 +1,60 @@
 import subprocess, os, struct
 from . import flatten_list, MONITOR_MANUFACTURER_CODES
 
+class _EDID:
+    '''
+    simple structure and method to extract monitor serial and name from an EDID string.
+    
+    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
+    '''
+    EDID_FORMAT = (">"     # big-endian
+                    "8s"    # constant header (8 bytes)
+                    "H"     # manufacturer id (2 bytes)
+                    "H"     # product id (2 bytes)
+                    "I"     # serial number (4 bytes)
+                    "B"     # manufactoring week (1 byte)
+                    "B"     # manufactoring year (1 byte)
+                    "B"     # edid version (1 byte)
+                    "B"     # edid revision (1 byte)
+                    "B"     # video input type (1 byte)
+                    "B"     # horizontal size in cm (1 byte)
+                    "B"     # vertical size in cm (1 byte)
+                    "B"     # display gamma (1 byte)
+                    "B"     # supported features (1 byte)
+                    "10s"   # color characteristics (10 bytes)
+                    "H"     # supported timings (2 bytes)
+                    "B"     # reserved timing (1 byte)
+                    "16s"   # EDID supported timings (16 bytes)
+                    "18s"   # detailed timing block 1 (18 bytes)
+                    "18s"   # detailed timing block 2 (18 bytes)
+                    "18s"   # detailed timing block 3 (18 bytes)
+                    "18s"   # detailed timing block 4 (18 bytes)
+                    "B"     # extension flag (1 byte)
+                    "B")    # checksum (1 byte)
+    def parse_edid(edid):
+        '''internal function, do not call'''
+        def filter_hex(st):
+            st = str(st)
+            while '\\x' in st:
+                i = st.index('\\x')
+                st = st.replace(st[i:i+4], '')
+            return st.replace('\\n','')[2:-1]
+        if ' ' in edid:
+            edid = edid.replace(' ','')
+        edid = bytes.fromhex(edid)
+        data = struct.unpack(_EDID.EDID_FORMAT, edid)
+        serial = filter_hex(data[18])
+        #other info can be anywhere in this range, I don't know why
+        name = None
+        for i in data[19:22]:
+            try:
+                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
+                if st.index(' ')<len(st)-1:
+                    name = filter_hex(i).split(' ')
+                    name = name[0].lower().capitalize()+' '+name[1]
+            except:pass
+        return name, serial
+
 class Light:
     '''collection of screen brightness related methods using the light executable'''
     def __filter_monitors(display, *args):
@@ -9,7 +63,7 @@ class Light:
         if type(display) is int:
             return monitors[display]
         else:
-            return [i for i in monitors if display in (i['name'], i['edid'], i['path'])]
+            return [i for i in monitors if display in (i['name'], i['edid'], i['path'], i['edid'])]
     def get_display_info(*args):
         '''
         Returns information about detected displays as reported by Light
@@ -38,11 +92,13 @@ class Light:
         '''
         res=subprocess.run(['light', '-L'],stdout=subprocess.PIPE).stdout.decode().split('\n')
         displays = []
+        count=0
         for r in res:
             if 'backlight' in r and 'sysfs/backlight/auto' not in r:
                 r = r[r.index('backlight/')+10:]
                 if os.path.isdir(f'/sys/class/backlight/{r}'):
-                    tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'method': Light}
+                    tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'method': Light, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
+                    count+=1
                     try:
                         out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
                         #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
@@ -53,8 +109,16 @@ class Light:
                                 if len(i)==4:
                                     edid+=i[2:]+i[:2]
                         tmp['edid'] = edid
+                        name, serial = _EDID.parse_edid(edid)
+                        if name!=None:
+                            tmp['serial'] = serial
+                            tmp['name'] = name
+                        tmp['manufacturer'] = name.split(' ')[0]
+                        if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
+                            tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
+                        tmp['model'] = name.split(' ')[1]
                     except:
-                        tmp['edid'] = None
+                        pass
                     displays.append(tmp)
         if len(args)==1:
             displays = Light.__filter_monitors(args[0], displays)
@@ -194,62 +258,14 @@ class XBacklight:
         return int(round(float(str(res)),0))
 
 class XRandr:
-    '''collection of screen brightness related methods using the xrandr executable
-    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)'''
-    _EDID_FORMAT = (">"     # big-endian
-                    "8s"    # constant header (8 bytes)
-                    "H"     # manufacturer id (2 bytes)
-                    "H"     # product id (2 bytes)
-                    "I"     # serial number (4 bytes)
-                    "B"     # manufactoring week (1 byte)
-                    "B"     # manufactoring year (1 byte)
-                    "B"     # edid version (1 byte)
-                    "B"     # edid revision (1 byte)
-                    "B"     # video input type (1 byte)
-                    "B"     # horizontal size in cm (1 byte)
-                    "B"     # vertical size in cm (1 byte)
-                    "B"     # display gamma (1 byte)
-                    "B"     # supported features (1 byte)
-                    "10s"   # color characteristics (10 bytes)
-                    "H"     # supported timings (2 bytes)
-                    "B"     # reserved timing (1 byte)
-                    "16s"   # EDID supported timings (16 bytes)
-                    "18s"   # detailed timing block 1 (18 bytes)
-                    "18s"   # detailed timing block 2 (18 bytes)
-                    "18s"   # detailed timing block 3 (18 bytes)
-                    "18s"   # detailed timing block 4 (18 bytes)
-                    "B"     # extension flag (1 byte)
-                    "B")    # checksum (1 byte)
+    '''collection of screen brightness related methods using the xrandr executable'''
     def __filter_monitors(display, *args):
         '''internal function, do not call'''
         monitors = XRandr.get_display_info() if len(args)==0 else args[0]
         if type(display) is int:
             return monitors[display]
         else:
-            return [i for i in monitors if display in (i['name'], i['serial'], i['interface'], i['model'])]
-    def __parse_edid(edid):
-        '''internal function, do not call'''
-        def filter_hex(st):
-            st = str(st)
-            while '\\x' in st:
-                i = st.index('\\x')
-                st = st.replace(st[i:i+4], '')
-            return st.replace('\\n','')[2:-1]
-        if ' ' in edid:
-            edid = edid.replace(' ','')
-        edid = bytes.fromhex(edid)
-        data = struct.unpack(XRandr._EDID_FORMAT, edid)
-        serial = filter_hex(data[18])
-        #other info can be anywhere in this range, I don't know why
-        name = None
-        for i in data[19:22]:
-            try:
-                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
-                if st.index(' ')<len(st)-1:
-                    name = filter_hex(i).split(' ')
-                    name = name[0].lower().capitalize()+' '+name[1]
-            except:pass
-        return name, serial
+            return [i for i in monitors if display in (i['name'], i['serial'], i['interface'], i['model'], i['edid'])]
 
     def get_display_info(*args):
         '''
@@ -283,29 +299,25 @@ class XRandr:
         names = XRandr.get_display_interfaces()
         data = []
         tmp = {}
+        count = 0
         for i in out:
             if i.startswith(tuple(names)):
                 data.append(tmp)
-                tmp = {'interface':i.split(' ')[0], 'line':i, 'method':XRandr}
+                tmp = {'interface':i.split(' ')[0], 'line':i, 'method':XRandr, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
+                count+=1
             elif 'EDID:' in i:
                 st = out[out.index(tmp['line']):]
                 edid = [st[j].replace('\t','').replace(' ', '') for j in range(st.index(i)+1, st.index(i)+9)]
                 edid = ''.join(edid)
                 tmp['edid'] = edid
-                name, serial = XRandr.__parse_edid(edid)
+                name, serial = _EDID.parse_edid(edid)
                 tmp['name'] = name if name!=None else tmp['interface']
                 if name!=None:
                     tmp['manufacturer'] = name.split(' ')[0]
                     if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
                         tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
-                    else:
-                        tmp['manufacturer_id'] = None
                     tmp['model'] = name.split(' ')[1]
                     tmp['serial'] = serial
-                else:
-                    tmp['manufacturer'] = None
-                    tmp['model'] = None
-                    tmp['serial'] = None
             elif 'Brightness:' in i:
                 tmp['brightness'] = int(float(i.replace('Brightness:','').replace(' ','').replace('\t',''))*100)
 
@@ -376,9 +388,10 @@ class XRandr:
             primary_brightness = sbc.linux.XRandr.get_brightness(display=0)
             ```
         '''
-        brightness = XRandr.get_display_info()
+        monitors = XRandr.get_display_info()
         if display!=None:
-            brightness = XRandr.__filter_monitors(display, brightness)
+            monitors = XRandr.__filter_monitors(display, monitors)
+        brightness = [i['brightness'] for i in monitors]
 
         return brightness[0] if len(brightness)==1 else brightness
 
@@ -421,7 +434,7 @@ class DDCUtil:
         if type(display) is int:
             return monitors[display]
         else:
-            return [i for i in monitors if display in (i['name'], i['serial'], i['i2c_bus'], i['model'])]
+            return [i for i in monitors if display in (i['name'], i['serial'], i['i2c_bus'], i['model'], i['edid'])]
 
     def get_display_info(*args):
         '''
@@ -459,11 +472,13 @@ class DDCUtil:
                 out.append(line)
         data = []
         tmp = {}
+        count = 0
         for i in range(len(out)):
             line = out[i]
             if not line.startswith(('\t', ' ')):
                 data.append(tmp)
-                tmp = {'tmp': line, 'method':DDCUtil}
+                tmp = {'tmp': line, 'method':DDCUtil, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
+                count+=1
             else:
                 if 'I2C bus' in line:
                     tmp['i2c_bus'] = line[line.index('/'):]
@@ -471,17 +486,17 @@ class DDCUtil:
                 elif 'Mfg id' in line:
                     tmp['manufacturer_id'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
                     try:tmp['manufacturer'] = MONITOR_MANUFACTURER_CODES[tmp['manufacturer_id'].upper()]
-                    except:tmp['manufacturer']=None
+                    except:pass
                 elif 'Model' in line:
                     name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
                     tmp['name'] = ' '.join(name)
                     try:tmp['model'] = name[1]
-                    except IndexError:tmp['model'] = None
+                    except IndexError:pass
                 elif 'Serial number' in line:
                     tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
                 elif 'EDID hex dump:' in line:
                     try:tmp['edid'] = ''.join([j[j.index('+0')+8:j.index('+0')+55].replace(' ','') for j in out[i+2:i+10]])
-                    except:tmp['edid'] = None
+                    except:pass
         data.append(tmp)
         ret = [{k:v for k,v in i.items() if k!='tmp'} for i in data if i!={} and 'Invalid display' not in i['tmp']]
         if len(args)==1:
@@ -574,6 +589,176 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
+class Monitor(object):
+    '''A class to manage a single monitor and its relevant information'''
+    def __init__(self, display):
+        '''
+        Args:
+            display (int or str): the index/model name/serial/edid of the display you wish to control
+        
+        Raises:
+            LookupError: if the given display is a string but that string does not match any known displays
+            TypeError: if the given display type is not int or str
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # create a class for the primary monitor and then a specificly named monitor
+            primary = sbc.windows.Monitor(0)
+            benq_monitor = sbc.linux.Monitor('BenQ GL2450HM')
+
+            # check if the benq monitor is the primary one
+            if primary.serial == benq_monitor.serial:
+                print('BenQ GL2450HM is the primary display')
+            else:
+                print('The primary display is', primary.name)
+            
+            # this class can also be accessed like a dictionary
+            print(primary['name'])
+            print(benq_monitor['name'])
+            ```
+        '''
+        if type(display) is dict:
+            info = display
+        else:
+            info = list_monitors_info()
+            if type(display) is int:
+                info = info[display]
+            elif type(display) is str:
+                for i in info:
+                    try:
+                        if display in (i['serial'], i['name'], i['model'], i['edid']):
+                            info = i
+                    except KeyError:
+                        pass
+                if type(info) == list:#we haven't found a match
+                    raise LookupError('could not match display info to known displays')
+            else:
+                raise TypeError(f'display arg must be int or str, not {type(display)}')
+
+        print(info)
+        self.serial = info['serial']##fix keyerror by smart iteration
+        '''a unique string assigned by the manufacturer to this monitor'''
+        self.name = info['name']
+        '''the monitors manufacturer name plus its model'''
+        self.method = info['method']
+        '''the method by which this monitor can be addressed. Will be either `XRandr` or `DDCUtil` or `Light`'''
+        self.manufacturer = info['manufacturer']
+        '''the name of the brand of the monitor'''
+        self.manufacturer_id = info['manufacturer_id']
+        '''the 3 letter manufacturing code corresponding to the manufacturer name'''
+        self.model = info['model']
+        '''the general model of the display'''
+        self.index = info['index']
+        '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
+        This means that if the monitor uses `XRandr`, the index is out of the list of `XRandr` addressable monitors ONLY. Same for `DDCUtil` and `Light`'''
+        self.edid = info['edid']
+        '''a unique string returned by the monitor that contains its VCP capabilities, serial and name'''
+    def __getitem__(self, item):
+        return getattr(self, item)
+    def set_brightness(self, *args, **kwargs):
+        '''
+        Sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitor's brightness method
+            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritrten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.linux.Monitor(0)
+            primary_brightness = primary.set_brightness(50)
+            ```
+        '''
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
+        return self.method.set_brightness(*args, **kwargs)
+    def get_brightness(self, **kwargs):
+        '''
+        Returns the brightness of this display
+
+        Args:
+            kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.linux.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
+        '''
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
+        return self.method.get_brightness(**kwargs)
+    def get_info(self):
+        '''
+        Returns all known information about this monitor instance
+
+        Returns:
+            dict
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.linux.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
+        '''
+        return {
+            'name':self.name,
+            'model':self.model,
+            'serial':self.serial,
+            'manufacturer': self.manufacturer,
+            'manufacturer_id': self.manufacturer_id,
+            'method': self.method,
+            'index': self.index,
+            'edid': self.edid
+        }
+    def is_active(self):
+        '''
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool: True means active, False means inactive
+        
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            primary = sbc.linux.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            ```
+        '''
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False
+
 def list_monitors_info(method=None):
     '''
     Lists detailed information about all detected monitors
@@ -607,7 +792,7 @@ def list_monitors_info(method=None):
         if method.lower()=='xrandr':methods = [XRandr]
         elif method.lower()=='ddcutil':methods = [DDCUtil]
         elif method.lower()=='light':methods = [Light]
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\'')
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' to get monitor information')
     for m in methods:
         try:tmp.append(m.get_display_info())
         except:pass
@@ -644,7 +829,6 @@ def list_monitors(method=None):
     '''
     displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
-
 
 def get_brightness_from_sysfiles(display = None):
     '''
@@ -700,7 +884,59 @@ def get_brightness_from_sysfiles(display = None):
         raise Exception(exc)
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
-def set_brightness(value, method = None, **kwargs):
+def __filter_monitors(display = None, method = None):
+    methods = globals()['methods'].copy()
+    if method != None:
+        if method.lower()=='xrandr':methods = [XRandr]
+        elif method.lower()=='ddcutil':methods = [DDCUtil]
+        elif method.lower()=='light':methods = [Light]
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\' to alter screen brightness')
+
+    monitors = flatten_list([i.get_display_info() for i in methods])
+
+    if display!=None:
+        monitors = [i for i in monitors if display in (i['edid'], i['serial'], i['name'], i['index'])]
+
+    return monitors
+
+def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+    '''internal function, do not call.
+    either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
+    errors = []
+    try: # filter knwon list of monitors according to kwargs
+        monitors = __filter_monitors(display = display, method = method)
+    except Exception as e:
+        errors.append(['',type(e).__name__, e])
+    else:
+        output = []
+        for m in monitors: # add the output of each brightness method to the output list
+            try:
+                identifier = m['index'] if m['edid'] == None else m['edid']
+                output.append(
+                    getattr(m['method'], meta_method+'_brightness')(*args, display = identifier, **kwargs)
+                )
+            except Exception as e:
+                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
+
+        if output!=[]: # flatten and return any output
+            output = flatten_list(output)
+            return output[0] if len(output)==1 else output
+
+    #if function hasn't already returned it has failed
+    if method==None and meta_method == 'get':
+        try:
+            return get_brightness_from_sysfiles(**kwargs)
+        except Exception as e:
+            errors.append(['/sys/class/backlight/*', type(e).__name__, e])
+
+    msg='\n'
+    for e in errors:
+        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
+    if msg=='\n':
+        msg+='\tno output was received from brightness methods'
+    raise Exception(msg)
+
+def set_brightness(value, display = None, method = None, **kwargs):
     '''
     Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods untill one works
 
@@ -730,28 +966,12 @@ def set_brightness(value, method = None, **kwargs):
         sbc.linux.set_brightness(25, method='xrandr')
         ```
     '''
-    # use this as we will be modifying this list later and we don't want to change the global version
-    # just the local one
-    methods = globals()['methods'].copy()
-    if method != None:
-        if method.lower()=='xrandr':methods = {'XRandr':XRandr}
-        elif method.lower()=='ddcutil':methods = {'DDCUtil':DDCUtil}
-        elif method.lower()=='light':methods = {'Light':Light}
-        elif method.lower()=='xbacklight':methods = {'XBacklight':XBacklight}
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
-    errors = []
-    for n,m in methods.items():
-        try:
-            return m.set_brightness(value, **kwargs)
-        except Exception as e:
-            errors.append([n, type(e).__name__, e])
-    #if function hasn't already returned it has failed
-    msg='\n'
-    for e in errors:
-        msg+=f'    {e[0]} -> {e[1]}: {e[2]}\n'
-    raise Exception(msg)
+    if method!=None and method.lower()=='xbacklight':
+        return XBacklight.set_brightness(value, **kwargs)
+    else:
+        return __set_and_get_brightness(value, display = display, method = method, meta_method='set', **kwargs)
 
-def get_brightness(method = None, **kwargs):
+def get_brightness(display = None, method = None, **kwargs):
     '''
     Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods untill one works
 
@@ -784,30 +1004,9 @@ def get_brightness(method = None, **kwargs):
         light_brightness = sbc.get_brightness(display=1, method='light')
         ```
     '''
-    # use this as we will be modifying this list later and we don't want to change the global version
-    # just the local one
-    methods = globals()['methods'].copy()
-    if method != None:
-        if method.lower()=='xrandr':methods = {'XRandr':XRandr}
-        elif method.lower()=='ddcutil':methods = {'DDCUtil':DDCUtil}
-        elif method.lower()=='light':methods = {'Light':Light}
-        elif method.lower()=='xbacklight':methods = {'XBacklight':XBacklight}
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\'')
-    errors = []
-    for n,m in methods.items():
-        try:
-            return m.get_brightness(**kwargs)
-        except Exception as e:
-            errors.append([n, type(e).__name__, e])
-    #if function hasn't already returned it has failed
-    if method==None:
-        try:
-            return get_brightness_from_sysfiles(**kwargs)
-        except Exception as e:
-            errors.append(['/sys/class/backlight/*', type(e).__name__, e])
-    msg='\n'
-    for e in errors:
-        msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
-    raise Exception(msg)
+    if method!=None and method.lower()=='xbacklight':
+        return XBacklight.get_brightness(**kwargs)
+    else:
+        return __set_and_get_brightness(display = display, method = method, meta_method='get', **kwargs)
 
 methods = {'XRandr': XRandr, 'DDCUtil': DDCUtil, 'Light': Light, 'XBacklight': XBacklight}
