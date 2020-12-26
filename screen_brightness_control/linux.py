@@ -885,14 +885,14 @@ def get_brightness_from_sysfiles(display = None):
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
 def __filter_monitors(display = None, method = None):
-    methods = globals()['methods'].copy()
+    methods = list(globals()['methods'].values())
     if method != None:
         if method.lower()=='xrandr':methods = [XRandr]
         elif method.lower()=='ddcutil':methods = [DDCUtil]
         elif method.lower()=='light':methods = [Light]
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\' to alter screen brightness')
+        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\' to get/set screen brightness')
 
-    monitors = flatten_list([i.get_display_info() for i in methods])
+    monitors = flatten_list([i.get_display_info() for i in methods if i!=XBacklight])
 
     if display!=None:
         monitors = [i for i in monitors if display in (i['edid'], i['serial'], i['name'], i['index'])]
@@ -916,11 +916,16 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                     getattr(m['method'], meta_method+'_brightness')(*args, display = identifier, **kwargs)
                 )
             except Exception as e:
-                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
+                errors.append([f"{m['name']}", type(e).__name__, e])
 
         if output!=[]: # flatten and return any output
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
+        else:
+            try:
+                return getattr(XBacklight, meta_method+'_brightness')(*args, **kwargs)
+            except Exception as e:
+                errors.append([f"XBacklight", type(e).__name__, e])
 
     #if function hasn't already returned it has failed
     if method==None and meta_method == 'get':
