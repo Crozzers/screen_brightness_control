@@ -99,27 +99,29 @@ class Light:
                 if os.path.isdir(f'/sys/class/backlight/{r}'):
                     tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'method': Light, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
                     count+=1
-                    try:
-                        out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
-                        #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
-                        edid = ''
-                        for line in out:
-                            line = line.split(' ')
-                            for i in line:
-                                if len(i)==4:
-                                    edid+=i[2:]+i[:2]
-                        tmp['edid'] = edid
-                        name, serial = _EDID.parse_edid(edid)
-                        if name!=None:
-                            tmp['serial'] = serial
-                            tmp['name'] = name
-                        tmp['manufacturer'] = name.split(' ')[0]
-                        if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
-                            tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
-                        tmp['model'] = name.split(' ')[1]
-                    except:
-                        pass
-                    displays.append(tmp)
+                    if os.path.isfile(tmp['path']+'/device/edid'):
+                        try:
+                            out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
+                            #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
+                            edid = ''
+                            for line in out:
+                                line = line.split(' ')
+                                for i in line:
+                                    if len(i)==4:
+                                        edid+=i[2:]+i[:2]
+                            tmp['edid'] = edid
+                            name, serial = _EDID.parse_edid(edid)
+                            if name!=None:
+                                tmp['serial'] = serial
+                                tmp['name'] = name
+                            tmp['manufacturer'] = name.split(' ')[0]
+                            if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
+                                tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
+                            tmp['model'] = name.split(' ')[1]
+                        except:
+                            pass
+                        displays.append(tmp)
+
         if len(args)==1:
             displays = Light.__filter_monitors(args[0], displays)
             if len(displays)==1:
@@ -885,17 +887,18 @@ def get_brightness_from_sysfiles(display = None):
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
 def __filter_monitors(display = None, method = None):
-    methods = list(globals()['methods'].values())
-    if method != None:
-        if method.lower()=='xrandr':methods = [XRandr]
-        elif method.lower()=='ddcutil':methods = [DDCUtil]
-        elif method.lower()=='light':methods = [Light]
-        else:raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\' to get/set screen brightness')
-
-    monitors = flatten_list([i.get_display_info() for i in methods if i!=XBacklight])
+    monitors = list_monitors_info(method=method)
 
     if display!=None:
         monitors = [i for i in monitors if display in (i['edid'], i['serial'], i['name'], i['index'])]
+
+    if monitors == []:
+        msg = 'no monitors found'
+        if display!=None:
+            msg+=f' with name/serial/model/edid of "{display}"'
+        if method!=None:
+            msg+=f' with method of "{method}"'
+        raise LookupError(msg)
 
     return monitors
 
