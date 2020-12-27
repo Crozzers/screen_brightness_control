@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title"><code>screen_brightness_control v0.5.1</code></h1>
+<h1 class="title"><code>screen_brightness_control v0.6.0</code></h1>
 </header>
 
 <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.</p>
@@ -35,11 +35,13 @@
 <li>Install using <code>pip3 install .</code></li>
 </ul>
 <h4>Note:</h4>
-<p>For running on Linux you will need to install one of these programs: <a href="https://github.com/haikarainen/light">light</a>, <code>xrandr</code> or <code>xbacklight</code></p>
+<p>For running on Linux you will need to install one of these programs: <code>xrandr</code>, <code>ddcutil</code>, <a href="https://github.com/haikarainen/light">light</a> or <code>xbacklight</code>.
+If you are using a desktop computer with proper monitors, install <code>ddcutil</code>. If you're using a laptop, try <code>xrandr</code> or <code>xbacklight</code>.
+If you're using a laptop with a display driver that doesn't support RandR, use <code>light</code>.</p>
 <ul>
-<li>Arch: <code>sudo pacman -S light-git</code> or <code>sudo pacman -S xorg-xrandr</code> or <code>sudo pacman -S xorg-xbacklight</code></li>
-<li>Debian/Ubuntu: <a href="https://github.com/haikarainen/light">Light install instructions</a> or <code>sudo apt install x11-server-utils</code> or <code>sudo apt install xbacklight</code></li>
-<li>Fedora: <code>sudo dnf install light</code> or <code>sudo dnf install libXrandr</code> or <code>sudo dnf install xbacklight</code></li>
+<li>Arch: <code>sudo pacman -S xorg-xrandr</code> or <code>sudo pacman -S ddcutil</code> or <code>sudo pacman -S light-git</code> or <code>sudo pacman -S xorg-xbacklight</code></li>
+<li>Debian/Ubuntu: <code>sudo apt install x11-xserver-utils</code> or <code>sudo apt install ddcutil</code> or <code>sudo apt install light</code> or <code>sudo apt install xbacklight</code></li>
+<li>Fedora: <code>sudo dnf install libXrandr</code> or <code>sudo dnf install light</code> or <code>sudo dnf install xbacklight</code></li>
 </ul>
 <h1>Usage</h1>
 <p>You can call this module from your command line or use it as a python library (see the documentation section below).</p>
@@ -55,7 +57,7 @@
 &gt;   -f FADE, --fade FADE  fade the brightness to this value
 &gt;   -m METHOD, --method METHOD
 &gt;                         specify which method to use
-&gt;   -l, --list            list all monitors (windows only)
+&gt;   -l, --list            list all monitors
 &gt;   -v, --verbose         any error messages will be more detailed
 &gt;   -V, --version         print the current version
 python -m screen_brightness_control -g
@@ -158,38 +160,27 @@ sbc.fade_brightness(100, blocking=False)
 <h2>License</h2>
 <p>This software is licensed under the <a href="https://mit-license.org/">MIT license</a></p>
 <h1>FAQ</h1>
-<h3>Why is there no support for DDC/CI commands on Linux?</h3>
-<p>I'm working on it, however, I am struggling to find a way to implement it without root being required every time the program is called.
-If you have any suggestions feel free to raise an <a href="https://github.com/Crozzers/screen_brightness_control/issues">issue</a>,
-<a href="https://github.com/Crozzers/screen_brightness_control/pulls">pull request</a> or to <a href="mailto:captaincrozzers@gmail.com">ping me an email</a></p>
 <h3>Why do I always get <code>ScreenBrightnessError</code> on Linux?</h3>
 <p><strong>Why this happens:</strong><br />
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
-The programs it attempts to call are "light", "xrandr" and "xbacklight".
+The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
 If none of these programs can be called a <code>ScreenBrightnessError</code> is raised</p>
 <p><strong>How to fix it:</strong><br />
-Install light (recommended), xrandr or xbacklight using your system package manager:</p>
-<ul>
-<li>Arch: <code>sudo pacman -S light-git</code> or <code>sudo pacman -S xorg-xrandr</code> or <code>sudo pacman -S xorg-xbacklight</code></li>
-<li>Debian/Ubuntu: <a href="https://github.com/haikarainen/light">Light install instructions</a> or <code>sudo apt install x11-server-utils</code> or <code>sudo apt install xbacklight</code></li>
-<li>Fedora: <code>sudo dnf install light</code> or <code>sudo dnf install libXrandr</code> or <code>sudo dnf install xbacklight</code></li>
-</ul>
+Install <code>xrandr</code>, <code>ddcutil</code>, <code>light</code>, or <code>xbacklight</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.</p>
 <h3>I call <code>set_brightness()</code> and nothing happens on Linux</h3>
 <p><strong>Why this happens:</strong><br />
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
-If you installed xbacklight or xrandr, it only supports Intel (and sometimes NVidia) graphics, not AMD.</p>
+If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
+If you installed ddcutil, this requires root access to run for every query.</p>
 <p><strong>How to fix it:</strong><br />
-Install Light by following <a href="https://github.com/haikarainen/light#installation">these steps</a>. Make sure to run the install as sudo</p>
+If you installed <code>light</code>: follow <a href="https://github.com/haikarainen/light#installation">these steps</a>. Make sure to run the install as sudo<br />
+If you installed <code>xrandr</code> or <code>xbacklight</code>: make sure your graphics drivers support RandR.<br />
+If you installed <code>ddcutil</code>: make sure to run the script with root permissions</p>
 <h3>Using the <code>display</code> kwarg does nothing/creates exceptions on Linux</h3>
 <p><strong>Why this happens:</strong><br />
-The <code>display</code> kwarg is only supported by the <code>Light</code> and <code>XRandr</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
+The <code>display</code> kwarg is only supported by the <code>Light</code>, <code>XRandr</code> and <code>DDCUtil</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
 <p><strong>How to fix it:</strong><br />
-Install light (recommended) or xrandr using your system package manager:</p>
-<ul>
-<li>Arch: <code>sudo pacman -S light-git</code> or <code>sudo pacman -S xorg-xrandr</code></li>
-<li>Debian/Ubuntu: <a href="https://github.com/haikarainen/light">Light install instructions</a> or <code>sudo apt install x11-server-utils</code></li>
-<li>Fedora: <code>sudo dnf install light</code> or <code>sudo dnf install libXrandr</code></li>
-</ul>
+Install <code>xrandr</code> or <code>ddcutil</code> or <code>light</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.</p>
 <h3>The model of my monitor/display is not what the program says it is (Windows)</h3>
 <p><strong>Why this happens:</strong><br />
 If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
@@ -203,6 +194,10 @@ monitor = sbc.windows.Monitor('BenQ BNQ78A7') # swap this argument for the prefe
 print(monitor.model_name)
 &gt; 'GL2450HM'
 </code></pre>
+<h3>The serial number of my monitor/display is not what the program says it is (Windows)</h3>
+<p><strong>Why this happens:</strong><br />
+I do not know how to get a monitor's serial number using VCP and WMI. If you know and want to contribute then feel free to <a href="https://github.com/Crozzers/screen_brightness_control/issues">raise an issue</a>, <a href="https://github.com/Crozzers/screen_brightness_control/pulls">raise a pull request</a> or to email me <a href="mailto:captaincrozzers@gmail.com">captaincrozzers@gmail.com</a>.<br />
+The "serial" reported by this library is a unique identifier that Windows gives each display that I could reliably extract using both VCP and WMI. I decided that, for what I needed it for, it was good enough.</p>
 <h3>When I call <code>get_brightness()</code> the returned value isn't what I set it to (Windows)</h3>
 <p>Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
 You can likely see this if you open your display settings and very slowly move the brightness slider.<br />
@@ -232,11 +227,12 @@ print(monitor.Level)
 <h1>Documentation</h1>
 <ul id="index">
 <li><h3><a>Version</a></h3>
-<ul>
-<li><code><a href="docs/0.5.1/index.html">Latest</a></code></li>
+<ul><!--VERSION START-->
+<li><code><a href="docs/0.6.0/index.html">Latest</a></code></li>
+<li><code><a href="docs/0.6.0/index.html">0.6.0</a></code></li>
 <li><code><a href="docs/0.5.1/index.html">0.5.1</a></code></li>
 
-</ul></li></ul>
+</ul></li></ul><!--VERSION END-->
 
 <h1>Meta</h1>
 <ul id="index">
