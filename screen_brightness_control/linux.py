@@ -607,7 +607,7 @@ class Monitor(object):
             import screen_brightness_control as sbc
 
             # create a class for the primary monitor and then a specificly named monitor
-            primary = sbc.windows.Monitor(0)
+            primary = sbc.linux.Monitor(0)
             benq_monitor = sbc.linux.Monitor('BenQ GL2450HM')
 
             # check if the benq monitor is the primary one
@@ -665,7 +665,7 @@ class Monitor(object):
 
         Args:
             args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritrten)
+            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
 
         Returns:
             int: from 0 to 100
@@ -887,6 +887,11 @@ def get_brightness_from_sysfiles(display = None):
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
 def __filter_monitors(display = None, method = None):
+    '''internal function, do not call
+    filters the list of all addressable monitors by:
+        whether their name/model/serial/edid matches the display kwarg
+        whether they use the method matching the method kwarg'''
+
     monitors = list_monitors_info(method=method)
 
     if display!=None:

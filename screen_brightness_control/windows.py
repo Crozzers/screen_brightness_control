@@ -552,7 +552,7 @@ class Monitor(object):
 
         Args:
             args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritrten)
+            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
 
         Returns:
             int: from 0 to 100
@@ -716,7 +716,7 @@ def __filter_monitors(display=None, method=None):
     '''internal function, do not call
     filters the list of all addressable monitors by:
         whether their name/model/serial/model_name matches the display kwarg
-        whether they use the method matching the mdthod kwarg'''
+        whether they use the method matching the method kwarg'''
     methods = [WMI, VCP]
     monitors = list_monitors_info()
     #parse the method kwarg
