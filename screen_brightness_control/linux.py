@@ -444,7 +444,8 @@ class DDCUtil:
     executable = 'ddcutil'
     '''the ddcutil executable to be called'''
     sleep_multiplier = 0.5
-    '''how long ddcutil should sleep between each DDC request (lower is shorter)'''
+    '''how long ddcutil should sleep between each DDC request (lower is shorter).
+    See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
 
     def __filter_monitors(display, *args):
         '''internal function, do not call'''
@@ -655,7 +656,6 @@ class Monitor(object):
             else:
                 raise TypeError(f'display arg must be int or str, not {type(display)}')
 
-        print(info)
         self.serial = info['serial']##fix keyerror by smart iteration
         '''a unique string assigned by the manufacturer to this monitor'''
         self.name = info['name']
