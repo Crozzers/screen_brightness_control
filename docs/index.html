@@ -113,9 +113,12 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
-def list_monitors():
+def list_monitors(**kwargs):
     &#39;&#39;&#39;
     list all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
 
     Returns:
         list: list of strings
@@ -128,9 +131,9 @@ def list_monitors():
         ```
     &#39;&#39;&#39;
     if platform.system() == &#39;Windows&#39;:
-        return windows.list_monitors()
+        return windows.list_monitors(**kwargs)
     elif platform.system() == &#39;Linux&#39;:
-        return linux.list_monitors()
+        return linux.list_monitors(**kwargs)
 
 def flatten_list(thick_list):
     &#39;&#39;&#39;
@@ -378,7 +381,7 @@ if platform.system()==&#39;Windows&#39;:
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
 
-__version__=&#39;0.6.0-dev1&#39;
+__version__=&#39;0.6.0-pre3&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
 </details>
 </section>
@@ -669,10 +672,15 @@ secondary_brightness = sbc.get_brightness(display=1)
 </details>
 </dd>
 <dt id="screen_brightness_control.list_monitors"><code class="name flex">
-<span>def <span class="ident">list_monitors</span></span>(<span>)</span>
+<span>def <span class="ident">list_monitors</span></span>(<span>**kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>list all monitors that are controllable by this library</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
+<dd>passed directly to OS relevant monitor list function</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list</code></dt>
@@ -687,9 +695,12 @@ monitor_names = sbc.list_monitors()
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors():
+<pre><code class="python">def list_monitors(**kwargs):
     &#39;&#39;&#39;
     list all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
 
     Returns:
         list: list of strings
@@ -702,9 +713,9 @@ monitor_names = sbc.list_monitors()
         ```
     &#39;&#39;&#39;
     if platform.system() == &#39;Windows&#39;:
-        return windows.list_monitors()
+        return windows.list_monitors(**kwargs)
     elif platform.system() == &#39;Linux&#39;:
-        return linux.list_monitors()</code></pre>
+        return linux.list_monitors(**kwargs)</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.set_brightness"><code class="name flex">

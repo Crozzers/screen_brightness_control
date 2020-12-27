@@ -580,7 +580,7 @@ class Monitor(object):
 
         Args:
             args (tuple): passed directly to this monitor&#39;s brightness method
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritrten)
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
 
         Returns:
             int: from 0 to 100
@@ -675,9 +675,12 @@ class Monitor(object):
         except:
             return False
 
-def list_monitors_info():
+def list_monitors_info(method=None):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -693,13 +696,18 @@ def list_monitors_info():
             print(&#39;Model:&#39;, info[&#39;model&#39;]) # the general model of the display
             print(&#39;Serial:&#39;, info[&#39;serial&#39;]) # a unique string assigned by Windows to this display
             print(&#39;Manufacturer:&#39;, info[&#39;manufacturer&#39;]) # the name of the brand of the monitor
-            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the breand name, EG: BNQ -&gt; BenQ  
+            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
             print(&#39;Index:&#39;, info[&#39;index&#39;]) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print(&#39;Method:&#39;, info[&#39;method&#39;]) # the method this monitor can be addressed by
         ```
     &#39;&#39;&#39;
     tmp = []
-    for m in [WMI, VCP]:
+    methods = [WMI,VCP]
+    if method!=None:
+        if method.lower()==&#39;wmi&#39;:methods=[WMI]
+        elif method.lower()==&#39;vcp&#39;:methods=[VCP]
+        else:raise ValueError(&#39;method kwarg must be \&#39;wmi\&#39; or \&#39;vcp\&#39;&#39;)
+    for m in methods:
         tmp.append(m.get_display_info())
     tmp = flatten_list(tmp)
     info = []
@@ -711,9 +719,12 @@ def list_monitors_info():
             info.append(i)
     return flatten_list(info)
 
-def list_monitors():
+def list_monitors(method=None):
     &#39;&#39;&#39;
     Returns a list of all addressable monitor names
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;
 
     Returns:
         list: list of strings
@@ -726,14 +737,14 @@ def list_monitors():
         # EG output: [&#39;BenQ BNQ78A7&#39;, &#39;Dell DEL405E&#39;]
         ```
     &#39;&#39;&#39;
-    displays = [i[&#39;name&#39;] for i in list_monitors_info()]
+    displays = [i[&#39;name&#39;] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
 def __filter_monitors(display=None, method=None):
     &#39;&#39;&#39;internal function, do not call
     filters the list of all addressable monitors by:
         whether their name/model/serial/model_name matches the display kwarg
-        whether they use the method matching the mdthod kwarg&#39;&#39;&#39;
+        whether they use the method matching the method kwarg&#39;&#39;&#39;
     methods = [WMI, VCP]
     monitors = list_monitors_info()
     #parse the method kwarg
@@ -998,10 +1009,15 @@ benq_brightness = sbc.windows.get_brightness(display = 'BenQ BNQ78A7')
 </details>
 </dd>
 <dt id="screen_brightness_control.windows.list_monitors"><code class="name flex">
-<span>def <span class="ident">list_monitors</span></span>(<span>)</span>
+<span>def <span class="ident">list_monitors</span></span>(<span>method=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns a list of all addressable monitor names</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>method</code></strong> :&ensp;<code>str</code></dt>
+<dd>the method the monitor can be addressed by. Can be 'wmi' or 'vcp'</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list</code></dt>
@@ -1017,9 +1033,12 @@ monitors = sbc.windows.list_monitors()
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors():
+<pre><code class="python">def list_monitors(method=None):
     &#39;&#39;&#39;
     Returns a list of all addressable monitor names
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;
 
     Returns:
         list: list of strings
@@ -1032,15 +1051,20 @@ monitors = sbc.windows.list_monitors()
         # EG output: [&#39;BenQ BNQ78A7&#39;, &#39;Dell DEL405E&#39;]
         ```
     &#39;&#39;&#39;
-    displays = [i[&#39;name&#39;] for i in list_monitors_info()]
+    displays = [i[&#39;name&#39;] for i in list_monitors_info(method=method)]
     return flatten_list(displays)</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.windows.list_monitors_info"><code class="name flex">
-<span>def <span class="ident">list_monitors_info</span></span>(<span>)</span>
+<span>def <span class="ident">list_monitors_info</span></span>(<span>method=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Lists detailed information about all detected monitors</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>method</code></strong> :&ensp;<code>str</code></dt>
+<dd>the method the monitor can be addressed by. Can be 'wmi' or 'vcp'</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list</code></dt>
@@ -1056,7 +1080,7 @@ for info in monitors:
     print('Model:', info['model']) # the general model of the display
     print('Serial:', info['serial']) # a unique string assigned by Windows to this display
     print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
-    print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the breand name, EG: BNQ -&gt; BenQ  
+    print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
     print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
     print('Method:', info['method']) # the method this monitor can be addressed by
 </code></pre></div>
@@ -1064,9 +1088,12 @@ for info in monitors:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors_info():
+<pre><code class="python">def list_monitors_info(method=None):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
+
+    Args:
+        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -1082,13 +1109,18 @@ for info in monitors:
             print(&#39;Model:&#39;, info[&#39;model&#39;]) # the general model of the display
             print(&#39;Serial:&#39;, info[&#39;serial&#39;]) # a unique string assigned by Windows to this display
             print(&#39;Manufacturer:&#39;, info[&#39;manufacturer&#39;]) # the name of the brand of the monitor
-            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the breand name, EG: BNQ -&gt; BenQ  
+            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
             print(&#39;Index:&#39;, info[&#39;index&#39;]) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print(&#39;Method:&#39;, info[&#39;method&#39;]) # the method this monitor can be addressed by
         ```
     &#39;&#39;&#39;
     tmp = []
-    for m in [WMI, VCP]:
+    methods = [WMI,VCP]
+    if method!=None:
+        if method.lower()==&#39;wmi&#39;:methods=[WMI]
+        elif method.lower()==&#39;vcp&#39;:methods=[VCP]
+        else:raise ValueError(&#39;method kwarg must be \&#39;wmi\&#39; or \&#39;vcp\&#39;&#39;)
+    for m in methods:
         tmp.append(m.get_display_info())
     tmp = flatten_list(tmp)
     info = []
@@ -1314,7 +1346,7 @@ print(benq_monitor['name'])
 
         Args:
             args (tuple): passed directly to this monitor&#39;s brightness method
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritrten)
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
 
         Returns:
             int: from 0 to 100
@@ -1609,7 +1641,7 @@ if primary.is_active():
 <dt><strong><code>args</code></strong> :&ensp;<code>tuple</code></dt>
 <dd>passed directly to this monitor's brightness method</dd>
 <dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
-<dd>passed directly to this monitor's brightness method (the <code>display</code> kwarg is always overwritrten)</dd>
+<dd>passed directly to this monitor's brightness method (the <code>display</code> kwarg is always overwritten)</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1633,7 +1665,7 @@ primary_brightness = primary.set_brightness(50)
 
     Args:
         args (tuple): passed directly to this monitor&#39;s brightness method
-        kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritrten)
+        kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
 
     Returns:
         int: from 0 to 100
