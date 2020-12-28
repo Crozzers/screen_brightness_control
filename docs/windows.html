@@ -29,7 +29,7 @@
 <pre><code class="python">import wmi, threading, pythoncom, ctypes, win32api
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, MONITOR_MANUFACTURER_CODES
+from . import flatten_list, _monitor_brand_lookup
 
 class WMI:
     &#39;&#39;&#39;collection of screen brightness related methods using the WMI API&#39;&#39;&#39;
@@ -84,12 +84,11 @@ class WMI:
                 instance = m.InstanceName.split(&#39;\\&#39;)
                 serial = instance[-1]
                 model = instance[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = &#39;Unknown&#39;
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
+
                 tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
                 info.append(tmp)
                 a+=1
@@ -331,12 +330,10 @@ class VCP:
                 m = ms.split(&#39;#&#39;)
                 serial = m[2]
                 model = m[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = &#39;Unknown&#39;
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
                 tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
                 info.append(tmp)
@@ -746,19 +743,11 @@ def __filter_monitors(display=None, method=None):
         whether their name/model/serial/model_name matches the display kwarg
         whether they use the method matching the method kwarg&#39;&#39;&#39;
     methods = [WMI, VCP]
-    monitors = list_monitors_info()
     #parse the method kwarg
-    if method != None:
-        try:
-            method = (&#39;wmi&#39;, &#39;vcp&#39;).index(method.lower())
-            method = methods[method]
-            monitors = [i for i in monitors if i[&#39;method&#39;] == method]
-            if monitors == []:
-                raise LookupError(&#39;Chosen method is not valid, no detected monitors can utilize it&#39;)
-        except LookupError as e:
-            raise e
-        except:
-            raise ValueError(&#34;Chosen method is not valid, must be &#39;wmi&#39; or &#39;vcp&#39;&#34;)
+    monitors = list_monitors_info(method = method)
+    if method!=None and monitors==[]:
+        raise LookupError(&#39;no monitors detected with matching method&#39;)
+
     #parse display kwarg by trying to match given term to known monitors
     if display!=None:
         if type(display) is int:
@@ -801,9 +790,10 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method=&#39;
                     getattr(m[&#39;method&#39;], meta_method+&#39;_brightness&#39;)(*args, display = m[&#39;serial&#39;], **kwargs)
                 )
             except Exception as e:
+                output.append(None)
                 errors.append([f&#34;{m[&#39;name&#39;]} ({m[&#39;serial&#39;]})&#34;, type(e).__name__, e])
 
-        if output!=[]: # flatten and return any output
+        if output!=[] and not all(i==None for i in output): # flatten and return any output
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
 
@@ -812,7 +802,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method=&#39;
     for e in errors:
         msg+=f&#39;\t{e[0]} -&gt; {e[1]}: {e[2]}\n&#39;
     if msg==&#39;\n&#39;:
-        msg+=&#39;\tno output was received from brightness methods&#39;
+        msg+=&#39;\tno valid output was received from brightness methods&#39;
     raise Exception(msg)
 
 def set_brightness(value, display=None, method = None, **kwargs):
@@ -830,7 +820,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
         Typically it will list, int (0 to 100) or None
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be set by any method
@@ -867,10 +857,10 @@ def get_brightness(display = None, method = None, **kwargs):
 
     Returns:
         int: from 0 to 100 if only one display is detected or the `display` kwarg is set
-        list: list of integers if multiple displays are detected and the `display` kwarg isn&#39;t set
+        list: list of integers if multiple displays are detected and the `display` kwarg isn&#39;t set (invalid monitors return `None`)
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be obtained by any method
@@ -927,12 +917,12 @@ def get_brightness(display = None, method = None, **kwargs):
 <dt><code>int</code></dt>
 <dd>from 0 to 100 if only one display is detected or the <code>display</code> kwarg is set</dd>
 <dt><code>list</code></dt>
-<dd>list of integers if multiple displays are detected and the <code>display</code> kwarg isn't set</dd>
+<dd>list of integers if multiple displays are detected and the <code>display</code> kwarg isn't set (invalid monitors return <code>None</code>)</dd>
 </dl>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>LookupError</code></dt>
-<dd>if the chosen display or method is not found</dd>
+<dd>if the chosen display (with method if applicable) is not found</dd>
 <dt><code>ValueError</code></dt>
 <dd>if the chosen method is invalid</dd>
 <dt><code>TypeError</code></dt>
@@ -974,10 +964,10 @@ benq_brightness = sbc.windows.get_brightness(display = 'BenQ BNQ78A7')
 
     Returns:
         int: from 0 to 100 if only one display is detected or the `display` kwarg is set
-        list: list of integers if multiple displays are detected and the `display` kwarg isn&#39;t set
+        list: list of integers if multiple displays are detected and the `display` kwarg isn&#39;t set (invalid monitors return `None`)
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be obtained by any method
@@ -1155,7 +1145,7 @@ Typically it will list, int (0 to 100) or None</p>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>LookupError</code></dt>
-<dd>if the chosen display or method is not found</dd>
+<dd>if the chosen display (with method if applicable) is not found</dd>
 <dt><code>ValueError</code></dt>
 <dd>if the chosen method is invalid</dd>
 <dt><code>TypeError</code></dt>
@@ -1197,7 +1187,7 @@ sbc.windows.set_brightness(100, display = 'BenQ BNQ78A7')
         Typically it will list, int (0 to 100) or None
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be set by any method
@@ -1814,12 +1804,10 @@ primary_brightness = primary.set_brightness(50)
                 m = ms.split(&#39;#&#39;)
                 serial = m[2]
                 model = m[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = &#39;Unknown&#39;
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
                 tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
                 info.append(tmp)
@@ -2222,12 +2210,10 @@ sbc.windows.VCP.get_display_info('DEL405E', 'BNQ78A7')
             m = ms.split(&#39;#&#39;)
             serial = m[2]
             model = m[1]
-            if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                man_id = model[:3]
-            else:
-                manufacturer = &#39;Unknown&#39;
-                man_id = None
+
+            man_id = model[:3]
+            manufacturer = _monitor_brand_lookup(man_id)
+            manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
             tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
             info.append(tmp)
@@ -2577,12 +2563,11 @@ sbc.windows.VCP.set_brightness(100, display = 'BNQ78A7')
                 instance = m.InstanceName.split(&#39;\\&#39;)
                 serial = instance[-1]
                 model = instance[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = &#39;Unknown&#39;
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
+
                 tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
                 info.append(tmp)
                 a+=1
@@ -2870,12 +2855,11 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ BNQ78A7')
             instance = m.InstanceName.split(&#39;\\&#39;)
             serial = instance[-1]
             model = instance[1]
-            if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                man_id = model[:3]
-            else:
-                manufacturer = &#39;Unknown&#39;
-                man_id = None
+
+            man_id = model[:3]
+            manufacturer = _monitor_brand_lookup(man_id)
+            manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
+
             tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
             info.append(tmp)
             a+=1
