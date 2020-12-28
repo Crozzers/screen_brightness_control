@@ -177,7 +177,7 @@ If you installed ddcutil, this requires root access to run for every query.
 
 **How to fix it:**   
 If you installed `xrandr` or `xbacklight`: make sure your graphics drivers support RandR.  
-If you installed `ddcutil`: make sure to run the script with root permissions 
+If you installed `ddcutil`: make sure to run the script with root permissions.  
 If you installed `light`: follow [these steps](https://github.com/haikarainen/light#installation) making sure to run the install as sudo or re-compile from source (requires `autoconf` to be installed):
 ```
 git clone https://github.com/haikarainen/light && cd light
