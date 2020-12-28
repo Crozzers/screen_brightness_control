@@ -586,17 +586,17 @@ class DDCUtil:
             no_return (bool): if True, this function returns None, returns the result of `DDCUtil.get_brightness()` otherwise
         
         Returns:
-            The result of `XRandr.get_brightness()` or `None` (see `no_return` kwarg)
+            The result of `DDCUtil.get_brightness()` or `None` (see `no_return` kwarg)
 
         Example:
             ```python
             import screen_brightness_control as sbc
 
             # set the brightness to 50
-            sbc.linux.XRandr.set_brightness(50)
+            sbc.linux.DDCUtil.set_brightness(50)
 
             # set the brightness of the primary display to 75
-            sbc.linux.XRandr.set_brightness(75, display=0)
+            sbc.linux.DDCUtil.set_brightness(75, display=0)
             ```
         '''
         monitors = DDCUtil.get_display_info()
@@ -786,6 +786,9 @@ def list_monitors_info(method=None):
     Returns:
         list: list of dictionaries upon success, empty list upon failure
 
+    Raises:
+        ValueError: if the method kwarg is invalid
+
     Example:
         ```python
         import screen_brightness_control as sbc
@@ -831,7 +834,7 @@ def list_monitors(method=None):
     Returns a list of all addressable monitor names
 
     Args:
-        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil'
+        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
 
     Returns:
         list: list of strings
@@ -910,6 +913,8 @@ def __filter_monitors(display = None, method = None):
     monitors = list_monitors_info(method=method)
 
     if display!=None:
+        if type(display) not in (str, int):
+            raise TypeError(f'display kwarg must be int or str, not {type(display)}')
         monitors = [i for i in monitors if display in (i['edid'], i['serial'], i['name'], i['index'])]
 
     if monitors == []:
@@ -975,11 +980,14 @@ def set_brightness(value, display = None, method = None, **kwargs):
         kwargs (dict): passed directly to the chosen brightness method
     
     Returns:
-        The result of the called method. Typically int, list of ints or None
+        int: an integer between 0 and 100 if only one display is detected (or `XBacklight` is used)
+        list: if the brightness method detects multiple displays it may return a list of integers (invalid monitors return `None`)
 
     Raises:
-        ValueError: if you pass an invalid value for `method`
-        Exception: if the brightness cannot be set via any method
+        ValueError: if you pass in an invalid value for `method`
+        LookupError: if the chosen display or method is not found
+        TypeError: if the value given for `display` is not int or str
+        Exception: if the brightness could not be obtained by any method
 
     Example:
         ```python
@@ -1009,12 +1017,14 @@ def get_brightness(display = None, method = None, **kwargs):
         kwargs (dict): passed directly to chosen brightness method
     
     Returns:
-        int: an integer between 0 and 100 if only one display is detected
-        list: if the brightness method detects multiple displays it may return a list of integers
+        int: an integer between 0 and 100 if only one display is detected (or `XBacklight` is used)
+        list: if the brightness method detects multiple displays it may return a list of integers (invalid monitors return `None`)
 
     Raises:
         ValueError: if you pass in an invalid value for `method`
-        Exception: if the brightness cannot be retrieved via any method
+        LookupError: if the chosen display or method is not found
+        TypeError: if the value given for `display` is not int or str
+        Exception: if the brightness could not be obtained by any method
 
     Example:
         ```python

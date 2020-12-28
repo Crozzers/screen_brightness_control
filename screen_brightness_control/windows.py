@@ -715,19 +715,11 @@ def __filter_monitors(display=None, method=None):
         whether their name/model/serial/model_name matches the display kwarg
         whether they use the method matching the method kwarg'''
     methods = [WMI, VCP]
-    monitors = list_monitors_info()
     #parse the method kwarg
-    if method != None:
-        try:
-            method = ('wmi', 'vcp').index(method.lower())
-            method = methods[method]
-            monitors = [i for i in monitors if i['method'] == method]
-            if monitors == []:
-                raise LookupError('Chosen method is not valid, no detected monitors can utilize it')
-        except LookupError as e:
-            raise e
-        except:
-            raise ValueError("Chosen method is not valid, must be 'wmi' or 'vcp'")
+    monitors = list_monitors_info(method = method)
+    if method!=None and monitors==[]:
+        raise LookupError('no monitors detected with matching method')
+
     #parse display kwarg by trying to match given term to known monitors
     if display!=None:
         if type(display) is int:
@@ -800,7 +792,7 @@ def set_brightness(value, display=None, method = None, **kwargs):
         Typically it will list, int (0 to 100) or None
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be set by any method
@@ -837,10 +829,10 @@ def get_brightness(display = None, method = None, **kwargs):
 
     Returns:
         int: from 0 to 100 if only one display is detected or the `display` kwarg is set
-        list: list of integers if multiple displays are detected and the `display` kwarg isn't set
+        list: list of integers if multiple displays are detected and the `display` kwarg isn't set (invalid monitors return `None`)
     
     Raises:
-        LookupError: if the chosen display or method is not found
+        LookupError: if the chosen display (with method if applicable) is not found
         ValueError: if the chosen method is invalid
         TypeError: if the value given for `display` is not int or str
         Exception: if the brightness could not be obtained by any method

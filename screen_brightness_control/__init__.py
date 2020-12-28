@@ -239,7 +239,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
     
     Returns:
-        Returns a list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of get_brightness()
+        list: list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of `get_brightness()`
 
     Example:
         ```
@@ -323,7 +323,7 @@ def get_brightness(verbose_error=False,**kwargs):
     
     Returns:
         int: an integer from 0 to 100 if only one display is detected
-        list: if there a multiple displays connected it may return a list of integers
+        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
 
     Example:
         ```python
