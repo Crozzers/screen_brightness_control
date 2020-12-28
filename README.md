@@ -25,7 +25,7 @@ You can call this module from your command line or use it as a python library (s
 
 ```
 python -m screen_brightness_control --help
-> usage: __main__.py [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
+> usage: screen_brightness_control [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
 >
 > optional arguments:
 >   -h, --help            show this help message and exit

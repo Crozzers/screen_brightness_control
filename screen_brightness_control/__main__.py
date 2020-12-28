@@ -5,7 +5,7 @@ if __name__=='__main__':
     if platform.system()=='Darwin':
         print('MAC is not supported')
     else:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(prog='screen_brightness_control')
         parser.add_argument('-d', '--display', help='the display to be used')
         parser.add_argument('-s', '--set', type=int, help='set the brightness to this value')
         parser.add_argument('-g', '--get', action='store_true', help='get the current screen brightness')
@@ -33,13 +33,15 @@ if __name__=='__main__':
 
         if args.get:
             values = SBC.get_brightness(**kw)
+            values = [values] if type(values) is int else values
             monitors = SBC.list_monitors()
             if monitors == None:
                 print(values)
             else:
-                if args.display == None:
+                if args.display == None or type(values)==list:
                     for i in range(len(monitors)):
-                        print(f'{monitors[i]}: {values[i]}%')
+                        try:print(f'{monitors[i]}: {values[i]}%')
+                        except IndexError:break
                 else:
                     print(f'Display {args.display}: {values}')
         elif args.set!=None:
