@@ -40,7 +40,7 @@ if __name__=='__main__':
             else:
                 if args.display == None or type(values)==list:
                     for i in range(len(monitors)):
-                        try:print(f'{monitors[i]}: {values[i]}%')
+                        try:print(f'{monitors[i]}: {values[i]}{"%" if values[i]!=None else ""}')
                         except IndexError:break
                 else:
                     print(f'Display {args.display}: {values}')
