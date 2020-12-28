@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title"><code>screen_brightness_control v0.6.0</code></h1>
+<h1 class="title"><code>screen_brightness_control v0.6.1</code></h1>
 </header>
 
 <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.</p>
@@ -46,7 +46,7 @@ If you're using a laptop with a display driver that doesn't support RandR, use <
 <h1>Usage</h1>
 <p>You can call this module from your command line or use it as a python library (see the documentation section below).</p>
 <pre><code>python -m screen_brightness_control --help
-&gt; usage: __main__.py [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
+&gt; usage: screen_brightness_control [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
 &gt;
 &gt; optional arguments:
 &gt;   -h, --help            show this help message and exit
@@ -172,10 +172,13 @@ Install <code>xrandr</code>, <code>ddcutil</code>, <code>light</code>, or <code>
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
 If you installed ddcutil, this requires root access to run for every query.</p>
-<p><strong>How to fix it:</strong><br />
-If you installed <code>light</code>: follow <a href="https://github.com/haikarainen/light#installation">these steps</a>. Make sure to run the install as sudo<br />
+<p><strong>How to fix it:</strong> <br />
 If you installed <code>xrandr</code> or <code>xbacklight</code>: make sure your graphics drivers support RandR.<br />
-If you installed <code>ddcutil</code>: make sure to run the script with root permissions</p>
+If you installed <code>ddcutil</code>: make sure to run the script with root permissions.<br />
+If you installed <code>light</code>: follow <a href="https://github.com/haikarainen/light#installation">these steps</a> making sure to run the install as sudo or re-compile from source (requires <code>autoconf</code> to be installed):</p>
+<pre><code>git clone https://github.com/haikarainen/light &amp;&amp; cd light
+sh autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; sudo make install
+</code></pre>
 <h3>Using the <code>display</code> kwarg does nothing/creates exceptions on Linux</h3>
 <p><strong>Why this happens:</strong><br />
 The <code>display</code> kwarg is only supported by the <code>Light</code>, <code>XRandr</code> and <code>DDCUtil</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
@@ -228,7 +231,8 @@ print(monitor.Level)
 <ul id="index">
 <li><h3><a>Version</a></h3>
 <ul><!--VERSION START-->
-<li><code><a href="docs/0.6.0/index.html">Latest</a></code></li>
+<li><code><a href="docs/0.6.1/index.html">Latest</a></code></li>
+<li><code><a href="docs/0.6.1/index.html">0.6.1</a></code></li>
 <li><code><a href="docs/0.6.0/index.html">0.6.0</a></code></li>
 <li><code><a href="docs/0.5.1/index.html">0.5.1</a></code></li>
 
