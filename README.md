@@ -175,10 +175,14 @@ Light requires root access to run, which is usually provided when you manually i
 If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
 If you installed ddcutil, this requires root access to run for every query.
 
-**How to fix it:**  
-If you installed `light`: follow [these steps](https://github.com/haikarainen/light#installation). Make sure to run the install as sudo  
+**How to fix it:**   
 If you installed `xrandr` or `xbacklight`: make sure your graphics drivers support RandR.  
-If you installed `ddcutil`: make sure to run the script with root permissions
+If you installed `ddcutil`: make sure to run the script with root permissions 
+If you installed `light`: follow [these steps](https://github.com/haikarainen/light#installation) making sure to run the install as sudo or re-compile from source (requires `autoconf` to be installed):
+```
+git clone https://github.com/haikarainen/light && cd light
+sh autogen.sh && ./configure && make && sudo make install
+```
 
 
 ### Using the `display` kwarg does nothing/creates exceptions on Linux
