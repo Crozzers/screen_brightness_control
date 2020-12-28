@@ -33,11 +33,12 @@ if __name__=='__main__':
 
         if args.get:
             values = SBC.get_brightness(**kw)
-            values = [values] if type(values) is int else values
-            monitors = SBC.list_monitors()
+            try:monitors = SBC.list_monitors(**kw)
+            except:monitors = None
             if monitors == None:
                 print(values)
             else:
+                values = [values] if type(values) is int else values
                 if args.display == None or type(values)==list:
                     for i in range(len(monitors)):
                         try:print(f'{monitors[i]}: {values[i]}{"%" if values[i]!=None else ""}')
