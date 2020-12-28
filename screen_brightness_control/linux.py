@@ -939,9 +939,10 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                     getattr(m['method'], meta_method+'_brightness')(*args, display = identifier, **kwargs)
                 )
             except Exception as e:
+                output.append(None)
                 errors.append([f"{m['name']}", type(e).__name__, e])
 
-        if output!=[]: # flatten and return any output
+        if output!=[] and not all(i==None for i in output): # flatten and return any valid output
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
         else:
@@ -961,7 +962,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     for e in errors:
         msg+=f'\t{e[0]} -> {e[1]}: {e[2]}\n'
     if msg=='\n':
-        msg+='\tno output was received from brightness methods'
+        msg+='\tno valid output was received from brightness methods'
     raise Exception(msg)
 
 def set_brightness(value, display = None, method = None, **kwargs):
