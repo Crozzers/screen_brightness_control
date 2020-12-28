@@ -1,5 +1,5 @@
 import subprocess, os, struct
-from . import flatten_list, MONITOR_MANUFACTURER_CODES
+from . import flatten_list, _monitor_brand_lookup
 
 class _EDID:
     '''
@@ -101,7 +101,7 @@ class Light:
             if 'backlight' in r and 'sysfs/backlight/auto' not in r:
                 r = r[r.index('backlight/')+10:]
                 if os.path.isdir(f'/sys/class/backlight/{r}'):
-                    tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'method': Light, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
+                    tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'light_path': f'sysfs/backlight/{r}', 'method': Light, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
                     count+=1
                     if os.path.isfile(tmp['path']+'/device/edid'):
                         try:
@@ -119,8 +119,7 @@ class Light:
                                 tmp['serial'] = serial
                                 tmp['name'] = name
                             tmp['manufacturer'] = name.split(' ')[0]
-                            if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
-                                tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
+                            tmp['manufacturer_id'] = _monitor_brand_lookup(tmp['manufacturer'])
                             tmp['model'] = name.split(' ')[1]
                         except:
                             pass
@@ -179,8 +178,8 @@ class Light:
         if display!=None:
             info = Light.__filter_monitors(display, info)
         for i in info:
-            name = i['name']
-            command = f'{Light.executable} -S {value} -s sysfs/backlight/{name}'
+            light_path = i['light_path']
+            command = f'{Light.executable} -S {value} -s {light_path}'
             subprocess.call(command.split(" "))
         return Light.get_brightness(display=display) if not no_return else None
 
@@ -214,8 +213,8 @@ class Light:
             info = Light.__filter_monitors(display, info)
         results = []
         for i in info:
-            name = i['name']
-            command = f'{Light.executable} -G -s sysfs/backlight/{name}'
+            light_path = i['light_path']
+            command = f'{Light.executable} -G -s {light_path}'
             results.append(subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode())
         results = [int(round(float(str(i)),0)) for i in results]
         return results[0] if len(results)==1 else results
@@ -326,8 +325,7 @@ class XRandr:
                 tmp['name'] = name if name!=None else tmp['interface']
                 if name!=None:
                     tmp['manufacturer'] = name.split(' ')[0]
-                    if tmp['manufacturer'] in list(MONITOR_MANUFACTURER_CODES.values()):
-                        tmp ['manufacturer_id'] = list(MONITOR_MANUFACTURER_CODES.keys())[list(MONITOR_MANUFACTURER_CODES.values()).index(tmp['manufacturer'])]
+                    tmp['manufacturer_id'] = _monitor_brand_lookup(tmp['manufacturer'])
                     tmp['model'] = name.split(' ')[1]
                     tmp['serial'] = serial
             elif 'Brightness:' in i:
@@ -504,10 +502,11 @@ class DDCUtil:
                     tmp['bus_number'] = int(tmp['i2c_bus'].replace('/dev/i2c-',''))
                 elif 'Mfg id' in line:
                     tmp['manufacturer_id'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
-                    try:tmp['manufacturer'] = MONITOR_MANUFACTURER_CODES[tmp['manufacturer_id'].upper()]
-                    except:pass
+                    tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer_id'])
                 elif 'Model' in line:
                     name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
+                    try:name[0] = name[0].lower().capitalize()
+                    except IndexError:pass
                     tmp['name'] = ' '.join(name)
                     try:tmp['model'] = name[1]
                     except IndexError:pass

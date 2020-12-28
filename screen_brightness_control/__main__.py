@@ -50,8 +50,11 @@ if __name__=='__main__':
             print(SBC.__version__)
         elif args.list:
             monitors = SBC.list_monitors(**kw)
-            for i in range(len(monitors)):
-                print(f'Display {i}: {monitors[i]}')
+            if len(monitors) == 0:
+                print('No monitors detected')
+            else:
+                for i in range(len(monitors)):
+                    print(f'Display {i}: {monitors[i]}')
         else:
             print("No valid arguments")
 

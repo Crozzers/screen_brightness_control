@@ -1,7 +1,7 @@
 import wmi, threading, pythoncom, ctypes, win32api
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, MONITOR_MANUFACTURER_CODES
+from . import flatten_list, _monitor_brand_lookup
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -56,12 +56,11 @@ class WMI:
                 instance = m.InstanceName.split('\\')
                 serial = instance[-1]
                 model = instance[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = 'Unknown'
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = 'Unknown' if manufacturer==None else manufacturer
+
                 tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI}
                 info.append(tmp)
                 a+=1
@@ -303,12 +302,10 @@ class VCP:
                 m = ms.split('#')
                 serial = m[2]
                 model = m[1]
-                if model[:3] in MONITOR_MANUFACTURER_CODES.keys():
-                    manufacturer = MONITOR_MANUFACTURER_CODES[model[:3]]
-                    man_id = model[:3]
-                else:
-                    manufacturer = 'Unknown'
-                    man_id = None
+
+                man_id = model[:3]
+                manufacturer = _monitor_brand_lookup(man_id)
+                manufacturer = 'Unknown' if manufacturer==None else manufacturer
 
                 tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
                 info.append(tmp)

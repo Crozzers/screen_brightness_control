@@ -66,6 +66,20 @@ MONITOR_MANUFACTURER_CODES = {
     "UNK": "Unknown",
     "_YV": "Fujitsu",
 }
+def _monitor_brand_lookup(search):
+    '''internal function to search the monitor manufacturer codes dict'''
+    keys = list(MONITOR_MANUFACTURER_CODES.keys())
+    keys_lower = [i.lower() for i in keys]
+    values = list(MONITOR_MANUFACTURER_CODES.values())
+    values_lower = [i.lower() for i in values]
+    search_lower = search.lower()
+
+    if search_lower in keys_lower:
+        return values[keys_lower.index(search_lower)]
+    elif search_lower in values_lower:
+        return keys[values_lower.index(search_lower)]
+    else:
+        return None
 
 class ScreenBrightnessError(Exception):
     '''
@@ -353,5 +367,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.6.0'
+__version__='0.6.1'
 __author__='Crozzers'
