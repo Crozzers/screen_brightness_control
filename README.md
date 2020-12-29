@@ -63,7 +63,7 @@ except sbc.ScreenBrightnessError as error:
 
 ### get_brightness(`verbose_error=False, **kwargs`)
 **Summary:**  
-Returns the current screen brightness as a percentage by default. If you're on Windows it may return a list of values if you have multiple, brightness adjustable monitors.  
+Returns the current screen brightness as a percentage by default. It may return a list of values if you have multiple, brightness adjustable monitors.  
 Raises `ScreenBrightnessError` upon failure
 
 **Arguments:**
