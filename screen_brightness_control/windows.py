@@ -294,16 +294,19 @@ class VCP:
             monitors = _wmi_init().WmiMonitorID()
             a=0
             for monitor in monitors:
-                serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
-                name = bytes(monitor.UserFriendlyName).decode().replace('\x00', '')
+                try:
+                    serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                    name = bytes(monitor.UserFriendlyName).decode().replace('\x00', '')
 
-                manufacturer = name.split(' ')[0]
-                man_id = _monitor_brand_lookup(manufacturer)
-                model = name.split(' ')[1]
+                    manufacturer = name.split(' ')[0]
+                    man_id = _monitor_brand_lookup(manufacturer)
+                    model = name.split(' ')[1]
 
-                tmp = {'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
-                info.append(tmp)
-                a+=1
+                    tmp = {'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
+                    info.append(tmp)
+                    a+=1
+                except:
+                    pass
         except:
             pass
         if len(args)>0:
