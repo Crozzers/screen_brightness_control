@@ -127,6 +127,36 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
+def list_monitors_info(**kwargs):
+    &#39;&#39;&#39;
+    list detailed information about all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
+
+    Returns:
+        list: list of dictionaries
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitors = sbc.list_monitors_info()
+        for monitor in monitors:
+            print(&#39;=======================&#39;)
+            print(&#39;Name:&#39;, info[&#39;name&#39;])                        # the manufacturer name plus the model
+            print(&#39;Model:&#39;, info[&#39;model&#39;])                      # the general model of the display
+            print(&#39;Serial:&#39;, info[&#39;serial&#39;])                    # a unique string assigned by Windows to this display
+            print(&#39;Manufacturer:&#39;, info[&#39;manufacturer&#39;])        # the name of the brand of the monitor
+            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;])  # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
+            print(&#39;Index:&#39;, info[&#39;index&#39;])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print(&#39;Method:&#39;, info[&#39;method&#39;])                    # the method this monitor can be addressed by
+        ```
+    &#39;&#39;&#39;
+    if platform.system() == &#39;Windows&#39;:
+        return windows.list_monitors_info(**kwargs)
+    elif platform.system() == &#39;Linux&#39;:
+        return linux.list_monitors_info(**kwargs)
+
 def list_monitors(**kwargs):
     &#39;&#39;&#39;
     list all monitors that are controllable by this library
@@ -141,13 +171,10 @@ def list_monitors(**kwargs):
         ```python
         import screen_brightness_control as sbc
         monitor_names = sbc.list_monitors()
-        # eg: [&#39;BenQ BNQ78A7&#39;, &#39;Dell DEL405E&#39;]
+        # eg: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]
         ```
     &#39;&#39;&#39;
-    if platform.system() == &#39;Windows&#39;:
-        return windows.list_monitors(**kwargs)
-    elif platform.system() == &#39;Linux&#39;:
-        return linux.list_monitors(**kwargs)
+    return [i[&#39;name&#39;] for i in list_monitors_info(**kwargs)]
 
 def flatten_list(thick_list):
     &#39;&#39;&#39;
@@ -706,7 +733,7 @@ secondary_brightness = sbc.get_brightness(display=1)
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
 monitor_names = sbc.list_monitors()
-# eg: ['BenQ BNQ78A7', 'Dell DEL405E']
+# eg: ['BenQ GL2450H', 'Dell U2211H']
 </code></pre></div>
 <details class="source">
 <summary>
@@ -726,13 +753,73 @@ monitor_names = sbc.list_monitors()
         ```python
         import screen_brightness_control as sbc
         monitor_names = sbc.list_monitors()
-        # eg: [&#39;BenQ BNQ78A7&#39;, &#39;Dell DEL405E&#39;]
+        # eg: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]
+        ```
+    &#39;&#39;&#39;
+    return [i[&#39;name&#39;] for i in list_monitors_info(**kwargs)]</code></pre>
+</details>
+</dd>
+<dt id="screen_brightness_control.list_monitors_info"><code class="name flex">
+<span>def <span class="ident">list_monitors_info</span></span>(<span>**kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>list detailed information about all monitors that are controllable by this library</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
+<dd>passed directly to OS relevant monitor list function</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of dictionaries</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+monitors = sbc.list_monitors_info()
+for monitor in monitors:
+    print('=======================')
+    print('Name:', info['name'])                        # the manufacturer name plus the model
+    print('Model:', info['model'])                      # the general model of the display
+    print('Serial:', info['serial'])                    # a unique string assigned by Windows to this display
+    print('Manufacturer:', info['manufacturer'])        # the name of the brand of the monitor
+    print('Manufacturer ID:', info['manufacturer_id'])  # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
+    print('Index:', info['index'])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+    print('Method:', info['method'])                    # the method this monitor can be addressed by
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def list_monitors_info(**kwargs):
+    &#39;&#39;&#39;
+    list detailed information about all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
+
+    Returns:
+        list: list of dictionaries
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitors = sbc.list_monitors_info()
+        for monitor in monitors:
+            print(&#39;=======================&#39;)
+            print(&#39;Name:&#39;, info[&#39;name&#39;])                        # the manufacturer name plus the model
+            print(&#39;Model:&#39;, info[&#39;model&#39;])                      # the general model of the display
+            print(&#39;Serial:&#39;, info[&#39;serial&#39;])                    # a unique string assigned by Windows to this display
+            print(&#39;Manufacturer:&#39;, info[&#39;manufacturer&#39;])        # the name of the brand of the monitor
+            print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;])  # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
+            print(&#39;Index:&#39;, info[&#39;index&#39;])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print(&#39;Method:&#39;, info[&#39;method&#39;])                    # the method this monitor can be addressed by
         ```
     &#39;&#39;&#39;
     if platform.system() == &#39;Windows&#39;:
-        return windows.list_monitors(**kwargs)
+        return windows.list_monitors_info(**kwargs)
     elif platform.system() == &#39;Linux&#39;:
-        return linux.list_monitors(**kwargs)</code></pre>
+        return linux.list_monitors_info(**kwargs)</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.set_brightness"><code class="name flex">
@@ -918,11 +1005,12 @@ except sbc.ScreenBrightnessError as error:
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="screen_brightness_control.fade_brightness" href="#screen_brightness_control.fade_brightness">fade_brightness</a></code></li>
 <li><code><a title="screen_brightness_control.flatten_list" href="#screen_brightness_control.flatten_list">flatten_list</a></code></li>
 <li><code><a title="screen_brightness_control.get_brightness" href="#screen_brightness_control.get_brightness">get_brightness</a></code></li>
 <li><code><a title="screen_brightness_control.list_monitors" href="#screen_brightness_control.list_monitors">list_monitors</a></code></li>
+<li><code><a title="screen_brightness_control.list_monitors_info" href="#screen_brightness_control.list_monitors_info">list_monitors_info</a></code></li>
 <li><code><a title="screen_brightness_control.set_brightness" href="#screen_brightness_control.set_brightness">set_brightness</a></code></li>
 </ul>
 </li>

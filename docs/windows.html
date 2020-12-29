@@ -483,7 +483,7 @@ class Monitor():
             ```python
             import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specificly named monitor
+            # create a class for the primary monitor and then a specifically named monitor
             primary = sbc.windows.Monitor(0)
             benq_monitor = sbc.windows.Monitor(&#39;BenQ GL2450H&#39;)
 
@@ -514,7 +514,7 @@ class Monitor():
                 raise TypeError(f&#39;display arg must be int or str, not {type(display)}&#39;)
 
         self.serial = info[&#39;serial&#39;]
-        &#39;&#39;&#39;a unique string assigned by Windows to this monitor&#39;&#39;&#39;
+        &#39;&#39;&#39;the serial number of the display or (if serial is not available) an ID assigned by windows&#39;&#39;&#39;
         self.name = info[&#39;name&#39;]
         &#39;&#39;&#39;the monitors manufacturer name plus its model&#39;&#39;&#39;
         self.method = info[&#39;method&#39;]
@@ -1192,7 +1192,7 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
 
-# create a class for the primary monitor and then a specificly named monitor
+# create a class for the primary monitor and then a specifically named monitor
 primary = sbc.windows.Monitor(0)
 benq_monitor = sbc.windows.Monitor('BenQ GL2450H')
 
@@ -1225,7 +1225,7 @@ print(benq_monitor['name'])
             ```python
             import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specificly named monitor
+            # create a class for the primary monitor and then a specifically named monitor
             primary = sbc.windows.Monitor(0)
             benq_monitor = sbc.windows.Monitor(&#39;BenQ GL2450H&#39;)
 
@@ -1256,7 +1256,7 @@ print(benq_monitor['name'])
                 raise TypeError(f&#39;display arg must be int or str, not {type(display)}&#39;)
 
         self.serial = info[&#39;serial&#39;]
-        &#39;&#39;&#39;a unique string assigned by Windows to this monitor&#39;&#39;&#39;
+        &#39;&#39;&#39;the serial number of the display or (if serial is not available) an ID assigned by windows&#39;&#39;&#39;
         self.name = info[&#39;name&#39;]
         &#39;&#39;&#39;the monitors manufacturer name plus its model&#39;&#39;&#39;
         self.method = info[&#39;method&#39;]
@@ -1399,7 +1399,7 @@ This means that if the monitor uses <code><a title="screen_brightness_control.wi
 </dd>
 <dt id="screen_brightness_control.windows.Monitor.serial"><code class="name">var <span class="ident">serial</span></code></dt>
 <dd>
-<div class="desc"><p>a unique string assigned by Windows to this monitor</p></div>
+<div class="desc"><p>the serial number of the display or (if serial is not available) an ID assigned by windows</p></div>
 </dd>
 </dl>
 <h3>Methods</h3>
