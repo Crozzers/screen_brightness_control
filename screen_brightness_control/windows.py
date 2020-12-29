@@ -296,13 +296,11 @@ class VCP:
             for monitor in monitors:
                 try:
                     serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
-                    name = bytes(monitor.UserFriendlyName).decode().replace('\x00', '')
-
-                    manufacturer = name.split(' ')[0]
+                    manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
+                    manufacturer = manufacturer.lower().capitalize()
                     man_id = _monitor_brand_lookup(manufacturer)
-                    model = name.split(' ')[1]
 
-                    tmp = {'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
+                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
                     info.append(tmp)
                     a+=1
                 except:
@@ -442,7 +440,7 @@ class VCP:
             loops+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
-class Monitor(object):
+class Monitor():
     '''A class to manage a single monitor and its relevant information'''
     def __init__(self, display):
         '''
@@ -499,22 +497,13 @@ class Monitor(object):
         '''the 3 letter manufacturing code corresponding to the manufacturer name'''
         self.model = info['model']
         '''the general model of the display'''
-        self.model_name = info['model_name']
-        '''(Deprecated)
-        the model name of the display. Is always equal to `None` unless the method is `VCP`.
-        If the method is `VCP` and you try to access this variable it will be loaded on-request (because it takes 1-2 seconds)'''
+        self.model_name = info['model']
+        '''Deprecated, always equal to the model. Will be removed soon'''
         self.index = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
         This means that if the monitor uses `WMI`, the index is out of the list of `WMI` addressable monitors ONLY. Same for `VCP`'''
     def __getitem__(self, item):
         return getattr(self, item)
-    def __getattribute__(self, attr):
-        if attr == 'model_name' and object.__getattribute__(self, 'model_name')==None:
-            model_name = object.__getattribute__(self, 'method').get_display_names()[object.__getattribute__(self, 'index')]
-            setattr(self, 'model_name', model_name)
-            return model_name
-        else:
-            return object.__getattribute__(self, attr)
     def set_brightness(self, *args, **kwargs):
         '''
         Sets the brightness for this display
@@ -560,8 +549,7 @@ class Monitor(object):
         return self.method.get_brightness(**kwargs)
     def get_info(self):
         '''
-        Returns all known information about this monitor instance.
-        If the monitor's method is `VCP` it also loads the `Monitor.model_name` attribute
+        Returns all known information about this monitor instance
 
         Returns:
             dict
@@ -576,14 +564,6 @@ class Monitor(object):
             info = primary.get_info()
             ```
         '''
-        try:
-            if self.model_name == None:
-                info = self.method.get_display_info()
-                for i in range(len(info)):
-                    if info[i]['serial']==self.serial:
-                        self.model_name = info[i]
-        except:
-            pass
         return {
             'name':self.name,
             'model':self.model,
