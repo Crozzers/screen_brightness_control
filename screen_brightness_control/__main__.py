@@ -15,7 +15,7 @@ if __name__=='__main__':
         elif platform.system() == 'Linux':
             parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\')')
         parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
-        parser.add_argument('-v', '--verbose', action='store_true', help='any error messages will be more detailed')
+        parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
         parser.add_argument('-V', '--version', action='store_true', help='print the current version')
 
         args = parser.parse_args()
@@ -26,13 +26,11 @@ if __name__=='__main__':
             if type(args.display) is str and args.display.isdigit():
                 args.display = int(args.display)
             kw['display'] = args.display
-        if args.verbose:
-            kw['verbose_error']=True
         if args.method!=None:
             kw['method'] = args.method
 
         if args.get:
-            values = SBC.get_brightness(**kw)
+            values = SBC.get_brightness(verbose_error = args.verbose, **kw)
             try:monitors = SBC.list_monitors(**kw)
             except:monitors = None
             if monitors == None:
@@ -46,18 +44,26 @@ if __name__=='__main__':
                 else:
                     print(f'Display {args.display}: {values}')
         elif args.set!=None:
-            SBC.set_brightness(args.set, **kw)
+            SBC.set_brightness(args.set, verbose_error = args.verbose, **kw)
         elif args.fade!=None:
-            SBC.fade_brightness(args.fade, **kw)
+            SBC.fade_brightness(args.fade, verbose_error = args.verbose, **kw)
         elif args.version:
             print(SBC.__version__)
         elif args.list:
-            monitors = SBC.list_monitors(**kw)
+            if args.verbose:
+                monitors = SBC.list_monitors_info(**kw)
+            else:
+                monitors = SBC.list_monitors(**kw)
             if len(monitors) == 0:
                 print('No monitors detected')
             else:
                 for i in range(len(monitors)):
-                    print(f'Display {i}: {monitors[i]}')
+                    if type(monitors[i]) is str:
+                        print(f'Display {i}: {monitors[i]}')
+                    else:
+                        msg = 'Display {}:\n\tName: {}\n\tModel: {}\n\tManufacturer: {}\n\tManufacturer ID: {}\n\tSerial: {}\n\tMethod: {}\n'
+                        msg = msg.format(i, monitors[i]['name'], monitors[i]['model'], monitors[i]['manufacturer'], monitors[i]['manufacturer_id'], monitors[i]['serial'], monitors[i]['method'].__name__)
+                        print(msg)
         else:
             print("No valid arguments")
 
