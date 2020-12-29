@@ -1,7 +1,14 @@
-import wmi, threading, pythoncom, ctypes, win32api
+import wmi, threading, pythoncom, ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import flatten_list, _monitor_brand_lookup
+
+def _wmi_init():
+    '''internal function to create and return a wmi instance'''
+    #WMI calls don't work in new threads so we have to run this check
+    if threading.current_thread() != threading.main_thread():
+        pythoncom.CoInitialize()
+    return wmi.WMI(namespace='wmi')
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -45,13 +52,10 @@ class WMI:
             benq_info = sbc.windows.WMI.get_display_info('BenQ BNQ78A7')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
         info = []
         a = 0
         try:
-            monitors = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
+            monitors = _wmi_init().WmiMonitorBrightness()
             for m in monitors:
                 instance = m.InstanceName.split('\\')
                 serial = instance[-1]
@@ -122,11 +126,7 @@ class WMI:
             sbc.windows.WMI.set_brightness(25, display = 'BenQ BNQ78A7')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-
-        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+        brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
         if display!=None:
             if type(display) is str:
                 display = WMI._get_display_index(display)
@@ -168,10 +168,7 @@ class WMI:
             benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ BNQ78A7')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
+        brightness_method = _wmi_init().WmiMonitorBrightness()
         values = [i.CurrentBrightness for i in brightness_method]
         if display!=None:
             if type(display) is str:
@@ -294,20 +291,17 @@ class VCP:
         '''
         info = []
         try:
-            monitors_enum = win32api.EnumDisplayMonitors()
-            monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors_enum]
-            monitors = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in monitors]
+            monitors = _wmi_init().WmiMonitorID()
             a=0
-            for ms in monitors:
-                m = ms.split('#')
-                serial = m[2]
-                model = m[1]
+            for monitor in monitors:
+                serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                name = bytes(monitor.UserFriendlyName).decode().replace('\x00', '')
 
-                man_id = model[:3]
-                manufacturer = _monitor_brand_lookup(man_id)
-                manufacturer = 'Unknown' if manufacturer==None else manufacturer
+                manufacturer = name.split(' ')[0]
+                man_id = _monitor_brand_lookup(manufacturer)
+                model = name.split(' ')[1]
 
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
+                tmp = {'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
                 info.append(tmp)
                 a+=1
         except:
@@ -529,7 +523,8 @@ class Monitor(object):
         self.model = info['model']
         '''the general model of the display'''
         self.model_name = info['model_name']
-        '''the model name of the display. Is always equal to `None` unless the method is `VCP`.
+        '''(Deprecated)
+        the model name of the display. Is always equal to `None` unless the method is `VCP`.
         If the method is `VCP` and you try to access this variable it will be loaded on-request (because it takes 1-2 seconds)'''
         self.index = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
