@@ -622,7 +622,7 @@ class Monitor(object):
             ```python
             import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specificly named monitor
+            # create a class for the primary monitor and then a specifically named monitor
             primary = sbc.linux.Monitor(0)
             benq_monitor = sbc.linux.Monitor('BenQ GL2450HM')
 

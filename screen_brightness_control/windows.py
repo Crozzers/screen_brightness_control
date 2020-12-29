@@ -455,7 +455,7 @@ class Monitor():
             ```python
             import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specificly named monitor
+            # create a class for the primary monitor and then a specifically named monitor
             primary = sbc.windows.Monitor(0)
             benq_monitor = sbc.windows.Monitor('BenQ GL2450H')
 
@@ -486,7 +486,7 @@ class Monitor():
                 raise TypeError(f'display arg must be int or str, not {type(display)}')
 
         self.serial = info['serial']
-        '''a unique string assigned by Windows to this monitor'''
+        '''the serial number of the display or (if serial is not available) an ID assigned by windows'''
         self.name = info['name']
         '''the monitors manufacturer name plus its model'''
         self.method = info['method']

@@ -99,6 +99,36 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
+def list_monitors_info(**kwargs):
+    '''
+    list detailed information about all monitors that are controllable by this library
+
+    Args:
+        kwargs (dict): passed directly to OS relevant monitor list function
+
+    Returns:
+        list: list of dictionaries
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitors = sbc.list_monitors_info()
+        for monitor in monitors:
+            print('=======================')
+            print('Name:', info['name'])                        # the manufacturer name plus the model
+            print('Model:', info['model'])                      # the general model of the display
+            print('Serial:', info['serial'])                    # a unique string assigned by Windows to this display
+            print('Manufacturer:', info['manufacturer'])        # the name of the brand of the monitor
+            print('Manufacturer ID:', info['manufacturer_id'])  # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
+            print('Index:', info['index'])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Method:', info['method'])                    # the method this monitor can be addressed by
+        ```
+    '''
+    if platform.system() == 'Windows':
+        return windows.list_monitors_info(**kwargs)
+    elif platform.system() == 'Linux':
+        return linux.list_monitors_info(**kwargs)
+
 def list_monitors(**kwargs):
     '''
     list all monitors that are controllable by this library
@@ -113,13 +143,10 @@ def list_monitors(**kwargs):
         ```python
         import screen_brightness_control as sbc
         monitor_names = sbc.list_monitors()
-        # eg: ['BenQ BNQ78A7', 'Dell DEL405E']
+        # eg: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    if platform.system() == 'Windows':
-        return windows.list_monitors(**kwargs)
-    elif platform.system() == 'Linux':
-        return linux.list_monitors(**kwargs)
+    return [i['name'] for i in list_monitors_info(**kwargs)]
 
 def flatten_list(thick_list):
     '''
