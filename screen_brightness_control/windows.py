@@ -49,7 +49,7 @@ class WMI:
             primary_info = sbc.windows.WMI.get_display_info(0)
 
             # get information about a monitor with a specific name
-            benq_info = sbc.windows.WMI.get_display_info('BenQ BNQ78A7')
+            benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
         info = []
@@ -123,7 +123,7 @@ class WMI:
             sbc.windows.WMI.set_brightness(75, display = 0)
 
             # set the brightness of a named monitor to 25%
-            sbc.windows.WMI.set_brightness(25, display = 'BenQ BNQ78A7')
+            sbc.windows.WMI.set_brightness(25, display = 'BenQ GL2450H')
             ```
         '''
         brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
@@ -165,7 +165,7 @@ class WMI:
             primary_brightness = sbc.windows.WMI.get_brightness(display = 0)
 
             # get the brightness of a named monitor
-            benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ BNQ78A7')
+            benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ GL2450H')
             ```
         '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
@@ -243,10 +243,10 @@ class VCP:
             ```python
             import screen_brightness_control as sbc
 
-            search = 'BNQ78A7'
+            search = 'GL2450H'
             match = sbc.windows.VCP.filter_displays(search)
             print(match)
-            # EG output: {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }
+            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
         if len(args)==1:
@@ -278,15 +278,15 @@ class VCP:
             # get the information about all monitors
             vcp_info = sbc.windows.VCP.get_display_info()
             print(vcp_info)
-            # EG output: [{'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }, {'name': 'Dell DEL405E', 'model': 'DEL405E', ... }]
+            # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }, {'name': 'Dell U2211H', 'model': 'U2211H', ... }]
 
             # get information about a monitor with this specific model
-            bnq_info = sbc.windows.VCP.get_display_info('BNQ78A7')
-            # EG output: {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }
+            bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
+            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
 
             # get information about 2 specific monitors at the same time
-            sbc.windows.VCP.get_display_info('DEL405E', 'BNQ78A7')
-            # EG output: [{'name': 'Dell DEL405E', 'model': 'DEL405E', ... }, {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }]
+            sbc.windows.VCP.get_display_info('U2211H', 'GL2450H')
+            # EG output: [{'name': 'Dell U2211H', 'model': 'U2211H', ... }, {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
             ```
         '''
         info = []
@@ -340,14 +340,9 @@ class VCP:
         if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
             return
         return caps_string.value.decode('ASCII')
-    def get_display_names(*args):
+    def get_display_names():
         '''
-        Parse the VCP capabilities string of a monitor to get the actual model name of the monitor.
-        So instead of this generic panel model (eg: BNQ78A7) it returns the user-friendly version (GL2450HM).
-        This function takes a few seconds to run as it calls `VCP.get_monitor_caps()` for each monitor requested
-
-        Args:
-            args (tuple): [*Optional*] a variable list of monitors to get the names of, each item must be the monitor's handle as returned by `VCP.iter_physical_monitors()`
+        Return the names of each detected monitor
         
         Returns:
             list: list of strings
@@ -358,31 +353,10 @@ class VCP:
 
             names = sbc.windows.VCP.get_display_names()
             print(names)
-            # EG output: ['GL2450HM', 'U2211H']
-
-            # Get all the names if a monitor is not None
-            names = []
-            for monitor in sbc.windows.VCP.iter_physical_monitors():
-                if monitor:
-                    names.append(
-                        sbc.windows.VCP.get_display_names(monitor)
-                    )
-            print(names)
-            # EG output: ['U2211H']
+            # EG output: ['BenQ GL2450H', 'Dell U2211H']
             ```
         '''
-        names = []
-        if len(args)>0:
-            monitors = lambda:args
-        else:
-            monitors = VCP.iter_physical_monitors
-
-        for monitor in monitors():
-            key = VCP.get_monitor_caps(monitor)
-            cap = key[key.index('model(')+6:]
-            cap = cap[:cap.index(')')]
-            names.append(cap)
-        return names
+        return [i['name'] for i in VCP.get_display_info()]
     def get_brightness(display=None):
         '''
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
@@ -411,8 +385,8 @@ class VCP:
             # Get the brightness for a secondary display
             secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)
 
-            # Get the brightness for a display with the model 'BNQ78A7'
-            benq_brightness = sbc.windows.VCP.get_brightness(display = 'BNQ78A7')
+            # Get the brightness for a display with the model 'GL2450H'
+            benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
             ```
         '''
         values = []
@@ -451,8 +425,8 @@ class VCP:
             # Set the brightness for a secondary display to 25%
             sbc.windows.VCP.set_brightness(25, display = 1)
 
-            # Set the brightness for a display with the model 'BNQ78A7' to 100%
-            sbc.windows.VCP.set_brightness(100, display = 'BNQ78A7')
+            # Set the brightness for a display with the model 'GL2450H' to 100%
+            sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             ```
         '''
         if display!=None:
@@ -482,11 +456,11 @@ class Monitor(object):
 
             # create a class for the primary monitor and then a specificly named monitor
             primary = sbc.windows.Monitor(0)
-            benq_monitor = sbc.windows.Monitor('BenQ BNQ78A7')
+            benq_monitor = sbc.windows.Monitor('BenQ GL2450H')
 
             # check if the benq monitor is the primary one
             if primary.serial == benq_monitor.serial:
-                print('BNQ78A7 is the primary display')
+                print('GL2450H is the primary display')
             else:
                 print('The primary display is', primary.name)
             
@@ -698,7 +672,7 @@ def list_monitors(method=None):
         import screen_brightness_control as sbc
 
         monitors = sbc.windows.list_monitors()
-        # EG output: ['BenQ BNQ78A7', 'Dell DEL405E']
+        # EG output: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
     displays = [i['name'] for i in list_monitors_info(method=method)]
@@ -805,8 +779,8 @@ def set_brightness(value, display=None, method = None, **kwargs):
         # set the brightness of any displays using VCP to 25%
         sbc.windows.set_brightness(25, method = 'vcp')
 
-        # set the brightness of displays with the model name 'BenQ BNQ78A7' (see `list_monitors` and `list_monitors_info`) to 100%
-        sbc.windows.set_brightness(100, display = 'BenQ BNQ78A7')
+        # set the brightness of displays with the model name 'BenQ GL2450H' (see `list_monitors` and `list_monitors_info`) to 100%
+        sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
         ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
@@ -849,8 +823,8 @@ def get_brightness(display = None, method = None, **kwargs):
         # get the brightness of any displays using VCP
         vcp_brightness = sbc.windows.get_brightness(method = 'vcp')
 
-        # get the brightness of displays with the model name 'BenQ BNQ78A7'
-        benq_brightness = sbc.windows.get_brightness(display = 'BenQ BNQ78A7')
+        # get the brightness of displays with the model name 'BenQ GL2450H'
+        benq_brightness = sbc.windows.get_brightness(display = 'BenQ GL2450H')
         ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
