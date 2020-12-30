@@ -20,7 +20,7 @@ class WMI:
             info = WMI.get_display_info()
         a = 0
         for i in info:
-            if display in (i['serial'], i['model'], i['name']):
+            if display in (i['serial'], i['model'], i['name'], i['edid']):
                 return a
             a+=1
         return None
@@ -55,7 +55,10 @@ class WMI:
         info = []
         a = 0
         try:
-            monitors = _wmi_init().WmiMonitorBrightness()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorBrightness()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             for m in monitors:
                 instance = m.InstanceName.split('\\')
                 serial = instance[-1]
@@ -65,7 +68,12 @@ class WMI:
                 manufacturer = _monitor_brand_lookup(man_id)
                 manufacturer = 'Unknown' if manufacturer==None else manufacturer
 
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI}
+                try:
+                    edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])
+                except:
+                    edid = None
+
+                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid}
                 info.append(tmp)
                 a+=1
         except:
@@ -229,7 +237,7 @@ class VCP:
         Will attempt to match against index, name, model and serial
 
         Args:
-            display (str or int): what you are searching for. Can be serial number, name, model number or index of the display
+            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
             args (tuple): [*Optional*] if `args` isn't empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
 
         Raises:
@@ -257,7 +265,7 @@ class VCP:
             return info[display]
         else:
             for i in info:
-                if display in (i['serial'], i['model'], i['name']):
+                if display in (i['serial'], i['model'], i['name'], i['edid']):
                     return i
             raise LookupError('could not find matching display')
     def get_display_info(*args):
@@ -291,7 +299,10 @@ class VCP:
         '''
         info = []
         try:
-            monitors = _wmi_init().WmiMonitorID()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorID()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             a=0
             for monitor in monitors:
                 try:
@@ -299,8 +310,12 @@ class VCP:
                     manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
                     manufacturer = manufacturer.lower().capitalize()
                     man_id = _monitor_brand_lookup(manufacturer)
+                    try:
+                        edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[monitor.InstanceName][0]])
+                    except:
+                        edid = None
 
-                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
+                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid}
                     info.append(tmp)
                     a+=1
                 except:
@@ -620,6 +635,7 @@ def list_monitors_info(method=None):
             print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
             print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Method:', info['method']) # the method this monitor can be addressed by
+            print('EDID:', info['edid']) # the EDID string of the monitor
         ```
     '''
     tmp = []
