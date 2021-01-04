@@ -48,7 +48,7 @@ class WMI:
             info = WMI.get_display_info()
         a = 0
         for i in info:
-            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;]):
+            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;], i[&#39;edid&#39;]):
                 return a
             a+=1
         return None
@@ -83,7 +83,10 @@ class WMI:
         info = []
         a = 0
         try:
-            monitors = _wmi_init().WmiMonitorBrightness()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorBrightness()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             for m in monitors:
                 instance = m.InstanceName.split(&#39;\\&#39;)
                 serial = instance[-1]
@@ -93,7 +96,12 @@ class WMI:
                 manufacturer = _monitor_brand_lookup(man_id)
                 manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
-                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
+                try:
+                    edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[m.InstanceName][0]])
+                except:
+                    edid = None
+
+                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI, &#39;edid&#39;:edid}
                 info.append(tmp)
                 a+=1
         except:
@@ -253,11 +261,11 @@ class VCP:
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         &#39;&#39;&#39;
-        Searches through the information for all detected displays and attempts to return the info matching the value given.
-        Will attempt to match against index, name, model and serial
+        Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+        Will attempt to match against index, name, model, edid and serial
 
         Args:
-            display (str or int): what you are searching for. Can be serial number, name, model number or index of the display
+            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
             args (tuple): [*Optional*] if `args` isn&#39;t empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
 
         Raises:
@@ -285,7 +293,7 @@ class VCP:
             return info[display]
         else:
             for i in info:
-                if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;]):
+                if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;], i[&#39;edid&#39;]):
                     return i
             raise LookupError(&#39;could not find matching display&#39;)
     def get_display_info(*args):
@@ -319,7 +327,10 @@ class VCP:
         &#39;&#39;&#39;
         info = []
         try:
-            monitors = _wmi_init().WmiMonitorID()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorID()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             a=0
             for monitor in monitors:
                 try:
@@ -327,8 +338,12 @@ class VCP:
                     manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
                     manufacturer = manufacturer.lower().capitalize()
                     man_id = _monitor_brand_lookup(manufacturer)
+                    try:
+                        edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[monitor.InstanceName][0]])
+                    except:
+                        edid = None
 
-                    tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
+                    tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid}
                     info.append(tmp)
                     a+=1
                 except:
@@ -648,6 +663,7 @@ def list_monitors_info(method=None):
             print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
             print(&#39;Index:&#39;, info[&#39;index&#39;]) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print(&#39;Method:&#39;, info[&#39;method&#39;]) # the method this monitor can be addressed by
+            print(&#39;EDID:&#39;, info[&#39;edid&#39;]) # the EDID string of the monitor
         ```
     &#39;&#39;&#39;
     tmp = []
@@ -706,7 +722,7 @@ def __filter_monitors(display=None, method=None):
             monitors = [monitors[display]]
         elif type(display) is str:
             #see if display matches serial names, models or given names for monitors
-            m = [i for i in monitors if display in (i[&#39;serial&#39;], i[&#39;name&#39;], i[&#39;model&#39;])]
+            m = [i for i in monitors if display in (i[&#39;serial&#39;], i[&#39;name&#39;], i[&#39;model&#39;], i[&#39;edid&#39;])]
             #if no matches found, try to match model_name (takes longer)
             if m == []:
                 names = [i.get_display_names() for i in methods]
@@ -720,7 +736,7 @@ def __filter_monitors(display=None, method=None):
     if monitors == []:
         msg = &#39;no monitors found&#39;
         if display!=None:
-            msg+=f&#39; with name/serial/model of &#34;{display}&#34;&#39;
+            msg+=f&#39; with name/serial/model/edid of &#34;{display}&#34;&#39;
         if method!=None:
             msg+=f&#39; with method of &#34;{method}&#34;&#39;
         raise LookupError(msg)
@@ -1025,6 +1041,7 @@ for info in monitors:
     print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
     print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
     print('Method:', info['method']) # the method this monitor can be addressed by
+    print('EDID:', info['edid']) # the EDID string of the monitor
 </code></pre></div>
 <details class="source">
 <summary>
@@ -1054,6 +1071,7 @@ for info in monitors:
             print(&#39;Manufacturer ID:&#39;, info[&#39;manufacturer_id&#39;]) # the 3 letter code corresponding to the brand name, EG: BNQ -&gt; BenQ  
             print(&#39;Index:&#39;, info[&#39;index&#39;]) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print(&#39;Method:&#39;, info[&#39;method&#39;]) # the method this monitor can be addressed by
+            print(&#39;EDID:&#39;, info[&#39;edid&#39;]) # the EDID string of the monitor
         ```
     &#39;&#39;&#39;
     tmp = []
@@ -1654,11 +1672,11 @@ primary_brightness = primary.set_brightness(50)
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         &#39;&#39;&#39;
-        Searches through the information for all detected displays and attempts to return the info matching the value given.
-        Will attempt to match against index, name, model and serial
+        Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+        Will attempt to match against index, name, model, edid and serial
 
         Args:
-            display (str or int): what you are searching for. Can be serial number, name, model number or index of the display
+            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
             args (tuple): [*Optional*] if `args` isn&#39;t empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
 
         Raises:
@@ -1686,7 +1704,7 @@ primary_brightness = primary.set_brightness(50)
             return info[display]
         else:
             for i in info:
-                if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;]):
+                if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;], i[&#39;edid&#39;]):
                     return i
             raise LookupError(&#39;could not find matching display&#39;)
     def get_display_info(*args):
@@ -1720,7 +1738,10 @@ primary_brightness = primary.set_brightness(50)
         &#39;&#39;&#39;
         info = []
         try:
-            monitors = _wmi_init().WmiMonitorID()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorID()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             a=0
             for monitor in monitors:
                 try:
@@ -1728,8 +1749,12 @@ primary_brightness = primary.set_brightness(50)
                     manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
                     manufacturer = manufacturer.lower().capitalize()
                     man_id = _monitor_brand_lookup(manufacturer)
+                    try:
+                        edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[monitor.InstanceName][0]])
+                    except:
+                        edid = None
 
-                    tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
+                    tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid}
                     info.append(tmp)
                     a+=1
                 except:
@@ -1875,12 +1900,12 @@ primary_brightness = primary.set_brightness(50)
 <span>def <span class="ident">filter_displays</span></span>(<span>display, *args)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Searches through the information for all detected displays and attempts to return the info matching the value given.
-Will attempt to match against index, name, model and serial</p>
+<div class="desc"><p>Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+Will attempt to match against index, name, model, edid and serial</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>display</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>what you are searching for. Can be serial number, name, model number or index of the display</dd>
+<dd>what you are searching for. Can be serial number, name, model number, edid string or index of the display</dd>
 <dt><strong><code>args</code></strong> :&ensp;<code>tuple</code></dt>
 <dd>[<em>Optional</em>] if <code>args</code> isn't empty the function searches through args[0]. Otherwise it searches through the return of <code><a title="screen_brightness_control.windows.VCP.get_display_info" href="#screen_brightness_control.windows.VCP.get_display_info">VCP.get_display_info()</a></code></dd>
 </dl>
@@ -1907,11 +1932,11 @@ print(match)
 </summary>
 <pre><code class="python">def filter_displays(display, *args):
     &#39;&#39;&#39;
-    Searches through the information for all detected displays and attempts to return the info matching the value given.
-    Will attempt to match against index, name, model and serial
+    Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+    Will attempt to match against index, name, model, edid and serial
 
     Args:
-        display (str or int): what you are searching for. Can be serial number, name, model number or index of the display
+        display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
         args (tuple): [*Optional*] if `args` isn&#39;t empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
 
     Raises:
@@ -1939,7 +1964,7 @@ print(match)
         return info[display]
     else:
         for i in info:
-            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;]):
+            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;], i[&#39;edid&#39;]):
                 return i
         raise LookupError(&#39;could not find matching display&#39;)</code></pre>
 </details>
@@ -2098,7 +2123,10 @@ sbc.windows.VCP.get_display_info('U2211H', 'GL2450H')
     &#39;&#39;&#39;
     info = []
     try:
-        monitors = _wmi_init().WmiMonitorID()
+        wmi = _wmi_init()
+        monitors = wmi.WmiMonitorID()
+        try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+        except:pass
         a=0
         for monitor in monitors:
             try:
@@ -2106,8 +2134,12 @@ sbc.windows.VCP.get_display_info('U2211H', 'GL2450H')
                 manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
                 manufacturer = manufacturer.lower().capitalize()
                 man_id = _monitor_brand_lookup(manufacturer)
+                try:
+                    edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[monitor.InstanceName][0]])
+                except:
+                    edid = None
 
-                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP}
+                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid}
                 info.append(tmp)
                 a+=1
             except:
@@ -2371,7 +2403,7 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             info = WMI.get_display_info()
         a = 0
         for i in info:
-            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;]):
+            if display in (i[&#39;serial&#39;], i[&#39;model&#39;], i[&#39;name&#39;], i[&#39;edid&#39;]):
                 return a
             a+=1
         return None
@@ -2406,7 +2438,10 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
         info = []
         a = 0
         try:
-            monitors = _wmi_init().WmiMonitorBrightness()
+            wmi = _wmi_init()
+            monitors = wmi.WmiMonitorBrightness()
+            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+            except:pass
             for m in monitors:
                 instance = m.InstanceName.split(&#39;\\&#39;)
                 serial = instance[-1]
@@ -2416,7 +2451,12 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
                 manufacturer = _monitor_brand_lookup(man_id)
                 manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
-                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
+                try:
+                    edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[m.InstanceName][0]])
+                except:
+                    edid = None
+
+                tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI, &#39;edid&#39;:edid}
                 info.append(tmp)
                 a+=1
         except:
@@ -2685,7 +2725,10 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
     info = []
     a = 0
     try:
-        monitors = _wmi_init().WmiMonitorBrightness()
+        wmi = _wmi_init()
+        monitors = wmi.WmiMonitorBrightness()
+        try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+        except:pass
         for m in monitors:
             instance = m.InstanceName.split(&#39;\\&#39;)
             serial = instance[-1]
@@ -2695,7 +2738,12 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             manufacturer = _monitor_brand_lookup(man_id)
             manufacturer = &#39;Unknown&#39; if manufacturer==None else manufacturer
 
-            tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI}
+            try:
+                edid = &#39;&#39;.join([str(hex(i)).replace(&#39;0x&#39;,&#39;&#39;) for i in descriptors[m.InstanceName][0]])
+            except:
+                edid = None
+
+            tmp = {&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: WMI, &#39;edid&#39;:edid}
             info.append(tmp)
             a+=1
     except:
