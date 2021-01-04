@@ -189,7 +189,7 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         if type(display) is int:
             return [monitors[display]]
         else:
-            return [i for i in monitors if any(display==i[j] for j in ['name','serial','model','edid']+include if i[j]!=None)]
+            monitors = [i for i in monitors if any(display==i[j] for j in ['name','serial','model','edid']+include if i[j]!=None)]
 
     if monitors == []:
         msg = 'no monitors found'
