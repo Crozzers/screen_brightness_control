@@ -19,20 +19,18 @@ if __name__=='__main__':
         parser.add_argument('-V', '--version', action='store_true', help='print the current version')
 
         args = parser.parse_args()
-        kw = {}
         if args.display!=None:
             if type(args.display) not in (str, int):
                 raise TypeError('display arg must be str or int')
             if type(args.display) is str and args.display.isdigit():
                 args.display = int(args.display)
-            kw['display'] = args.display
-        if args.method!=None:
-            kw['method'] = args.method
 
         if args.get:
-            values = SBC.get_brightness(verbose_error = args.verbose, **kw)
-            try:monitors = SBC.list_monitors(**kw)
-            except:monitors = None
+            values = SBC.get_brightness(display = args.display, method = args.method, verbose_error = args.verbose)
+            if args.verbose:
+                monitors = [f'{i["name"]} ({i["serial"]})' for i in SBC.list_monitors_info(method = args.method)]
+            else:
+                monitors = SBC.list_monitors(method = args.method)
             if monitors == None:
                 print(values)
             else:
@@ -44,16 +42,16 @@ if __name__=='__main__':
                 else:
                     print(f'Display {args.display}: {values}')
         elif args.set!=None:
-            SBC.set_brightness(args.set, verbose_error = args.verbose, **kw)
+            SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:
-            SBC.fade_brightness(args.fade, verbose_error = args.verbose, **kw)
+            SBC.fade_brightness(args.fade, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.version:
             print(SBC.__version__)
         elif args.list:
             if args.verbose:
-                monitors = SBC.list_monitors_info(**kw)
+                monitors = SBC.list_monitors_info(method = args.method, )
             else:
-                monitors = SBC.list_monitors(**kw)
+                monitors = SBC.list_monitors(method = args.method, )
             if len(monitors) == 0:
                 print('No monitors detected')
             else:
