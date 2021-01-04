@@ -66,7 +66,6 @@ class WMI:
 
                 man_id = model[:3]
                 manufacturer = _monitor_brand_lookup(man_id)
-                manufacturer = 'Unknown' if manufacturer==None else manufacturer
 
                 try:
                     edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])

@@ -26,15 +26,18 @@ if __name__=='__main__':
                 args.display = int(args.display)
 
         if args.get:
-            monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method=args.method)]
-            for monitor in monitors:
-                name = monitor.name
-                if args.verbose:
-                    name+=f' ({monitor.serial}) [{monitor.method.__name__}]'
-                try:
-                    print(f'{name}: {monitor.get_brightness()}%')
-                except:
-                    print(f'{name}: Failed')
+            try:
+                monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method=args.method)]
+                for monitor in monitors:
+                    name = monitor.name
+                    if args.verbose:
+                        name+=f' ({monitor.serial}) [{monitor.method.__name__}]'
+                    try:
+                        print(f'{name}: {monitor.get_brightness()}%')
+                    except:
+                        print(f'{name}: Failed')
+            except:
+                print(SBC.get_brightness(display = args.display, method=args.method))
         elif args.set!=None:
             SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:
