@@ -177,6 +177,58 @@ def list_monitors(**kwargs):
     &#39;&#39;&#39;
     return [i[&#39;name&#39;] for i in list_monitors_info(**kwargs)]
 
+def filter_monitors(display=None, haystack=None, method=None, include=[]):
+    &#39;&#39;&#39;
+    Searches through the information for all detected displays and attempts to return the info matching the value given.
+    Will attempt to match against index, name, model, edid, method and serial
+
+    Args:
+        display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
+        haystack (list): the information to filter from. If this isn&#39;t set it defaults to the return of `list_monitors_info`
+        method (str): the method the monitors use
+        include (list): extra fields of information to sort by
+
+    Raises:
+        IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
+        LookupError: if the display, as a str, does not have a match
+
+    Returns:
+        list
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        search = &#39;GL2450H&#39;
+        match = sbc.filter_displays(search)
+        print(match)
+        # EG output: [{&#39;name&#39;: &#39;BenQ GL2450H&#39;, &#39;model&#39;: &#39;GL2450H&#39;, ... }]
+        ```
+    &#39;&#39;&#39;
+
+    if haystack:
+        monitors = [i for i in haystack if method==None or method.lower()==i[&#39;method&#39;].__name__.lower()]
+    else:
+        monitors = list_monitors_info(method=method)
+
+    if display!=None:
+        if type(display) not in (str, int):
+            raise TypeError(f&#39;display kwarg must be int or str, not {type(display)}&#39;)
+        if type(display) is int:
+            return [monitors[display]]
+        else:
+            monitors = [i for i in monitors if any(display==i[j] for j in [&#39;name&#39;,&#39;serial&#39;,&#39;model&#39;,&#39;edid&#39;]+include if i[j]!=None)]
+
+    if monitors == []:
+        msg = &#39;no monitors found&#39;
+        if display!=None:
+            msg+=f&#39; with name/serial/model/edid of &#34;{display}&#34;&#39;
+        if method!=None:
+            msg+=f&#39; with method of &#34;{method}&#34;&#39;
+        raise LookupError(msg)
+
+    return monitors
+
 def flatten_list(thick_list):
     &#39;&#39;&#39;
     Internal function I use to flatten lists, because I do that often
@@ -267,7 +319,7 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
             value = max(1, value)
         method = linux.set_brightness
     elif platform.system()==&#39;Darwin&#39;:
-        error = &#39;MAC is unsupported&#39;
+        error = &#39;MAC is not supported&#39;
     else:
         error = f&#39;{platform.system()} is not supported&#39;
 
@@ -402,7 +454,7 @@ def get_brightness(verbose_error=False,**kwargs):
     elif platform.system()==&#39;Linux&#39;:
         method = linux.get_brightness
     elif platform.system()==&#39;Darwin&#39;:
-        error = &#39;MAC is unsupported&#39;
+        error = &#39;MAC is not supported&#39;
     else:
         error = f&#39;{platform.system()} is not supported&#39;
 
@@ -420,8 +472,126 @@ def get_brightness(verbose_error=False,**kwargs):
 
 if platform.system()==&#39;Windows&#39;:
     from . import windows
+    monitorbase = windows.Monitor
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
+    monitorbase = linux.Monitor
+else:
+    monitorbase = object
+
+class Monitor(monitorbase):
+    &#39;&#39;&#39;A class to manage a single monitor and its relevant information&#39;&#39;&#39;
+    def __init__(self, display):
+        &#39;&#39;&#39;
+        Args:
+            display (int or str): the index/model name/serial/edid of the display you wish to control
+
+        Raises:
+            LookupError: if the given display is a string but that string does not match any known displays
+            TypeError: if the given display type is not int or str
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # create a class for the primary monitor and then a specifically named monitor
+            primary = sbc.Monitor(0)
+            benq_monitor = sbc.Monitor(&#39;BenQ GL2450HM&#39;)
+
+            # check if the benq monitor is the primary one
+            if primary.serial == benq_monitor.serial:
+                print(&#39;BenQ GL2450HM is the primary display&#39;)
+            else:
+                print(&#39;The primary display is&#39;, primary.name)
+
+            # this class can also be accessed like a dictionary
+            print(primary[&#39;name&#39;])
+            print(benq_monitor[&#39;name&#39;])
+            ```
+        &#39;&#39;&#39;
+        return super().__init__(display)
+    def set_brightness(self, *args, **kwargs):
+        &#39;&#39;&#39;
+        Sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitor&#39;s brightness method
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.Monitor(0)
+            primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        return super().set_brightness(*args, **kwargs)
+    def get_brightness(self, **kwargs):
+        &#39;&#39;&#39;
+        Returns the brightness of this display
+
+        Args:
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
+        &#39;&#39;&#39;
+        return super().get_brightness(**kwargs)
+    def get_info(self):
+        &#39;&#39;&#39;
+        Returns all known information about this monitor instance
+
+        Returns:
+            dict
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
+        &#39;&#39;&#39;
+        return super().get_info()
+    def is_active(self):
+        &#39;&#39;&#39;
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool: True means active, False means inactive
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            primary = sbc.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False
+
+del(monitorbase)
 
 __version__=&#39;0.7.0-dev&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
@@ -580,6 +750,97 @@ sbc.fade_brightness(100, blocking=False)
         return get_brightness(**kwargs)</code></pre>
 </details>
 </dd>
+<dt id="screen_brightness_control.filter_monitors"><code class="name flex">
+<span>def <span class="ident">filter_monitors</span></span>(<span>display=None, haystack=None, method=None, include=[])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Searches through the information for all detected displays and attempts to return the info matching the value given.
+Will attempt to match against index, name, model, edid, method and serial</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>display</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>what you are searching for. Can be serial number, name, model number, edid string or index of the display</dd>
+<dt><strong><code>haystack</code></strong> :&ensp;<code>list</code></dt>
+<dd>the information to filter from. If this isn't set it defaults to the return of <code><a title="screen_brightness_control.list_monitors_info" href="#screen_brightness_control.list_monitors_info">list_monitors_info()</a></code></dd>
+<dt><strong><code>method</code></strong> :&ensp;<code>str</code></dt>
+<dd>the method the monitors use</dd>
+<dt><strong><code>include</code></strong> :&ensp;<code>list</code></dt>
+<dd>extra fields of information to sort by</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>IndexError</code></dt>
+<dd>if the display value is an int and an <code>IndexError</code> occurs when using it as a list index</dd>
+<dt><code>LookupError</code></dt>
+<dd>if the display, as a str, does not have a match</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>list</p>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+search = 'GL2450H'
+match = sbc.filter_displays(search)
+print(match)
+# EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def filter_monitors(display=None, haystack=None, method=None, include=[]):
+    &#39;&#39;&#39;
+    Searches through the information for all detected displays and attempts to return the info matching the value given.
+    Will attempt to match against index, name, model, edid, method and serial
+
+    Args:
+        display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
+        haystack (list): the information to filter from. If this isn&#39;t set it defaults to the return of `list_monitors_info`
+        method (str): the method the monitors use
+        include (list): extra fields of information to sort by
+
+    Raises:
+        IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
+        LookupError: if the display, as a str, does not have a match
+
+    Returns:
+        list
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        search = &#39;GL2450H&#39;
+        match = sbc.filter_displays(search)
+        print(match)
+        # EG output: [{&#39;name&#39;: &#39;BenQ GL2450H&#39;, &#39;model&#39;: &#39;GL2450H&#39;, ... }]
+        ```
+    &#39;&#39;&#39;
+
+    if haystack:
+        monitors = [i for i in haystack if method==None or method.lower()==i[&#39;method&#39;].__name__.lower()]
+    else:
+        monitors = list_monitors_info(method=method)
+
+    if display!=None:
+        if type(display) not in (str, int):
+            raise TypeError(f&#39;display kwarg must be int or str, not {type(display)}&#39;)
+        if type(display) is int:
+            return [monitors[display]]
+        else:
+            monitors = [i for i in monitors if any(display==i[j] for j in [&#39;name&#39;,&#39;serial&#39;,&#39;model&#39;,&#39;edid&#39;]+include if i[j]!=None)]
+
+    if monitors == []:
+        msg = &#39;no monitors found&#39;
+        if display!=None:
+            msg+=f&#39; with name/serial/model/edid of &#34;{display}&#34;&#39;
+        if method!=None:
+            msg+=f&#39; with method of &#34;{method}&#34;&#39;
+        raise LookupError(msg)
+
+    return monitors</code></pre>
+</details>
+</dd>
 <dt id="screen_brightness_control.flatten_list"><code class="name flex">
 <span>def <span class="ident">flatten_list</span></span>(<span>thick_list)</span>
 </code></dt>
@@ -700,7 +961,7 @@ secondary_brightness = sbc.get_brightness(display=1)
     elif platform.system()==&#39;Linux&#39;:
         method = linux.get_brightness
     elif platform.system()==&#39;Darwin&#39;:
-        error = &#39;MAC is unsupported&#39;
+        error = &#39;MAC is not supported&#39;
     else:
         error = f&#39;{platform.system()} is not supported&#39;
 
@@ -929,7 +1190,7 @@ sbc.set_brightness(50, display=0)
             value = max(1, value)
         method = linux.set_brightness
     elif platform.system()==&#39;Darwin&#39;:
-        error = &#39;MAC is unsupported&#39;
+        error = &#39;MAC is not supported&#39;
     else:
         error = f&#39;{platform.system()} is not supported&#39;
 
@@ -950,6 +1211,363 @@ sbc.set_brightness(50, display=0)
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
+<dt id="screen_brightness_control.Monitor"><code class="flex name class">
+<span>class <span class="ident">Monitor</span></span>
+<span>(</span><span>display)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A class to manage a single monitor and its relevant information</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>display</code></strong> :&ensp;<code>int</code> or <code>str</code></dt>
+<dd>the index/model name/serial/edid of the display you wish to control</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>LookupError</code></dt>
+<dd>if the given display is a string but that string does not match any known displays</dd>
+<dt><code>TypeError</code></dt>
+<dd>if the given display type is not int or str</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+# create a class for the primary monitor and then a specifically named monitor
+primary = sbc.Monitor(0)
+benq_monitor = sbc.Monitor('BenQ GL2450HM')
+
+# check if the benq monitor is the primary one
+if primary.serial == benq_monitor.serial:
+    print('BenQ GL2450HM is the primary display')
+else:
+    print('The primary display is', primary.name)
+
+# this class can also be accessed like a dictionary
+print(primary['name'])
+print(benq_monitor['name'])
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Monitor(monitorbase):
+    &#39;&#39;&#39;A class to manage a single monitor and its relevant information&#39;&#39;&#39;
+    def __init__(self, display):
+        &#39;&#39;&#39;
+        Args:
+            display (int or str): the index/model name/serial/edid of the display you wish to control
+
+        Raises:
+            LookupError: if the given display is a string but that string does not match any known displays
+            TypeError: if the given display type is not int or str
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # create a class for the primary monitor and then a specifically named monitor
+            primary = sbc.Monitor(0)
+            benq_monitor = sbc.Monitor(&#39;BenQ GL2450HM&#39;)
+
+            # check if the benq monitor is the primary one
+            if primary.serial == benq_monitor.serial:
+                print(&#39;BenQ GL2450HM is the primary display&#39;)
+            else:
+                print(&#39;The primary display is&#39;, primary.name)
+
+            # this class can also be accessed like a dictionary
+            print(primary[&#39;name&#39;])
+            print(benq_monitor[&#39;name&#39;])
+            ```
+        &#39;&#39;&#39;
+        return super().__init__(display)
+    def set_brightness(self, *args, **kwargs):
+        &#39;&#39;&#39;
+        Sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitor&#39;s brightness method
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.Monitor(0)
+            primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        return super().set_brightness(*args, **kwargs)
+    def get_brightness(self, **kwargs):
+        &#39;&#39;&#39;
+        Returns the brightness of this display
+
+        Args:
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
+        &#39;&#39;&#39;
+        return super().get_brightness(**kwargs)
+    def get_info(self):
+        &#39;&#39;&#39;
+        Returns all known information about this monitor instance
+
+        Returns:
+            dict
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
+        &#39;&#39;&#39;
+        return super().get_info()
+    def is_active(self):
+        &#39;&#39;&#39;
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool: True means active, False means inactive
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            primary = sbc.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="screen_brightness_control.windows.Monitor" href="windows.html#screen_brightness_control.windows.Monitor">Monitor</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="screen_brightness_control.Monitor.get_brightness"><code class="name flex">
+<span>def <span class="ident">get_brightness</span></span>(<span>self, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the brightness of this display</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
+<dd>passed directly to this monitor's brightness method (<code>display</code> kwarg is always overwritten)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>from 0 to 100</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+# get the brightness of the primary monitor
+primary = sbc.Monitor(0)
+primary_brightness = primary.get_brightness()
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_brightness(self, **kwargs):
+    &#39;&#39;&#39;
+    Returns the brightness of this display
+
+    Args:
+        kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+
+    Returns:
+        int: from 0 to 100
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # get the brightness of the primary monitor
+        primary = sbc.Monitor(0)
+        primary_brightness = primary.get_brightness()
+        ```
+    &#39;&#39;&#39;
+    return super().get_brightness(**kwargs)</code></pre>
+</details>
+</dd>
+<dt id="screen_brightness_control.Monitor.get_info"><code class="name flex">
+<span>def <span class="ident">get_info</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns all known information about this monitor instance</p>
+<h2 id="returns">Returns</h2>
+<p>dict</p>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+# initialize class for primary monitor
+primary = sbc.Monitor(0)
+# get the info
+info = primary.get_info()
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_info(self):
+    &#39;&#39;&#39;
+    Returns all known information about this monitor instance
+
+    Returns:
+        dict
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # initialize class for primary monitor
+        primary = sbc.Monitor(0)
+        # get the info
+        info = primary.get_info()
+        ```
+    &#39;&#39;&#39;
+    return super().get_info()</code></pre>
+</details>
+</dd>
+<dt id="screen_brightness_control.Monitor.is_active"><code class="name flex">
+<span>def <span class="ident">is_active</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Attempts to retrieve the brightness for this display. If it works the display is deemed active</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True means active, False means inactive</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+primary = sbc.Monitor(0)
+if primary.is_active():
+    primary.set_brightness(50)
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def is_active(self):
+    &#39;&#39;&#39;
+    Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+    Returns:
+        bool: True means active, False means inactive
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        primary = sbc.Monitor(0)
+        if primary.is_active():
+            primary.set_brightness(50)
+        ```
+    &#39;&#39;&#39;
+    try:
+        self.get_brightness()
+        return True
+    except:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="screen_brightness_control.Monitor.set_brightness"><code class="name flex">
+<span>def <span class="ident">set_brightness</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Sets the brightness for this display</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>args</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>passed directly to this monitor's brightness method</dd>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
+<dd>passed directly to this monitor's brightness method (the <code>display</code> kwarg is always overwritten)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>from 0 to 100</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code class="language-python">import screen_brightness_control as sbc
+
+# set the brightness of the primary monitor to 50%
+primary = sbc.Monitor(0)
+primary.set_brightness(50)
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_brightness(self, *args, **kwargs):
+    &#39;&#39;&#39;
+    Sets the brightness for this display
+
+    Args:
+        args (tuple): passed directly to this monitor&#39;s brightness method
+        kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
+
+    Returns:
+        int: from 0 to 100
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # set the brightness of the primary monitor to 50%
+        primary = sbc.Monitor(0)
+        primary.set_brightness(50)
+        ```
+    &#39;&#39;&#39;
+    return super().set_brightness(*args, **kwargs)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="screen_brightness_control.windows.Monitor" href="windows.html#screen_brightness_control.windows.Monitor">Monitor</a></b></code>:
+<ul class="hlist">
+<li><code><a title="screen_brightness_control.windows.Monitor.edid" href="windows.html#screen_brightness_control.windows.Monitor.edid">edid</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.index" href="windows.html#screen_brightness_control.windows.Monitor.index">index</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.manufacturer" href="windows.html#screen_brightness_control.windows.Monitor.manufacturer">manufacturer</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.manufacturer_id" href="windows.html#screen_brightness_control.windows.Monitor.manufacturer_id">manufacturer_id</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.method" href="windows.html#screen_brightness_control.windows.Monitor.method">method</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.model" href="windows.html#screen_brightness_control.windows.Monitor.model">model</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.model_name" href="windows.html#screen_brightness_control.windows.Monitor.model_name">model_name</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.name" href="windows.html#screen_brightness_control.windows.Monitor.name">name</a></code></li>
+<li><code><a title="screen_brightness_control.windows.Monitor.serial" href="windows.html#screen_brightness_control.windows.Monitor.serial">serial</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
 <dt id="screen_brightness_control.ScreenBrightnessError"><code class="flex name class">
 <span>class <span class="ident">ScreenBrightnessError</span></span>
 <span>(</span><span>message='Cannot set/retrieve brightness level')</span>
@@ -1010,6 +1628,7 @@ except sbc.ScreenBrightnessError as error:
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
 <li><code><a title="screen_brightness_control.fade_brightness" href="#screen_brightness_control.fade_brightness">fade_brightness</a></code></li>
+<li><code><a title="screen_brightness_control.filter_monitors" href="#screen_brightness_control.filter_monitors">filter_monitors</a></code></li>
 <li><code><a title="screen_brightness_control.flatten_list" href="#screen_brightness_control.flatten_list">flatten_list</a></code></li>
 <li><code><a title="screen_brightness_control.get_brightness" href="#screen_brightness_control.get_brightness">get_brightness</a></code></li>
 <li><code><a title="screen_brightness_control.list_monitors" href="#screen_brightness_control.list_monitors">list_monitors</a></code></li>
@@ -1019,6 +1638,15 @@ except sbc.ScreenBrightnessError as error:
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
+<li>
+<h4><code><a title="screen_brightness_control.Monitor" href="#screen_brightness_control.Monitor">Monitor</a></code></h4>
+<ul class="">
+<li><code><a title="screen_brightness_control.Monitor.get_brightness" href="#screen_brightness_control.Monitor.get_brightness">get_brightness</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.get_info" href="#screen_brightness_control.Monitor.get_info">get_info</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.is_active" href="#screen_brightness_control.Monitor.is_active">is_active</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.set_brightness" href="#screen_brightness_control.Monitor.set_brightness">set_brightness</a></code></li>
+</ul>
+</li>
 <li>
 <h4><code><a title="screen_brightness_control.ScreenBrightnessError" href="#screen_brightness_control.ScreenBrightnessError">ScreenBrightnessError</a></code></h4>
 </li>
