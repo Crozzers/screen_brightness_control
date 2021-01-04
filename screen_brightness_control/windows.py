@@ -517,6 +517,8 @@ class Monitor():
         self.index = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
         This means that if the monitor uses `WMI`, the index is out of the list of `WMI` addressable monitors ONLY. Same for `VCP`'''
+        self.edid = info['edid']
+        '''a unique string returned by the monitor that contains its VCP capabilities, serial and name'''
     def __getitem__(self, item):
         return getattr(self, item)
     def set_brightness(self, *args, **kwargs):
@@ -536,10 +538,15 @@ class Monitor():
 
             # set the brightness of the primary monitor to 50%
             primary = sbc.windows.Monitor(0)
-            primary_brightness = primary.set_brightness(50)
+            primary.set_brightness(50)
             ```
         '''
-        kwargs['display'] = self.serial
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
         return self.method.set_brightness(*args, **kwargs)
     def get_brightness(self, **kwargs):
         '''
@@ -560,7 +567,12 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         '''
-        kwargs['display'] = self.serial
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
         return self.method.get_brightness(**kwargs)
     def get_info(self):
         '''
@@ -677,34 +689,26 @@ def list_monitors(method=None):
     displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
-def __filter_monitors(display=None, method=None):
+def filter_monitors(*args, display = None, method = None):
     '''internal function, do not call
     filters the list of all addressable monitors by:
-        whether their name/model/serial/model_name matches the display kwarg
+        whether their name/model/serial/edid matches the display kwarg
         whether they use the method matching the method kwarg'''
-    methods = [WMI, VCP]
-    #parse the method kwarg
-    monitors = list_monitors_info(method = method)
-    if method!=None and monitors==[]:
-        raise LookupError('no monitors detected with matching method')
 
-    #parse display kwarg by trying to match given term to known monitors
+    if len(args)>0:
+        monitors = args[0]
+    else:
+        monitors = list_monitors_info(method=method)
+
     if display!=None:
+        if type(display) not in (str, int):
+            raise TypeError(f'display kwarg must be int or str, not {type(display)}')
         if type(display) is int:
-            monitors = [monitors[display]]
-        elif type(display) is str:
-            #see if display matches serial names, models or given names for monitors
-            m = [i for i in monitors if display in (i['serial'], i['name'], i['model'], i['edid'])]
-            #if no matches found, try to match model_name (takes longer)
-            if m == []:
-                names = [i.get_display_names() for i in methods]
-                names = flatten_list(names)
-                if display in names:
-                    display = names.index(display)
-                    m = [monitors[display]]
-            monitors = m
+            return [monitors[display]]
         else:
-            raise TypeError(f'display must be int or str, not {type(display)}')
+            return [i for i in monitors if any(display==i[j] for j in ('name','serial','model','edid') if i[j]!=None)]
+                #display in (i['name'], i['serial'], i['model'], i['edid'])]
+
     if monitors == []:
         msg = 'no monitors found'
         if display!=None:
@@ -712,6 +716,7 @@ def __filter_monitors(display=None, method=None):
         if method!=None:
             msg+=f' with method of "{method}"'
         raise LookupError(msg)
+
     return monitors
 
 def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
@@ -719,7 +724,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
     errors = []
     try: # filter knwon list of monitors according to kwargs
-        monitors = __filter_monitors(display = display, method = method)
+        monitors = filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
