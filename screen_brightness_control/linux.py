@@ -977,7 +977,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                 errors.append([f"XBacklight", type(e).__name__, e])
 
     #if function hasn't already returned it has failed
-    if method==None and meta_method == 'get':
+    if (method,display) == (None, None) and meta_method == 'get':
         try:
             return get_brightness_from_sysfiles(**kwargs)
         except Exception as e:

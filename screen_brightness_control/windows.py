@@ -363,7 +363,7 @@ class VCP:
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query. Is passed to `VCP.filter_displays` to match to a display
+            display (int or str): the specific display you wish to query. Is passed to `filter_monitors` to match to a display
         
         Returns:
             list: list of ints from 0 to 100 if multiple displays are detected and the `display` kwarg is not set
@@ -407,7 +407,7 @@ class VCP:
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query. Is passed to `VCP.filter_displays` to match to a display
+            display (int or str): the specific display you wish to query. Is passed to `filter_monitors` to match to a display
             no_return (bool): if set to `True` this function will return `None`
         
         Returns:
