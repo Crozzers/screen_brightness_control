@@ -26,21 +26,15 @@ if __name__=='__main__':
                 args.display = int(args.display)
 
         if args.get:
-            values = SBC.get_brightness(display = args.display, method = args.method, verbose_error = args.verbose)
-            if args.verbose:
-                monitors = [f'{i["name"]} ({i["serial"]})' for i in SBC.list_monitors_info(method = args.method)]
-            else:
-                monitors = SBC.list_monitors(method = args.method)
-            if monitors == None:
-                print(values)
-            else:
-                values = [values] if type(values) is int else values
-                if args.display == None or type(values)==list:
-                    for i in range(len(monitors)):
-                        try:print(f'{monitors[i]}: {values[i]}{"%" if values[i]!=None else ""}')
-                        except IndexError:break
-                else:
-                    print(f'Display {args.display}: {values}')
+            monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method=args.method)]
+            for monitor in monitors:
+                name = monitor.name
+                if args.verbose:
+                    name+=f' ({monitor.serial}) [{monitor.method.__name__}]'
+                try:
+                    print(f'{name}: {monitor.get_brightness()}%')
+                except:
+                    print(f'{name}: Failed')
         elif args.set!=None:
             SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:
@@ -49,9 +43,9 @@ if __name__=='__main__':
             print(SBC.__version__)
         elif args.list:
             if args.verbose:
-                monitors = SBC.list_monitors_info(method = args.method, )
+                monitors = SBC.list_monitors_info(method = args.method)
             else:
-                monitors = SBC.list_monitors(method = args.method, )
+                monitors = SBC.list_monitors(method = args.method)
             if len(monitors) == 0:
                 print('No monitors detected')
             else:
