@@ -817,10 +817,6 @@ def list_monitors_info(method=None):
     methods = [XRandr, DDCUtil, Light]
     if method!=None:
         methods = [i for i in methods if method.lower()==i.__name__.lower()]
-        #if method.lower()=='xrandr':methods = [XRandr]
-        #elif method.lower()=='ddcutil':methods = [DDCUtil]
-        #elif method.lower()=='light':methods = [Light]
-        #else:
         if methods==[]:
             raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' to get monitor information')
     for m in methods:

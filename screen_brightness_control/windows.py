@@ -309,7 +309,7 @@ class VCP:
             pass
         if len(args)>0:
             try:
-                info = filter_monitors(display=i, haystack=info, method='vcp') for i in args
+                info = filter_monitors(display=args[0], haystack=info, method='vcp')
                 return info[0] if len(info)==1 else info
             except:
                 pass
