@@ -115,13 +115,14 @@ def list_monitors_info(**kwargs):
         monitors = sbc.list_monitors_info()
         for monitor in monitors:
             print('=======================')
-            print('Name:', info['name'])                        # the manufacturer name plus the model
-            print('Model:', info['model'])                      # the general model of the display
-            print('Serial:', info['serial'])                    # a unique string assigned by Windows to this display
-            print('Manufacturer:', info['manufacturer'])        # the name of the brand of the monitor
-            print('Manufacturer ID:', info['manufacturer_id'])  # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
-            print('Index:', info['index'])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Method:', info['method'])                    # the method this monitor can be addressed by
+            print('Name:', monitor['name'])                        # the manufacturer name plus the model
+            print('Model:', monitor['model'])                      # the general model of the display
+            print('Serial:', monitor['serial'])                    # a unique string assigned by Windows to this display
+            print('Manufacturer:', monitor['manufacturer'])        # the name of the brand of the monitor
+            print('Manufacturer ID:', monitor['manufacturer_id'])  # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
+            print('Index:', monitor['index'])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Method:', monitor['method'])                    # the method this monitor can be addressed by
+            print('EDID:', monitor['edid'])                        # the EDID string associated with that monitor
         ```
     '''
     if platform.system() == 'Windows':

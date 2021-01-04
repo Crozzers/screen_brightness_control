@@ -233,8 +233,8 @@ class VCP:
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         '''
-        Searches through the information for all detected displays and attempts to return the info matching the value given.
-        Will attempt to match against index, name, model and serial
+        Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+        Will attempt to match against index, name, model, edid and serial
 
         Args:
             display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
@@ -694,7 +694,7 @@ def __filter_monitors(display=None, method=None):
             monitors = [monitors[display]]
         elif type(display) is str:
             #see if display matches serial names, models or given names for monitors
-            m = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
+            m = [i for i in monitors if display in (i['serial'], i['name'], i['model'], i['edid'])]
             #if no matches found, try to match model_name (takes longer)
             if m == []:
                 names = [i.get_display_names() for i in methods]
@@ -708,7 +708,7 @@ def __filter_monitors(display=None, method=None):
     if monitors == []:
         msg = 'no monitors found'
         if display!=None:
-            msg+=f' with name/serial/model of "{display}"'
+            msg+=f' with name/serial/model/edid of "{display}"'
         if method!=None:
             msg+=f' with method of "{method}"'
         raise LookupError(msg)

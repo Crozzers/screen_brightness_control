@@ -64,10 +64,13 @@ if __name__=='__main__':
                         msg = 'Display {}:\n\tName: {}\n\tModel: {}\n\tManufacturer: {}\n\tManufacturer ID: {}\n\tSerial: {}\n\tMethod: {}\n\tEDID:'
                         msg = msg.format(i, monitors[i]['name'], monitors[i]['model'], monitors[i]['manufacturer'], monitors[i]['manufacturer_id'], monitors[i]['serial'], monitors[i]['method'].__name__)
                         #format the edid string
-                        #split str into pairs of characters
-                        edid = [monitors[i]['edid'][j:j+2] for j in range(0, len(monitors[i]['edid']), 2)]
-                        #make the characters form 8 pair long lines
-                        msg += '\n\t\t'+'\n\t\t'.join([' '.join(edid[j:j+8]) for j in range(0, len(edid), 8)])
+                        if monitors[i]['edid']!=None:
+                            #split str into pairs of characters
+                            edid = [monitors[i]['edid'][j:j+2] for j in range(0, len(monitors[i]['edid']), 2)]
+                            #make the characters form 8 pair long lines
+                            msg += '\n\t\t'+'\n\t\t'.join([' '.join(edid[j:j+8]) for j in range(0, len(edid), 8)])
+                        else:
+                            msg+=' None'
 
                         print(msg)
         else:

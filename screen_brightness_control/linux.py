@@ -32,7 +32,28 @@ class _EDID:
                     "B"     # extension flag (1 byte)
                     "B")    # checksum (1 byte)
     def parse_edid(edid):
-        '''internal function, do not call'''
+        '''Takes an EDID string (as string hex, formatted as: '00ffffff00') and attempts to extract the monitor's name and serial number from it
+
+        Args:
+            edid (str): the edid string
+
+        Returns:
+            tuple
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            edid = sbx.linux.list_monitors_info()[0]['edid']
+            name, serial = sbc.linux._EDID.parse_edid(edid)
+            if name!=None:
+                print('Success!')
+                print('Name:', name)
+                print('Serial:', serial)
+            else:
+                print('Unable to extract the data')
+            ```
+        '''
         def filter_hex(st):
             st = str(st)
             while '\\x' in st:
@@ -781,7 +802,7 @@ def list_monitors_info(method=None):
     Lists detailed information about all detected monitors
 
     Args:
-        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil'
+        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -794,16 +815,15 @@ def list_monitors_info(method=None):
         import screen_brightness_control as sbc
 
         monitors = sbc.linux.list_monitors_info()
-        for info in monitors:
+        for monitor in monitors:
             print('=======================')
-            print('Name:', info['name']) # the manufacturer name plus the model OR a generic name for the monitor, depending on the method
-            if info['method'] in (sbc.linux.XRandr, sbc.linux.DDCUtil):
-                print('Model:', info['model']) # the general model of the display
-                print('Serial:', info['serial']) # a unique string assigned by Windows to this display
-                print('Manufacturer:', info['manufacturer']) # the name of the brand of the monitor
-                print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
-            print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Method:', info['method']) # the method this monitor can be addressed by
+            print('Name:', monitor['name']) # the manufacturer name plus the model OR a generic name for the monitor, depending on the method
+            print('Model:', monitor['model']) # the general model of the display
+            print('Serial:', monitor['serial']) # a unique string assigned by Windows to this display
+            print('Manufacturer:', monitor['manufacturer']) # the name of the brand of the monitor
+            print('Manufacturer ID:', monitor['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
+            print('Index:', monitor['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Method:', monitor['method']) # the method this monitor can be addressed by
         ```
     '''
     tmp = []
