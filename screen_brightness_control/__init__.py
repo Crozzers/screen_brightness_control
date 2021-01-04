@@ -149,7 +149,7 @@ def list_monitors(**kwargs):
     '''
     return [i['name'] for i in list_monitors_info(**kwargs)]
 
-def filter_monitors(display=None, haystack=None, method=None):
+def filter_monitors(display=None, haystack=None, method=None, include=[]):
     '''
     Searches through the information for all detected displays and attempts to return the info matching the value given.
     Will attempt to match against index, name, model, edid, method and serial
@@ -158,6 +158,7 @@ def filter_monitors(display=None, haystack=None, method=None):
         display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
         haystack (list): the information to filter from. If this isn't set it defaults to the return of `list_monitors_info`
         method (str): the method the monitors use
+        include (list): extra fields of information to sort by
 
     Raises:
         IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
@@ -165,7 +166,7 @@ def filter_monitors(display=None, haystack=None, method=None):
 
     Returns:
         list
-    
+
     Example:
         ```python
         import screen_brightness_control as sbc
@@ -188,7 +189,7 @@ def filter_monitors(display=None, haystack=None, method=None):
         if type(display) is int:
             return [monitors[display]]
         else:
-            return [i for i in monitors if any(display==i[j] for j in ('name','serial','model','edid') if i[j]!=None)]
+            return [i for i in monitors if any(display==i[j] for j in ['name','serial','model','edid']+include if i[j]!=None)]
 
     if monitors == []:
         msg = 'no monitors found'
