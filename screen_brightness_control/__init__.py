@@ -149,6 +149,57 @@ def list_monitors(**kwargs):
     '''
     return [i['name'] for i in list_monitors_info(**kwargs)]
 
+def filter_monitors(display=None, haystack=None, method=None):
+    '''
+    Searches through the information for all detected displays and attempts to return the info matching the value given.
+    Will attempt to match against index, name, model, edid, method and serial
+
+    Args:
+        display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
+        haystack (list): the information to filter from. If this isn't set it defaults to the return of `list_monitors_info`
+        method (str): the method the monitors use
+
+    Raises:
+        IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
+        LookupError: if the display, as a str, does not have a match
+
+    Returns:
+        list
+    
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        search = 'GL2450H'
+        match = sbc.filter_displays(search)
+        print(match)
+        # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
+        ```
+    '''
+
+    if haystack:
+        monitors = [i for i in haystack if method==None or method.lower()==i['method'].__name__.lower()]
+    else:
+        monitors = list_monitors_info(method=method)
+
+    if display!=None:
+        if type(display) not in (str, int):
+            raise TypeError(f'display kwarg must be int or str, not {type(display)}')
+        if type(display) is int:
+            return [monitors[display]]
+        else:
+            return [i for i in monitors if any(display==i[j] for j in ('name','serial','model','edid') if i[j]!=None)]
+
+    if monitors == []:
+        msg = 'no monitors found'
+        if display!=None:
+            msg+=f' with name/serial/model/edid of "{display}"'
+        if method!=None:
+            msg+=f' with method of "{method}"'
+        raise LookupError(msg)
+
+    return monitors
+
 def flatten_list(thick_list):
     '''
     Internal function I use to flatten lists, because I do that often
@@ -495,7 +546,7 @@ class Monitor(monitorbase):
 
         Returns:
             bool: True means active, False means inactive
-        
+
         Example:
             ```python
             import screen_brightness_control as sbc

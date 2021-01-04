@@ -1,7 +1,7 @@
 import wmi, threading, pythoncom, ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup
+from . import flatten_list, _monitor_brand_lookup, filter_monitors
 
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
@@ -13,7 +13,7 @@ def _wmi_init():
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
     def _get_display_index(display, *args):
-        '''internal function, do not call'''
+        '''deprecated internal function, do not call'''
         if len(args)==1:
             info = args[0]
         else:
@@ -79,11 +79,8 @@ class WMI:
         except:
             pass
         if len(args)==1:
-            index = WMI._get_display_index(args[0], info)
-            if index==None:
-                raise LookupError('display not in list')
-            else:
-                info = info[index]
+            indexes = [i['index'] for i in filter_monitors(display=args[0], haystack=info, method='wmi')]
+            info = [info[i] for i in indexes]
         return info
     def get_display_names():
         '''
@@ -136,11 +133,8 @@ class WMI:
         '''
         brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
         if display!=None:
-            if type(display) is str:
-                display = WMI._get_display_index(display)
-                if display == None:
-                    raise LookupError('display name not found')
-            brightness_method = [brightness_method[display]]
+            indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
+            brightness_method = [brightness_method[i] for i in indexes]
         for method in brightness_method:
             method.WmiSetBrightness(value,0)
         return WMI.get_brightness(display=display) if not no_return else None
@@ -177,15 +171,11 @@ class WMI:
             ```
         '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
-        values = [i.CurrentBrightness for i in brightness_method]
         if display!=None:
-            if type(display) is str:
-                display = WMI._get_display_index(display)
-                if display == None:
-                    raise LookupError('display name not found')
-            values = [values[display]]
-        values = values[0] if len(values)==1 else values
-        return values
+            indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
+            brightness_method = [brightness_method[i] for i in indexes]
+        values = [i.CurrentBrightness for i in brightness_method]
+        return values[0] if len(values)==1 else values
 
 class VCP:
     '''Collection of screen brightness related methods using the DDC/CI commands'''
@@ -233,12 +223,13 @@ class VCP:
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         '''
+        Deprecated. Redirects to top-level filter_monitors function.
         Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
         Will attempt to match against index, name, model, edid and serial
 
         Args:
-            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
             args (tuple): [*Optional*] if `args` isn't empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
+            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
 
         Raises:
             IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
@@ -261,13 +252,7 @@ class VCP:
             info = args[0]
         else:
             info = VCP.get_display_info()
-        if type(display) is int:
-            return info[display]
-        else:
-            for i in info:
-                if display in (i['serial'], i['model'], i['name'], i['edid']):
-                    return i
-            raise LookupError('could not find matching display')
+        return filter_monitors(display = display, haystack = info, method='vcp')
     def get_display_info(*args):
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
@@ -324,7 +309,7 @@ class VCP:
             pass
         if len(args)>0:
             try:
-                info = [VCP.filter_displays(i, info) for i in args]
+                info = filter_monitors(display=i, haystack=info, method='vcp') for i in args
                 return info[0] if len(info)==1 else info
             except:
                 pass
@@ -413,8 +398,8 @@ class VCP:
             del(cur_out)
 
         if display!=None:
-            display = VCP.filter_displays(display)
-            values = [values[display['index']]]
+            display = filter_monitors(display = display, method='vcp')
+            values = [values[i['index']] for i in display]
 
         return values[0] if len(values)==1 else values
     def set_brightness(value, display=None, no_return=False):
@@ -446,11 +431,11 @@ class VCP:
             ```
         '''
         if display!=None:
-            display = VCP.filter_displays(display)
-            display = display['index']
+            displays = filter_monitors(display = display, method='vcp')
+            displays = [i['index'] for i in displays]
         loops = 0
         for m in VCP.iter_physical_monitors():
-            if display==None or (display == loops):
+            if display==None or (loops in displays):
                 windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
             loops+=1
         return VCP.get_brightness(display=display) if not no_return else None
@@ -660,11 +645,11 @@ def list_monitors_info(method=None):
         tmp.append(m.get_display_info())
     tmp = flatten_list(tmp)
     info = []
-    serials = []
-    #to make sure each display (with unique serial) is only reported once
+    edids = []
+    #to make sure each display (with unique edid) is only reported once
     for i in tmp:
-        if i['serial'] not in serials:
-            serials.append(i['serial'])
+        if i['edid'] not in edids:
+            edids.append(i['edid'])
             info.append(i)
     return flatten_list(info)
 
@@ -689,41 +674,11 @@ def list_monitors(method=None):
     displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
-def filter_monitors(*args, display = None, method = None):
-    '''internal function, do not call
-    filters the list of all addressable monitors by:
-        whether their name/model/serial/edid matches the display kwarg
-        whether they use the method matching the method kwarg'''
-
-    if len(args)>0:
-        monitors = args[0]
-    else:
-        monitors = list_monitors_info(method=method)
-
-    if display!=None:
-        if type(display) not in (str, int):
-            raise TypeError(f'display kwarg must be int or str, not {type(display)}')
-        if type(display) is int:
-            return [monitors[display]]
-        else:
-            return [i for i in monitors if any(display==i[j] for j in ('name','serial','model','edid') if i[j]!=None)]
-                #display in (i['name'], i['serial'], i['model'], i['edid'])]
-
-    if monitors == []:
-        msg = 'no monitors found'
-        if display!=None:
-            msg+=f' with name/serial/model/edid of "{display}"'
-        if method!=None:
-            msg+=f' with method of "{method}"'
-        raise LookupError(msg)
-
-    return monitors
-
 def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
     '''internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
     errors = []
-    try: # filter knwon list of monitors according to kwargs
+    try: # filter known list of monitors according to kwargs
         monitors = filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
