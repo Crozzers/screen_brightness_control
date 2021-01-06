@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title"><code>screen_brightness_control v0.6.1</code></h1>
+<h1 class="title"><code>screen_brightness_control </code><br /><code>v0.6.1</code></h1>
 </header>
 
 <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.</p>
@@ -78,7 +78,7 @@ except sbc.ScreenBrightnessError as error:
 </code></pre>
 <h3>get_brightness(<code>verbose_error=False, **kwargs</code>)</h3>
 <p><strong>Summary:</strong><br />
-Returns the current screen brightness as a percentage by default. If you're on Windows it may return a list of values if you have multiple, brightness adjustable monitors.<br />
+Returns the current screen brightness as a percentage by default. It may return a list of values if you have multiple, brightness adjustable monitors.<br />
 Raises <code>ScreenBrightnessError</code> upon failure</p>
 <p><strong>Arguments:</strong></p>
 <ul>
