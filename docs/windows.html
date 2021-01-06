@@ -778,7 +778,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method=&#39;
     &#39;&#39;&#39;internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences&#39;&#39;&#39;
     errors = []
-    try: # filter knwon list of monitors according to kwargs
+    try: # filter known list of monitors according to kwargs
         monitors = __filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append([&#39;&#39;,type(e).__name__, e])
