@@ -341,50 +341,46 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         sbc.fade_brightness(100, blocking=False)
         ```
     '''
-    def fade(start, finish, increment, **kwargs):
-        if 'no_return' not in kwargs.keys():
-            kwargs['no_return']=True
+    def fade(start, finish, increment, monitor):
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
                 val = start - (val-finish)
-            set_brightness(val, **kwargs)
+            monitor.set_brightness(val, no_return = True)
             time.sleep(interval)
 
-        del(kwargs['no_return'])
-        if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+        if monitor.get_brightness()!=finish:
+            monitor.set_brightness(finish, no_return = True)
         return
 
-    current_vals = get_brightness(**kwargs)
-    current_vals = [current_vals, ] if type(current_vals)==int else current_vals
-
     threads = []
-    a = 0
-    for current in current_vals:
-        st, fi = start, finish
-        #convert strings like '+5' to an actual brightness value
-        if type(fi)==str:
-            if "+" in fi or "-" in fi:
-                fi=current+int(float(fi))
-        if type(st)==str:
-            if "+" in st or "-" in st:
-                st=current+int(float(st))
+    if 'verbose_error' in kwargs.keys():
+        del(kwargs['verbose_error'])
+    for i in filter_monitors(**kwargs):
+        monitor = Monitor(i)
+        try:
+            #same effect as monitor.is_active()
+            current = monitor.get_brightness()
+            st, fi = start, finish
+            #convert strings like '+5' to an actual brightness value
+            if type(fi)==str:
+                if "+" in fi or "-" in fi:
+                    fi=current+int(float(fi))
+            if type(st)==str:
+                if "+" in st or "-" in st:
+                    st=current+int(float(st))
 
-        st = current if st==None else st
-        #make sure both values are within the correct range
-        fi = min(max(int(fi),0),100)
-        st = min(max(int(st),0),100)
+            st = current if st==None else st
+            #make sure both values are within the correct range
+            fi = min(max(int(fi),0),100)
+            st = min(max(int(st),0),100)
 
-        kw=kwargs.copy()
-        if 'display' not in kw.keys():
-            kw['display'] = a
-
-        if finish!=start:
-            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw)
-            t1.start()
-            threads.append(t1)
-        a+=1
+            if finish!=start:
+                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+                t1.start()
+                threads.append(t1)
+        except:
+            pass
 
     if not blocking:
         return threads
