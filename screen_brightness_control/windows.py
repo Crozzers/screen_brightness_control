@@ -12,18 +12,6 @@ def _wmi_init():
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
-    def _get_display_index(display, *args):
-        '''deprecated internal function, do not call'''
-        if len(args)==1:
-            info = args[0]
-        else:
-            info = WMI.get_display_info()
-        a = 0
-        for i in info:
-            if display in (i['serial'], i['model'], i['name'], i['edid']):
-                return a
-            a+=1
-        return None
     def get_display_info(*args):
         '''
         Returns a dictionary of info about all detected monitors
@@ -96,9 +84,7 @@ class WMI:
                 print(name)
             ```
         '''
-        info = WMI.get_display_info()
-        names = [i['name'] for i in info]
-        return names
+        return [i['name'] for i in WMI.get_display_info()]
     def set_brightness(value, display = None, no_return = False):
         '''
         Sets the display brightness for Windows using WMI
@@ -222,7 +208,7 @@ class VCP:
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         '''
-        Deprecated. Redirects to top-level filter_monitors function.
+        Deprecated. Redirects to top-level `filter_monitors` function.
         Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
         Will attempt to match against index, name, model, edid and serial
 
