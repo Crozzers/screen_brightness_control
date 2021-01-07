@@ -394,12 +394,17 @@ class VCP:
             cur_out = DWORD()
             if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
                 values.append(cur_out.value)
+            else:
+                values.append(None)
             del(cur_out)
 
         if display!=None:
             display = filter_monitors(display = display, method='vcp')
             values = [values[i['index']] for i in display]
 
+        values = [i for i in values if i!=None]
+        if values==[]:
+            return None
         return values[0] if len(values)==1 else values
     def set_brightness(value, display=None, no_return=False):
         '''
