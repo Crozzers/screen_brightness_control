@@ -12,12 +12,12 @@ def _wmi_init():
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
-    def get_display_info(*args):
+    def get_display_info(display=None):
         '''
         Returns a dictionary of info about all detected monitors
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model or index
+            display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
             list: list of dictonaries
@@ -65,8 +65,8 @@ class WMI:
                 a+=1
         except:
             pass
-        if len(args)==1:
-            indexes = [i['index'] for i in filter_monitors(display=args[0], haystack=info, method='wmi')]
+        if display!=None:
+            indexes = [i['index'] for i in filter_monitors(display=display, haystack=info, method='wmi')]
             info = [info[i] for i in indexes]
         return info
     def get_display_names():
@@ -238,12 +238,12 @@ class VCP:
         else:
             info = VCP.get_display_info()
         return filter_monitors(display = display, haystack = info, method='vcp')
-    def get_display_info(*args):
+    def get_display_info(display=None):
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
         Args:
-            args (tuple): [*Optional*] a variable list of monitors. Pass in a monitor's name/serial/model/index and only the information corresponding to these monitors will be returned
+            display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
             list: list of dicts if `args` is empty or there are multiple values passed in `args`
@@ -261,10 +261,6 @@ class VCP:
             # get information about a monitor with this specific model
             bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
             # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
-
-            # get information about 2 specific monitors at the same time
-            sbc.windows.VCP.get_display_info('U2211H', 'GL2450H')
-            # EG output: [{'name': 'Dell U2211H', 'model': 'U2211H', ... }, {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
             ```
         '''
         info = []
@@ -292,9 +288,9 @@ class VCP:
                     pass
         except:
             pass
-        if len(args)>0:
+        if display!=None:
             try:
-                info = filter_monitors(display=args[0], haystack=info, method='vcp')
+                info = filter_monitors(display=display, haystack=info, method='vcp')
                 return info[0] if len(info)==1 else info
             except:
                 pass

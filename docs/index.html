@@ -127,6 +127,171 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
+class Monitor():
+    &#39;&#39;&#39;A class to manage a single monitor and its relevant information&#39;&#39;&#39;
+    def __init__(self, display):
+        &#39;&#39;&#39;
+        Args:
+            display (int or str): the index/model name/serial/edid of the display you wish to control
+
+        Raises:
+            LookupError: if the given display is a string but that string does not match any known displays
+            TypeError: if the given display type is not int or str
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # create a class for the primary monitor and then a specifically named monitor
+            primary = sbc.Monitor(0)
+            benq_monitor = sbc.Monitor(&#39;BenQ GL2450HM&#39;)
+
+            # check if the benq monitor is the primary one
+            if primary.serial == benq_monitor.serial:
+                print(&#39;BenQ GL2450HM is the primary display&#39;)
+            else:
+                print(&#39;The primary display is&#39;, primary.name)
+
+            # this class can also be accessed like a dictionary
+            print(primary[&#39;name&#39;])
+            print(benq_monitor[&#39;name&#39;])
+            ```
+        &#39;&#39;&#39;
+        monitors_info = list_monitors_info()
+        if type(display) is dict:
+            if display in monitors_info:
+                info = display
+            else:
+                raise LookupError(&#39;could not match display info to known displays&#39;)
+        else:
+            info = filter_monitors(display, haystack=monitors_info)[0]
+
+        self.serial = info[&#39;serial&#39;]
+        &#39;&#39;&#39;the serial number of the display or (if serial is not available) an ID assigned by the OS&#39;&#39;&#39;
+        self.name = info[&#39;name&#39;]
+        &#39;&#39;&#39;the monitors manufacturer name plus its model&#39;&#39;&#39;
+        self.method = info[&#39;method&#39;]
+        &#39;&#39;&#39;the method by which this monitor can be addressed&#39;&#39;&#39;
+        self.manufacturer = info[&#39;manufacturer&#39;]
+        &#39;&#39;&#39;the name of the brand of the monitor&#39;&#39;&#39;
+        self.manufacturer_id = info[&#39;manufacturer_id&#39;]
+        &#39;&#39;&#39;the 3 letter manufacturing code corresponding to the manufacturer name&#39;&#39;&#39;
+        self.model = info[&#39;model&#39;]
+        &#39;&#39;&#39;the general model of the display&#39;&#39;&#39;
+        if platform.system()==&#39;Windows&#39;:
+            self.model_name = info[&#39;model&#39;]
+            &#39;&#39;&#39;(Windows Only) Deprecated, always equal to the model. Will be removed soon&#39;&#39;&#39;
+        self.index = info[&#39;index&#39;]
+        &#39;&#39;&#39;the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.&#39;&#39;&#39;
+        self.edid = info[&#39;edid&#39;]
+        &#39;&#39;&#39;a unique string returned by the monitor that contains its DDC capabilities, serial and name&#39;&#39;&#39;
+    def set_brightness(self, *args, **kwargs):
+        &#39;&#39;&#39;
+        Sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitor&#39;s brightness method
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.Monitor(0)
+            primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        if self.edid!=None:
+            kwargs[&#39;display&#39;] = self.edid
+        elif self.serial!=None:
+            kwargs[&#39;display&#39;] = self.serial
+        else:
+            kwargs[&#39;display&#39;] = self.index
+        return self.method.set_brightness(*args, **kwargs)
+    def get_brightness(self, **kwargs):
+        &#39;&#39;&#39;
+        Returns the brightness of this display
+
+        Args:
+            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
+        &#39;&#39;&#39;
+        if self.edid!=None:
+            kwargs[&#39;display&#39;] = self.edid
+        elif self.serial!=None:
+            kwargs[&#39;display&#39;] = self.serial
+        else:
+            kwargs[&#39;display&#39;] = self.index
+        return self.method.get_brightness(**kwargs)
+    def get_info(self):
+        &#39;&#39;&#39;
+        Returns all known information about this monitor instance
+
+        Returns:
+            dict
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
+        &#39;&#39;&#39;
+        info = {
+            &#39;name&#39;:self.name,
+            &#39;model&#39;:self.model,
+            &#39;serial&#39;:self.serial,
+            &#39;manufacturer&#39;: self.manufacturer,
+            &#39;manufacturer_id&#39;: self.manufacturer_id,
+            &#39;method&#39;: self.method,
+            &#39;index&#39;: self.index,
+            &#39;edid&#39;: self.edid
+        }
+        if platform.system()==&#39;Windows&#39;:
+            info[&#39;model_name&#39;] = info[&#39;model&#39;]
+            #deprecated, will be removed in v0.8.0. Only here for compatibility
+        return info
+    def is_active(self):
+        &#39;&#39;&#39;
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool: True means active, False means inactive
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            primary = sbc.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            ```
+        &#39;&#39;&#39;
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False
+
+
 def list_monitors_info(**kwargs):
     &#39;&#39;&#39;
     list detailed information about all monitors that are controllable by this library
@@ -369,50 +534,46 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         sbc.fade_brightness(100, blocking=False)
         ```
     &#39;&#39;&#39;
-    def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
+    def fade(start, finish, increment, monitor):
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
                 val = start - (val-finish)
-            set_brightness(val, **kwargs)
+            monitor.set_brightness(val, no_return = True)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
-        if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+        if monitor.get_brightness()!=finish:
+            monitor.set_brightness(finish, no_return = True)
         return
 
-    current_vals = get_brightness(**kwargs)
-    current_vals = [current_vals, ] if type(current_vals)==int else current_vals
-
     threads = []
-    a = 0
-    for current in current_vals:
-        st, fi = start, finish
-        #convert strings like &#39;+5&#39; to an actual brightness value
-        if type(fi)==str:
-            if &#34;+&#34; in fi or &#34;-&#34; in fi:
-                fi=current+int(float(fi))
-        if type(st)==str:
-            if &#34;+&#34; in st or &#34;-&#34; in st:
-                st=current+int(float(st))
+    if &#39;verbose_error&#39; in kwargs.keys():
+        del(kwargs[&#39;verbose_error&#39;])
+    for i in filter_monitors(**kwargs):
+        monitor = Monitor(i)
+        try:
+            #same effect as monitor.is_active()
+            current = monitor.get_brightness()
+            st, fi = start, finish
+            #convert strings like &#39;+5&#39; to an actual brightness value
+            if type(fi)==str:
+                if &#34;+&#34; in fi or &#34;-&#34; in fi:
+                    fi=current+int(float(fi))
+            if type(st)==str:
+                if &#34;+&#34; in st or &#34;-&#34; in st:
+                    st=current+int(float(st))
 
-        st = current if st==None else st
-        #make sure both values are within the correct range
-        fi = min(max(int(fi),0),100)
-        st = min(max(int(st),0),100)
+            st = current if st==None else st
+            #make sure both values are within the correct range
+            fi = min(max(int(fi),0),100)
+            st = min(max(int(st),0),100)
 
-        kw=kwargs.copy()
-        if &#39;display&#39; not in kw.keys():
-            kw[&#39;display&#39;] = a
-
-        if finish!=start:
-            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw)
-            t1.start()
-            threads.append(t1)
-        a+=1
+            if finish!=start:
+                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+                t1.start()
+                threads.append(t1)
+        except:
+            pass
 
     if not blocking:
         return threads
@@ -472,126 +633,8 @@ def get_brightness(verbose_error=False,**kwargs):
 
 if platform.system()==&#39;Windows&#39;:
     from . import windows
-    monitorbase = windows.Monitor
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
-    monitorbase = linux.Monitor
-else:
-    monitorbase = object
-
-class Monitor(monitorbase):
-    &#39;&#39;&#39;A class to manage a single monitor and its relevant information&#39;&#39;&#39;
-    def __init__(self, display):
-        &#39;&#39;&#39;
-        Args:
-            display (int or str): the index/model name/serial/edid of the display you wish to control
-
-        Raises:
-            LookupError: if the given display is a string but that string does not match any known displays
-            TypeError: if the given display type is not int or str
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # create a class for the primary monitor and then a specifically named monitor
-            primary = sbc.Monitor(0)
-            benq_monitor = sbc.Monitor(&#39;BenQ GL2450HM&#39;)
-
-            # check if the benq monitor is the primary one
-            if primary.serial == benq_monitor.serial:
-                print(&#39;BenQ GL2450HM is the primary display&#39;)
-            else:
-                print(&#39;The primary display is&#39;, primary.name)
-
-            # this class can also be accessed like a dictionary
-            print(primary[&#39;name&#39;])
-            print(benq_monitor[&#39;name&#39;])
-            ```
-        &#39;&#39;&#39;
-        return super().__init__(display)
-    def set_brightness(self, *args, **kwargs):
-        &#39;&#39;&#39;
-        Sets the brightness for this display
-
-        Args:
-            args (tuple): passed directly to this monitor&#39;s brightness method
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (the `display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness of the primary monitor to 50%
-            primary = sbc.Monitor(0)
-            primary.set_brightness(50)
-            ```
-        &#39;&#39;&#39;
-        return super().set_brightness(*args, **kwargs)
-    def get_brightness(self, **kwargs):
-        &#39;&#39;&#39;
-        Returns the brightness of this display
-
-        Args:
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the brightness of the primary monitor
-            primary = sbc.Monitor(0)
-            primary_brightness = primary.get_brightness()
-            ```
-        &#39;&#39;&#39;
-        return super().get_brightness(**kwargs)
-    def get_info(self):
-        &#39;&#39;&#39;
-        Returns all known information about this monitor instance
-
-        Returns:
-            dict
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # initialize class for primary monitor
-            primary = sbc.Monitor(0)
-            # get the info
-            info = primary.get_info()
-            ```
-        &#39;&#39;&#39;
-        return super().get_info()
-    def is_active(self):
-        &#39;&#39;&#39;
-        Attempts to retrieve the brightness for this display. If it works the display is deemed active
-
-        Returns:
-            bool: True means active, False means inactive
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            primary = sbc.Monitor(0)
-            if primary.is_active():
-                primary.set_brightness(50)
-            ```
-        &#39;&#39;&#39;
-        try:
-            self.get_brightness()
-            return True
-        except:
-            return False
-
-del(monitorbase)
 
 __version__=&#39;0.7.0-dev&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
@@ -697,50 +740,46 @@ sbc.fade_brightness(100, blocking=False)
         sbc.fade_brightness(100, blocking=False)
         ```
     &#39;&#39;&#39;
-    def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
+    def fade(start, finish, increment, monitor):
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
                 val = start - (val-finish)
-            set_brightness(val, **kwargs)
+            monitor.set_brightness(val, no_return = True)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
-        if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+        if monitor.get_brightness()!=finish:
+            monitor.set_brightness(finish, no_return = True)
         return
 
-    current_vals = get_brightness(**kwargs)
-    current_vals = [current_vals, ] if type(current_vals)==int else current_vals
-
     threads = []
-    a = 0
-    for current in current_vals:
-        st, fi = start, finish
-        #convert strings like &#39;+5&#39; to an actual brightness value
-        if type(fi)==str:
-            if &#34;+&#34; in fi or &#34;-&#34; in fi:
-                fi=current+int(float(fi))
-        if type(st)==str:
-            if &#34;+&#34; in st or &#34;-&#34; in st:
-                st=current+int(float(st))
+    if &#39;verbose_error&#39; in kwargs.keys():
+        del(kwargs[&#39;verbose_error&#39;])
+    for i in filter_monitors(**kwargs):
+        monitor = Monitor(i)
+        try:
+            #same effect as monitor.is_active()
+            current = monitor.get_brightness()
+            st, fi = start, finish
+            #convert strings like &#39;+5&#39; to an actual brightness value
+            if type(fi)==str:
+                if &#34;+&#34; in fi or &#34;-&#34; in fi:
+                    fi=current+int(float(fi))
+            if type(st)==str:
+                if &#34;+&#34; in st or &#34;-&#34; in st:
+                    st=current+int(float(st))
 
-        st = current if st==None else st
-        #make sure both values are within the correct range
-        fi = min(max(int(fi),0),100)
-        st = min(max(int(st),0),100)
+            st = current if st==None else st
+            #make sure both values are within the correct range
+            fi = min(max(int(fi),0),100)
+            st = min(max(int(st),0),100)
 
-        kw=kwargs.copy()
-        if &#39;display&#39; not in kw.keys():
-            kw[&#39;display&#39;] = a
-
-        if finish!=start:
-            t1 = threading.Thread(target=fade, args=(st, fi, increment), kwargs=kw)
-            t1.start()
-            threads.append(t1)
-        a+=1
+            if finish!=start:
+                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+                t1.start()
+                threads.append(t1)
+        except:
+            pass
 
     if not blocking:
         return threads
@@ -1250,7 +1289,7 @@ print(benq_monitor['name'])
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Monitor(monitorbase):
+<pre><code class="python">class Monitor():
     &#39;&#39;&#39;A class to manage a single monitor and its relevant information&#39;&#39;&#39;
     def __init__(self, display):
         &#39;&#39;&#39;
@@ -1280,7 +1319,34 @@ print(benq_monitor['name'])
             print(benq_monitor[&#39;name&#39;])
             ```
         &#39;&#39;&#39;
-        return super().__init__(display)
+        monitors_info = list_monitors_info()
+        if type(display) is dict:
+            if display in monitors_info:
+                info = display
+            else:
+                raise LookupError(&#39;could not match display info to known displays&#39;)
+        else:
+            info = filter_monitors(display, haystack=monitors_info)[0]
+
+        self.serial = info[&#39;serial&#39;]
+        &#39;&#39;&#39;the serial number of the display or (if serial is not available) an ID assigned by the OS&#39;&#39;&#39;
+        self.name = info[&#39;name&#39;]
+        &#39;&#39;&#39;the monitors manufacturer name plus its model&#39;&#39;&#39;
+        self.method = info[&#39;method&#39;]
+        &#39;&#39;&#39;the method by which this monitor can be addressed&#39;&#39;&#39;
+        self.manufacturer = info[&#39;manufacturer&#39;]
+        &#39;&#39;&#39;the name of the brand of the monitor&#39;&#39;&#39;
+        self.manufacturer_id = info[&#39;manufacturer_id&#39;]
+        &#39;&#39;&#39;the 3 letter manufacturing code corresponding to the manufacturer name&#39;&#39;&#39;
+        self.model = info[&#39;model&#39;]
+        &#39;&#39;&#39;the general model of the display&#39;&#39;&#39;
+        if platform.system()==&#39;Windows&#39;:
+            self.model_name = info[&#39;model&#39;]
+            &#39;&#39;&#39;(Windows Only) Deprecated, always equal to the model. Will be removed soon&#39;&#39;&#39;
+        self.index = info[&#39;index&#39;]
+        &#39;&#39;&#39;the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.&#39;&#39;&#39;
+        self.edid = info[&#39;edid&#39;]
+        &#39;&#39;&#39;a unique string returned by the monitor that contains its DDC capabilities, serial and name&#39;&#39;&#39;
     def set_brightness(self, *args, **kwargs):
         &#39;&#39;&#39;
         Sets the brightness for this display
@@ -1301,7 +1367,13 @@ print(benq_monitor['name'])
             primary.set_brightness(50)
             ```
         &#39;&#39;&#39;
-        return super().set_brightness(*args, **kwargs)
+        if self.edid!=None:
+            kwargs[&#39;display&#39;] = self.edid
+        elif self.serial!=None:
+            kwargs[&#39;display&#39;] = self.serial
+        else:
+            kwargs[&#39;display&#39;] = self.index
+        return self.method.set_brightness(*args, **kwargs)
     def get_brightness(self, **kwargs):
         &#39;&#39;&#39;
         Returns the brightness of this display
@@ -1321,7 +1393,13 @@ print(benq_monitor['name'])
             primary_brightness = primary.get_brightness()
             ```
         &#39;&#39;&#39;
-        return super().get_brightness(**kwargs)
+        if self.edid!=None:
+            kwargs[&#39;display&#39;] = self.edid
+        elif self.serial!=None:
+            kwargs[&#39;display&#39;] = self.serial
+        else:
+            kwargs[&#39;display&#39;] = self.index
+        return self.method.get_brightness(**kwargs)
     def get_info(self):
         &#39;&#39;&#39;
         Returns all known information about this monitor instance
@@ -1339,7 +1417,20 @@ print(benq_monitor['name'])
             info = primary.get_info()
             ```
         &#39;&#39;&#39;
-        return super().get_info()
+        info = {
+            &#39;name&#39;:self.name,
+            &#39;model&#39;:self.model,
+            &#39;serial&#39;:self.serial,
+            &#39;manufacturer&#39;: self.manufacturer,
+            &#39;manufacturer_id&#39;: self.manufacturer_id,
+            &#39;method&#39;: self.method,
+            &#39;index&#39;: self.index,
+            &#39;edid&#39;: self.edid
+        }
+        if platform.system()==&#39;Windows&#39;:
+            info[&#39;model_name&#39;] = info[&#39;model&#39;]
+            #deprecated, will be removed in v0.8.0. Only here for compatibility
+        return info
     def is_active(self):
         &#39;&#39;&#39;
         Attempts to retrieve the brightness for this display. If it works the display is deemed active
@@ -1362,10 +1453,41 @@ print(benq_monitor['name'])
         except:
             return False</code></pre>
 </details>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="screen_brightness_control.windows.Monitor" href="windows.html#screen_brightness_control.windows.Monitor">Monitor</a></li>
-</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="screen_brightness_control.Monitor.edid"><code class="name">var <span class="ident">edid</span></code></dt>
+<dd>
+<div class="desc"><p>a unique string returned by the monitor that contains its DDC capabilities, serial and name</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.index"><code class="name">var <span class="ident">index</span></code></dt>
+<dd>
+<div class="desc"><p>the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.manufacturer"><code class="name">var <span class="ident">manufacturer</span></code></dt>
+<dd>
+<div class="desc"><p>the name of the brand of the monitor</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.manufacturer_id"><code class="name">var <span class="ident">manufacturer_id</span></code></dt>
+<dd>
+<div class="desc"><p>the 3 letter manufacturing code corresponding to the manufacturer name</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.method"><code class="name">var <span class="ident">method</span></code></dt>
+<dd>
+<div class="desc"><p>the method by which this monitor can be addressed</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.model"><code class="name">var <span class="ident">model</span></code></dt>
+<dd>
+<div class="desc"><p>the general model of the display</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>the monitors manufacturer name plus its model</p></div>
+</dd>
+<dt id="screen_brightness_control.Monitor.serial"><code class="name">var <span class="ident">serial</span></code></dt>
+<dd>
+<div class="desc"><p>the serial number of the display or (if serial is not available) an ID assigned by the OS</p></div>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="screen_brightness_control.Monitor.get_brightness"><code class="name flex">
@@ -1413,7 +1535,13 @@ primary_brightness = primary.get_brightness()
         primary_brightness = primary.get_brightness()
         ```
     &#39;&#39;&#39;
-    return super().get_brightness(**kwargs)</code></pre>
+    if self.edid!=None:
+        kwargs[&#39;display&#39;] = self.edid
+    elif self.serial!=None:
+        kwargs[&#39;display&#39;] = self.serial
+    else:
+        kwargs[&#39;display&#39;] = self.index
+    return self.method.get_brightness(**kwargs)</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.Monitor.get_info"><code class="name flex">
@@ -1452,7 +1580,20 @@ info = primary.get_info()
         info = primary.get_info()
         ```
     &#39;&#39;&#39;
-    return super().get_info()</code></pre>
+    info = {
+        &#39;name&#39;:self.name,
+        &#39;model&#39;:self.model,
+        &#39;serial&#39;:self.serial,
+        &#39;manufacturer&#39;: self.manufacturer,
+        &#39;manufacturer_id&#39;: self.manufacturer_id,
+        &#39;method&#39;: self.method,
+        &#39;index&#39;: self.index,
+        &#39;edid&#39;: self.edid
+    }
+    if platform.system()==&#39;Windows&#39;:
+        info[&#39;model_name&#39;] = info[&#39;model&#39;]
+        #deprecated, will be removed in v0.8.0. Only here for compatibility
+    return info</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.Monitor.is_active"><code class="name flex">
@@ -1547,26 +1688,16 @@ primary.set_brightness(50)
         primary.set_brightness(50)
         ```
     &#39;&#39;&#39;
-    return super().set_brightness(*args, **kwargs)</code></pre>
+    if self.edid!=None:
+        kwargs[&#39;display&#39;] = self.edid
+    elif self.serial!=None:
+        kwargs[&#39;display&#39;] = self.serial
+    else:
+        kwargs[&#39;display&#39;] = self.index
+    return self.method.set_brightness(*args, **kwargs)</code></pre>
 </details>
 </dd>
 </dl>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="screen_brightness_control.windows.Monitor" href="windows.html#screen_brightness_control.windows.Monitor">Monitor</a></b></code>:
-<ul class="hlist">
-<li><code><a title="screen_brightness_control.windows.Monitor.edid" href="windows.html#screen_brightness_control.windows.Monitor.edid">edid</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.index" href="windows.html#screen_brightness_control.windows.Monitor.index">index</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.manufacturer" href="windows.html#screen_brightness_control.windows.Monitor.manufacturer">manufacturer</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.manufacturer_id" href="windows.html#screen_brightness_control.windows.Monitor.manufacturer_id">manufacturer_id</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.method" href="windows.html#screen_brightness_control.windows.Monitor.method">method</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.model" href="windows.html#screen_brightness_control.windows.Monitor.model">model</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.model_name" href="windows.html#screen_brightness_control.windows.Monitor.model_name">model_name</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.name" href="windows.html#screen_brightness_control.windows.Monitor.name">name</a></code></li>
-<li><code><a title="screen_brightness_control.windows.Monitor.serial" href="windows.html#screen_brightness_control.windows.Monitor.serial">serial</a></code></li>
-</ul>
-</li>
-</ul>
 </dd>
 <dt id="screen_brightness_control.ScreenBrightnessError"><code class="flex name class">
 <span>class <span class="ident">ScreenBrightnessError</span></span>
@@ -1640,10 +1771,18 @@ except sbc.ScreenBrightnessError as error:
 <ul>
 <li>
 <h4><code><a title="screen_brightness_control.Monitor" href="#screen_brightness_control.Monitor">Monitor</a></code></h4>
-<ul class="">
+<ul class="two-column">
+<li><code><a title="screen_brightness_control.Monitor.edid" href="#screen_brightness_control.Monitor.edid">edid</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.get_brightness" href="#screen_brightness_control.Monitor.get_brightness">get_brightness</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.get_info" href="#screen_brightness_control.Monitor.get_info">get_info</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.index" href="#screen_brightness_control.Monitor.index">index</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.is_active" href="#screen_brightness_control.Monitor.is_active">is_active</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.manufacturer" href="#screen_brightness_control.Monitor.manufacturer">manufacturer</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.manufacturer_id" href="#screen_brightness_control.Monitor.manufacturer_id">manufacturer_id</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.method" href="#screen_brightness_control.Monitor.method">method</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.model" href="#screen_brightness_control.Monitor.model">model</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.name" href="#screen_brightness_control.Monitor.name">name</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.serial" href="#screen_brightness_control.Monitor.serial">serial</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.set_brightness" href="#screen_brightness_control.Monitor.set_brightness">set_brightness</a></code></li>
 </ul>
 </li>
