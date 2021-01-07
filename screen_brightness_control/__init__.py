@@ -99,6 +99,171 @@ class ScreenBrightnessError(Exception):
         self.message=message
         super().__init__(self.message)
 
+class Monitor():
+    '''A class to manage a single monitor and its relevant information'''
+    def __init__(self, display):
+        '''
+        Args:
+            display (int or str): the index/model name/serial/edid of the display you wish to control
+
+        Raises:
+            LookupError: if the given display is a string but that string does not match any known displays
+            TypeError: if the given display type is not int or str
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # create a class for the primary monitor and then a specifically named monitor
+            primary = sbc.Monitor(0)
+            benq_monitor = sbc.Monitor('BenQ GL2450HM')
+
+            # check if the benq monitor is the primary one
+            if primary.serial == benq_monitor.serial:
+                print('BenQ GL2450HM is the primary display')
+            else:
+                print('The primary display is', primary.name)
+
+            # this class can also be accessed like a dictionary
+            print(primary['name'])
+            print(benq_monitor['name'])
+            ```
+        '''
+        monitors_info = list_monitors_info()
+        if type(display) is dict:
+            if display in monitors_info:
+                info = display
+            else:
+                raise LookupError('could not match display info to known displays')
+        else:
+            info = filter_monitors(display, haystack=monitors_info)[0]
+
+        self.serial = info['serial']
+        '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
+        self.name = info['name']
+        '''the monitors manufacturer name plus its model'''
+        self.method = info['method']
+        '''the method by which this monitor can be addressed'''
+        self.manufacturer = info['manufacturer']
+        '''the name of the brand of the monitor'''
+        self.manufacturer_id = info['manufacturer_id']
+        '''the 3 letter manufacturing code corresponding to the manufacturer name'''
+        self.model = info['model']
+        '''the general model of the display'''
+        if platform.system()=='Windows':
+            self.model_name = info['model']
+            '''(Windows Only) Deprecated, always equal to the model. Will be removed soon'''
+        self.index = info['index']
+        '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
+        self.edid = info['edid']
+        '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
+    def set_brightness(self, *args, **kwargs):
+        '''
+        Sets the brightness for this display
+
+        Args:
+            args (tuple): passed directly to this monitor's brightness method
+            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness of the primary monitor to 50%
+            primary = sbc.Monitor(0)
+            primary.set_brightness(50)
+            ```
+        '''
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
+        return self.method.set_brightness(*args, **kwargs)
+    def get_brightness(self, **kwargs):
+        '''
+        Returns the brightness of this display
+
+        Args:
+            kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
+
+        Returns:
+            int: from 0 to 100
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the brightness of the primary monitor
+            primary = sbc.Monitor(0)
+            primary_brightness = primary.get_brightness()
+            ```
+        '''
+        if self.edid!=None:
+            kwargs['display'] = self.edid
+        elif self.serial!=None:
+            kwargs['display'] = self.serial
+        else:
+            kwargs['display'] = self.index
+        return self.method.get_brightness(**kwargs)
+    def get_info(self):
+        '''
+        Returns all known information about this monitor instance
+
+        Returns:
+            dict
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # initialize class for primary monitor
+            primary = sbc.Monitor(0)
+            # get the info
+            info = primary.get_info()
+            ```
+        '''
+        info = {
+            'name':self.name,
+            'model':self.model,
+            'serial':self.serial,
+            'manufacturer': self.manufacturer,
+            'manufacturer_id': self.manufacturer_id,
+            'method': self.method,
+            'index': self.index,
+            'edid': self.edid
+        }
+        if platform.system()=='Windows':
+            info['model_name'] = info['model']
+            #deprecated, will be removed in v0.8.0. Only here for compatibility
+        return info
+    def is_active(self):
+        '''
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+
+        Returns:
+            bool: True means active, False means inactive
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            primary = sbc.Monitor(0)
+            if primary.is_active():
+                primary.set_brightness(50)
+            ```
+        '''
+        try:
+            self.get_brightness()
+            return True
+        except:
+            return False
+
+
 def list_monitors_info(**kwargs):
     '''
     list detailed information about all monitors that are controllable by this library
@@ -440,126 +605,8 @@ def get_brightness(verbose_error=False,**kwargs):
 
 if platform.system()=='Windows':
     from . import windows
-    monitorbase = windows.Monitor
 elif platform.system()=='Linux':
     from . import linux
-    monitorbase = linux.Monitor
-else:
-    monitorbase = object
-
-class Monitor(monitorbase):
-    '''A class to manage a single monitor and its relevant information'''
-    def __init__(self, display):
-        '''
-        Args:
-            display (int or str): the index/model name/serial/edid of the display you wish to control
-
-        Raises:
-            LookupError: if the given display is a string but that string does not match any known displays
-            TypeError: if the given display type is not int or str
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # create a class for the primary monitor and then a specifically named monitor
-            primary = sbc.Monitor(0)
-            benq_monitor = sbc.Monitor('BenQ GL2450HM')
-
-            # check if the benq monitor is the primary one
-            if primary.serial == benq_monitor.serial:
-                print('BenQ GL2450HM is the primary display')
-            else:
-                print('The primary display is', primary.name)
-
-            # this class can also be accessed like a dictionary
-            print(primary['name'])
-            print(benq_monitor['name'])
-            ```
-        '''
-        return super().__init__(display)
-    def set_brightness(self, *args, **kwargs):
-        '''
-        Sets the brightness for this display
-
-        Args:
-            args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness of the primary monitor to 50%
-            primary = sbc.Monitor(0)
-            primary.set_brightness(50)
-            ```
-        '''
-        return super().set_brightness(*args, **kwargs)
-    def get_brightness(self, **kwargs):
-        '''
-        Returns the brightness of this display
-
-        Args:
-            kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the brightness of the primary monitor
-            primary = sbc.Monitor(0)
-            primary_brightness = primary.get_brightness()
-            ```
-        '''
-        return super().get_brightness(**kwargs)
-    def get_info(self):
-        '''
-        Returns all known information about this monitor instance
-
-        Returns:
-            dict
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # initialize class for primary monitor
-            primary = sbc.Monitor(0)
-            # get the info
-            info = primary.get_info()
-            ```
-        '''
-        return super().get_info()
-    def is_active(self):
-        '''
-        Attempts to retrieve the brightness for this display. If it works the display is deemed active
-
-        Returns:
-            bool: True means active, False means inactive
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            primary = sbc.Monitor(0)
-            if primary.is_active():
-                primary.set_brightness(50)
-            ```
-        '''
-        try:
-            self.get_brightness()
-            return True
-        except:
-            return False
-
-del(monitorbase)
 
 __version__='0.7.0-dev'
 __author__='Crozzers'
