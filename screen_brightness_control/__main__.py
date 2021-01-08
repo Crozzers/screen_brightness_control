@@ -26,6 +26,8 @@ if __name__=='__main__':
                 args.display = int(args.display)
 
         if args.get:
+            import time
+            start=time.time()
             try:
                 monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method=args.method)]
                 for monitor in monitors:
@@ -34,10 +36,11 @@ if __name__=='__main__':
                         name+=f' ({monitor.serial}) [{monitor.method.__name__}]'
                     try:
                         print(f'{name}: {monitor.get_brightness()}%')
-                    except:
+                    except Exception as e:
                         print(f'{name}: Failed')
             except:
                 print(SBC.get_brightness(display = args.display, method=args.method))
+            print(time.time()-start)
         elif args.set!=None:
             SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:

@@ -1,5 +1,19 @@
 import platform,time,threading
 
+class __Cache(dict):
+    '''class to cache data with a short shelf life'''
+    def __setitem__(self, key, value, *args, expires=1, **kwargs):
+        super().__setitem__(key, (value, expires, time.time(), args, kwargs))
+    def __getitem__(self, key, *args, **kwargs):
+        value, expires, created, orig_args, orig_kwargs = super().__getitem__(key)
+        if time.time()-expires<created and orig_args==args and orig_kwargs==kwargs:
+            return value
+        raise KeyError
+    def get(self, *args, **kwargs):
+        return self.__getitem__(*args, **kwargs)
+    def store(self, *args, **kwargs):
+        return self.__setitem__(*args, **kwargs)
+
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
     "ACR": "Acer",
@@ -291,10 +305,15 @@ def list_monitors_info(**kwargs):
             print('EDID:', monitor['edid'])                        # the EDID string associated with that monitor
         ```
     '''
-    if platform.system() == 'Windows':
-        return windows.list_monitors_info(**kwargs)
-    elif platform.system() == 'Linux':
-        return linux.list_monitors_info(**kwargs)
+    try:
+        return __cache__.get('monitors_info', **kwargs)
+    except:
+        if platform.system() == 'Windows':
+            info = windows.list_monitors_info(**kwargs)
+        elif platform.system() == 'Linux':
+            info = linux.list_monitors_info(**kwargs)
+        __cache__.store('monitors_info', info, **kwargs)
+        return info
 
 def list_monitors(**kwargs):
     '''
@@ -603,7 +622,7 @@ def get_brightness(verbose_error=False,**kwargs):
     #if the function has not returned by now it failed
     raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
 
-
+__cache__ = __Cache()
 if platform.system()=='Windows':
     from . import windows
 elif platform.system()=='Linux':

@@ -1,14 +1,19 @@
 import wmi, threading, pythoncom, ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
 
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
-    #WMI calls don't work in new threads so we have to run this check
-    if threading.current_thread() != threading.main_thread():
-        pythoncom.CoInitialize()
-    return wmi.WMI(namespace='wmi')
+    try:
+        return __cache__.get('wmi_instance')
+    except:
+        #WMI calls don't work in new threads so we have to run this check
+        if threading.current_thread() != threading.main_thread():
+            pythoncom.CoInitialize()
+        instance = wmi.WMI(namespace='wmi')
+        __cache__.store('wmi_instance', instance)
+        return instance
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -40,32 +45,36 @@ class WMI:
             benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
-        info = []
-        a = 0
         try:
-            wmi = _wmi_init()
-            monitors = wmi.WmiMonitorBrightness()
-            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
-            except:pass
-            for m in monitors:
-                instance = m.InstanceName.split('\\')
-                serial = instance[-1]
-                model = instance[1]
-
-                man_id = model[:3]
-                try:man_id, manufacturer = _monitor_brand_lookup(model[:3])
-                except:manufacturer = None
-
-                try:
-                    edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])
-                except:
-                    edid = None
-
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid}
-                info.append(tmp)
-                a+=1
+            info = __cache__.get('wmi_monitor_info')
         except:
-            pass
+            info = []
+            a = 0
+            try:
+                wmi = _wmi_init()
+                monitors = wmi.WmiMonitorBrightness()
+                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+                except:pass
+                for m in monitors:
+                    instance = m.InstanceName.split('\\')
+                    serial = instance[-1]
+                    model = instance[1]
+
+                    man_id = model[:3]
+                    try:man_id, manufacturer = _monitor_brand_lookup(model[:3])
+                    except:manufacturer = None
+
+                    try:
+                        edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])
+                    except:
+                        edid = None
+
+                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid}
+                    info.append(tmp)
+                    a+=1
+            except:
+                pass
+            __cache__.store('wmi_monitor_info', info)
         if display!=None:
             indexes = [i['index'] for i in filter_monitors(display=display, haystack=info, method='wmi')]
             info = [info[i] for i in indexes]
@@ -264,32 +273,36 @@ class VCP:
             # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
-        info = []
         try:
-            wmi = _wmi_init()
-            monitors = wmi.WmiMonitorID()
-            try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
-            except:pass
-            a=0
-            for monitor in monitors:
-                try:
-                    serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
-                    manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
-                    manufacturer = manufacturer.lower().capitalize()
-                    try:man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                    except:man_id = None
-                    try:
-                        edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[monitor.InstanceName][0]])
-                    except:
-                        edid = None
-
-                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid}
-                    info.append(tmp)
-                    a+=1
-                except:
-                    pass
+            info = __cache__.get('vcp_monitor_info')
         except:
-            pass
+            info = []
+            try:
+                wmi = _wmi_init()
+                monitors = wmi.WmiMonitorID()
+                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+                except:pass
+                a=0
+                for monitor in monitors:
+                    try:
+                        serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                        manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
+                        manufacturer = manufacturer.lower().capitalize()
+                        try:man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                        except:man_id = None
+                        try:
+                            edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[monitor.InstanceName][0]])
+                        except:
+                            edid = None
+
+                        tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid}
+                        info.append(tmp)
+                        a+=1
+                    except:
+                        pass
+            except:
+                pass
+            __cache__.store('vcp_monitor_info', info)
         if display!=None:
             try:
                 info = filter_monitors(display=display, haystack=info, method='vcp')
@@ -373,6 +386,8 @@ class VCP:
             benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
             ```
         '''
+        import time
+        start=time.time()
         values = []
         for m in VCP.iter_physical_monitors():
             cur_out = DWORD()
@@ -456,23 +471,25 @@ def list_monitors_info(method=None):
             print('EDID:', info['edid']) # the EDID string of the monitor
         ```
     '''
-    tmp = []
-    methods = [WMI,VCP]
-    if method!=None:
-        if method.lower()=='wmi':methods=[WMI]
-        elif method.lower()=='vcp':methods=[VCP]
-        else:raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
-    for m in methods:
-        tmp.append(m.get_display_info())
-    tmp = flatten_list(tmp)
-    info = []
-    edids = []
-    #to make sure each display (with unique edid) is only reported once
-    for i in tmp:
-        if i['edid'] not in edids:
-            edids.append(i['edid'])
-            info.append(i)
-    return info
+    try:
+        return __cache__.get('windows_monitors_info', method=method)
+    except:
+        methods = [WMI,VCP]
+        if method!=None:
+            methods = [i for i in methods if i.__name__.lower() == method.lower()]
+            if methods==[]:
+                raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
+
+        info = []
+        edids = []
+        for m in methods:
+            #to make sure each display (with unique edid) is only reported once
+            for i in m.get_display_info():
+                if i['edid'] not in edids:
+                    edids.append(i['edid'])
+                    info.append(i)
+        __cache__.store('windows_monitors_info', info, method=method)
+        return info
 
 def list_monitors(method=None):
     '''
@@ -492,8 +509,7 @@ def list_monitors(method=None):
         # EG output: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    displays = [i['name'] for i in list_monitors_info(method=method)]
-    return flatten_list(displays)
+    return [i['name'] for i in list_monitors_info(method=method)]
 
 def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
     '''internal function, do not call.
