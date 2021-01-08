@@ -53,7 +53,8 @@ class WMI:
                 model = instance[1]
 
                 man_id = model[:3]
-                manufacturer = _monitor_brand_lookup(man_id)
+                try:man_id, manufacturer = _monitor_brand_lookup(model[:3])
+                except:manufacturer = None
 
                 try:
                     edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])
@@ -275,7 +276,8 @@ class VCP:
                     serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
                     manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
                     manufacturer = manufacturer.lower().capitalize()
-                    man_id = _monitor_brand_lookup(manufacturer)
+                    try:man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                    except:man_id = None
                     try:
                         edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[monitor.InstanceName][0]])
                     except:
@@ -470,7 +472,7 @@ def list_monitors_info(method=None):
         if i['edid'] not in edids:
             edids.append(i['edid'])
             info.append(i)
-    return flatten_list(info)
+    return info
 
 def list_monitors(method=None):
     '''

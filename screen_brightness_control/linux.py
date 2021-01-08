@@ -137,7 +137,8 @@ class Light:
                                 tmp['serial'] = serial
                                 tmp['name'] = name
                             tmp['manufacturer'] = name.split(' ')[0]
-                            tmp['manufacturer_id'] = _monitor_brand_lookup(tmp['manufacturer'])
+                            try:tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
+                            except:tmp['manufacturer_id'] = None
                             tmp['model'] = name.split(' ')[1]
                         except:
                             pass
@@ -340,7 +341,8 @@ class XRandr:
                 tmp['name'] = name if name!=None else tmp['interface']
                 if name!=None:
                     tmp['manufacturer'] = name.split(' ')[0]
-                    tmp['manufacturer_id'] = _monitor_brand_lookup(tmp['manufacturer'])
+                    try:tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
+                    except:tmp['manufacturer_id'] = None
                     tmp['model'] = name.split(' ')[1]
                     tmp['serial'] = serial
             elif 'Brightness:' in i:
@@ -512,7 +514,8 @@ class DDCUtil:
                     tmp['bus_number'] = int(tmp['i2c_bus'].replace('/dev/i2c-',''))
                 elif 'Mfg id' in line:
                     tmp['manufacturer_id'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
-                    tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer_id'])
+                    try:tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer_id'])
+                    except:tmp['manufacturer'] = None
                 elif 'Model' in line:
                     name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i!='']
                     try:name[0] = name[0].lower().capitalize()
@@ -664,7 +667,7 @@ def list_monitors_info(method=None):
                 info.append(i)
         except:
             info.append(i)
-    return flatten_list(info)
+    return info
 
 def list_monitors(method=None):
     '''

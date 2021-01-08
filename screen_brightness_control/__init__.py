@@ -75,11 +75,12 @@ def _monitor_brand_lookup(search):
     search_lower = search.lower()
 
     if search_lower in keys_lower:
-        return values[keys_lower.index(search_lower)]
+        index = keys_lower.index(search_lower)
     elif search_lower in values_lower:
-        return keys[values_lower.index(search_lower)]
+        index = values_lower.index(search_lower)
     else:
         return None
+    return keys[index], values[index]
 
 class ScreenBrightnessError(Exception):
     '''
