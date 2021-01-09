@@ -27,7 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import subprocess, os, struct
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
 
 class _EDID:
     &#39;&#39;&#39;
@@ -114,12 +114,12 @@ class Light:
         &#39;&#39;&#39;internal function, do not call&#39;&#39;&#39;
         monitors = Light.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;path&#39;, &#39;light_path&#39;])
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns information about detected displays as reported by Light
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return information about. Can be index, name, path or edid
+            display (str or int): [*Optional*] the monitor to return information about. Can be index, name, path, model, index or edid
 
         Returns:
             list: list of dictionaries if no monitor is specified
@@ -140,16 +140,18 @@ class Light:
             edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)
             ```
         &#39;&#39;&#39;
-        res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
-        displays = []
-        count=0
-        for r in res:
-            if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
-                r = r[r.index(&#39;backlight/&#39;)+10:]
-                if os.path.isdir(f&#39;/sys/class/backlight/{r}&#39;):
-                    tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                    count+=1
-                    if os.path.isfile(tmp[&#39;path&#39;]+&#39;/device/edid&#39;):
+        try:
+            displays = __cache__.get(&#39;light_monitors_info&#39;)
+        except:
+            res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
+            displays = []
+            count=0
+            for r in res:
+                if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
+                    r = r[r.index(&#39;backlight/&#39;)+10:]
+                    if os.path.isfile(f&#39;/sys/class/backlight/{r}/device/edid&#39;):
+                        tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                        count+=1
                         try:
                             out = subprocess.check_output([&#39;hexdump&#39;, tmp[&#39;path&#39;]+&#39;/device/edid&#39;], stderr=subprocess.DEVNULL).decode().split(&#39;\n&#39;)
                             #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
@@ -165,14 +167,16 @@ class Light:
                                 tmp[&#39;serial&#39;] = serial
                                 tmp[&#39;name&#39;] = name
                             tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                            tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                            try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                            except:tmp[&#39;manufacturer_id&#39;] = None
                             tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
                         except:
                             pass
                         displays.append(tmp)
+            __cache__.store(&#39;light_monitors_info&#39;, displays)
 
-        if len(args)==1:
-            displays = Light.__filter_monitors(args[0], displays)
+        if display!=None:
+            displays = Light.__filter_monitors(display, displays)
             if len(displays)==1:
                 displays = displays[0]
         return displays
@@ -225,8 +229,7 @@ class Light:
             info = Light.__filter_monitors(display, info)
         for i in info:
             light_path = i[&#39;light_path&#39;]
-            command = f&#39;{Light.executable} -S {value} -s {light_path}&#39;
-            subprocess.call(command.split(&#34; &#34;))
+            subprocess.call(f&#39;{Light.executable} -S {value} -s {light_path}&#39;.split(&#34; &#34;))
         return Light.get_brightness(display=display) if not no_return else None
 
     def get_brightness(display = None):
@@ -260,8 +263,7 @@ class Light:
         results = []
         for i in info:
             light_path = i[&#39;light_path&#39;]
-            command = f&#39;{Light.executable} -G -s {light_path}&#39;
-            results.append(subprocess.run(command.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
+            results.append(subprocess.run(f&#39;{Light.executable} -G -s {light_path}&#39;.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
         results = [int(round(float(str(i)),0)) for i in results]
         return results[0] if len(results)==1 else results
 
@@ -321,12 +323,12 @@ class XRandr:
         monitors = XRandr.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;interface&#39;])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns a dictionary of info about all detected monitors as reported by xrandr
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface or index
+            display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface, edid or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -349,35 +351,40 @@ class XRandr:
             benq_info = sbc.linux.XRandr.get_display_info(&#39;BenQ GL2450HM&#39;)
             ```
         &#39;&#39;&#39;
-        out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
-        names = XRandr.get_display_interfaces()
-        data = []
-        tmp = {}
-        count = 0
-        for i in out:
-            if i.startswith(tuple(names)):
-                data.append(tmp)
-                tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                count+=1
-            elif &#39;EDID:&#39; in i:
-                st = out[out.index(tmp[&#39;line&#39;]):]
-                edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
-                edid = &#39;&#39;.join(edid)
-                tmp[&#39;edid&#39;] = edid
-                name, serial = _EDID.parse_edid(edid)
-                tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
-                if name!=None:
-                    tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                    tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
-                    tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
-                    tmp[&#39;serial&#39;] = serial
-            elif &#39;Brightness:&#39; in i:
-                tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
+        try:
+            data = __cache__.get(&#39;xrandr_monitors_info&#39;)
+        except:
+            out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
+            names = XRandr.get_display_interfaces()
+            data = []
+            tmp = {}
+            count = 0
+            for i in out:
+                if i.startswith(tuple(names)):
+                    data.append(tmp)
+                    tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                    count+=1
+                elif &#39;EDID:&#39; in i:
+                    st = out[out.index(tmp[&#39;line&#39;]):]
+                    edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
+                    edid = &#39;&#39;.join(edid)
+                    tmp[&#39;edid&#39;] = edid
+                    name, serial = _EDID.parse_edid(edid)
+                    tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
+                    if name!=None:
+                        tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
+                        try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                        except:tmp[&#39;manufacturer_id&#39;] = None
+                        tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
+                        tmp[&#39;serial&#39;] = serial
+                elif &#39;Brightness:&#39; in i:
+                    tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
 
-        data.append(tmp)
-        data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
-        if len(args)==1:
-            data = XRandr.__filter_monitors(args[0], data)
+            data.append(tmp)
+            data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
+            __cache__.store(&#39;xrandr_monitors_info&#39;, data)
+        if display!=None:
+            data = XRandr.__filter_monitors(display, data)
             if len(data)==1:
                 data=data[0]
         return data
@@ -491,13 +498,13 @@ class DDCUtil:
         monitors = DDCUtil.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;i2c_bus&#39;])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command &#39;ddcutil detect&#39; and parsing the output.
 
         Args:
-            monitor (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index
+            display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid, i2c bus or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -513,50 +520,56 @@ class DDCUtil:
                 for key, value in i.items():
                     print(key, &#39;:&#39;, value)
 
-            # get information about the first XRandr addressable monitor
+            # get information about the first DDCUtil addressable monitor
             primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
             # get information about a monitor with a specific name
             benq_info = sbc.linux.DDCUtil.get_display_info(&#39;BenQ GL2450HM&#39;)
             ```
         &#39;&#39;&#39;
-        out = []
-        #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
-        for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
-            if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
-                out.append(line)
-        data = []
-        tmp = {}
-        count = 0
-        for i in range(len(out)):
-            line = out[i]
-            if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
-                data.append(tmp)
-                tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                count+=1
-            else:
-                if &#39;I2C bus&#39; in line:
-                    tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
-                    tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
-                elif &#39;Mfg id&#39; in line:
-                    tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-                    tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
-                elif &#39;Model&#39; in line:
-                    name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
-                    try:name[0] = name[0].lower().capitalize()
-                    except IndexError:pass
-                    tmp[&#39;name&#39;] = &#39; &#39;.join(name)
-                    try:tmp[&#39;model&#39;] = name[1]
-                    except IndexError:pass
-                elif &#39;Serial number&#39; in line:
-                    tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-                elif &#39;EDID hex dump:&#39; in line:
-                    try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
-                    except:pass
-        data.append(tmp)
-        ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
-        if len(args)==1:
-            ret = DDCUtil.__filter_monitors(args[0], data)
+        try:
+            ret = __cache__.get(&#39;ddcutil_monitors_info&#39;)
+        except:
+            out = []
+            #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
+            for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
+                if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
+                    out.append(line)
+            data = []
+            tmp = {}
+            count = 0
+            for i in range(len(out)):
+                line = out[i]
+                if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
+                    data.append(tmp)
+                    tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                    count+=1
+                else:
+                    if &#39;I2C bus&#39; in line:
+                        tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
+                        tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
+                    elif &#39;Mfg id&#39; in line:
+                        tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                        try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
+                        except:tmp[&#39;manufacturer&#39;] = None
+                    elif &#39;Model&#39; in line:
+                        name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
+                        try:name[0] = name[0].lower().capitalize()
+                        except IndexError:pass
+                        tmp[&#39;name&#39;] = &#39; &#39;.join(name)
+                        try:tmp[&#39;model&#39;] = name[1]
+                        except IndexError:pass
+                    elif &#39;Serial number&#39; in line:
+                        tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                    elif &#39;EDID hex dump:&#39; in line:
+                        try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
+                        except:pass
+            data.append(tmp)
+            ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
+            __cache__.store(&#39;ddcutil_monitors_info&#39;, ret)
+
+        if display!=None:
+            ret = DDCUtil.__filter_monitors(display, data)
             if len(ret)==1:
                 ret=ret[0]
         return ret
@@ -605,7 +618,13 @@ class DDCUtil:
             monitors = DDCUtil.__filter_monitors(display, monitors)
         res = []
         for m in monitors:
-            out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+            try:
+                out = __cache__.get(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;)
+                if out==None:
+                    raise Exception
+            except:
+                out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+                __cache__.store(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;, out, expires=0.5)
             try:res.append(int(out))
             except:pass
         if len(res) == 1:
@@ -643,12 +662,13 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None):
+def list_monitors_info(method=None, allow_duplicates=False):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be &#39;xrandr&#39; or &#39;ddcutil&#39; or &#39;light&#39;
+        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -672,27 +692,25 @@ def list_monitors_info(method=None):
             print(&#39;Method:&#39;, monitor[&#39;method&#39;]) # the method this monitor can be addressed by
         ```
     &#39;&#39;&#39;
-    tmp = []
-    methods = [XRandr, DDCUtil, Light]
-    if method!=None:
-        methods = [i for i in methods if method.lower()==i.__name__.lower()]
-        if methods==[]:
-            raise ValueError(&#39;method must be \&#39;xrandr\&#39; or \&#39;ddcutil\&#39; or \&#39;light\&#39; to get monitor information&#39;)
-    for m in methods:
-        try:tmp.append(m.get_display_info())
-        except:pass
-    tmp = flatten_list(tmp)
-    info = []
-    edids = []
-    #to make sure each display (with unique EDID) is only reported once
-    for i in tmp:
-        try:
-            if i[&#39;edid&#39;] not in edids:
-                edids.append(i[&#39;edid&#39;])
-                info.append(i)
-        except:
-            info.append(i)
-    return flatten_list(info)
+    try:
+        return __cache__.get(&#39;linux_monitors_info&#39;, method=method, allow_duplicates=allow_duplicates)
+    except:
+        methods = [XRandr, DDCUtil, Light]
+        if method!=None:
+            methods = [i for i in methods if method.lower()==i.__name__.lower()]
+            if methods==[]:
+                raise ValueError(&#39;method must be \&#39;xrandr\&#39; or \&#39;ddcutil\&#39; or \&#39;light\&#39; to get monitor information&#39;)
+
+        info = []
+        edids = []
+        for m in methods:
+            #to make sure each display (with unique edid) is only reported once
+            for i in m.get_display_info():
+                if allow_duplicates or i[&#39;edid&#39;] not in edids:
+                    edids.append(i[&#39;edid&#39;])
+                    info.append(i)
+        __cache__.store(&#39;linux_monitors_info&#39;, info, method=method, allow_duplicates=allow_duplicates)
+        return info
 
 def list_monitors(method=None):
     &#39;&#39;&#39;
@@ -1123,7 +1141,7 @@ monitors = sbc.linux.list_monitors()
 </details>
 </dd>
 <dt id="screen_brightness_control.linux.list_monitors_info"><code class="name flex">
-<span>def <span class="ident">list_monitors_info</span></span>(<span>method=None)</span>
+<span>def <span class="ident">list_monitors_info</span></span>(<span>method=None, allow_duplicates=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Lists detailed information about all detected monitors</p>
@@ -1131,6 +1149,8 @@ monitors = sbc.linux.list_monitors()
 <dl>
 <dt><strong><code>method</code></strong> :&ensp;<code>str</code></dt>
 <dd>the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'</dd>
+<dt><strong><code>allow_duplicates</code></strong> :&ensp;<code>bool</code></dt>
+<dd>whether to filter out duplicate displays (displays with the same EDID) or not</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1160,12 +1180,13 @@ for monitor in monitors:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors_info(method=None):
+<pre><code class="python">def list_monitors_info(method=None, allow_duplicates=False):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be &#39;xrandr&#39; or &#39;ddcutil&#39; or &#39;light&#39;
+        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -1189,27 +1210,25 @@ for monitor in monitors:
             print(&#39;Method:&#39;, monitor[&#39;method&#39;]) # the method this monitor can be addressed by
         ```
     &#39;&#39;&#39;
-    tmp = []
-    methods = [XRandr, DDCUtil, Light]
-    if method!=None:
-        methods = [i for i in methods if method.lower()==i.__name__.lower()]
-        if methods==[]:
-            raise ValueError(&#39;method must be \&#39;xrandr\&#39; or \&#39;ddcutil\&#39; or \&#39;light\&#39; to get monitor information&#39;)
-    for m in methods:
-        try:tmp.append(m.get_display_info())
-        except:pass
-    tmp = flatten_list(tmp)
-    info = []
-    edids = []
-    #to make sure each display (with unique EDID) is only reported once
-    for i in tmp:
-        try:
-            if i[&#39;edid&#39;] not in edids:
-                edids.append(i[&#39;edid&#39;])
-                info.append(i)
-        except:
-            info.append(i)
-    return flatten_list(info)</code></pre>
+    try:
+        return __cache__.get(&#39;linux_monitors_info&#39;, method=method, allow_duplicates=allow_duplicates)
+    except:
+        methods = [XRandr, DDCUtil, Light]
+        if method!=None:
+            methods = [i for i in methods if method.lower()==i.__name__.lower()]
+            if methods==[]:
+                raise ValueError(&#39;method must be \&#39;xrandr\&#39; or \&#39;ddcutil\&#39; or \&#39;light\&#39; to get monitor information&#39;)
+
+        info = []
+        edids = []
+        for m in methods:
+            #to make sure each display (with unique edid) is only reported once
+            for i in m.get_display_info():
+                if allow_duplicates or i[&#39;edid&#39;] not in edids:
+                    edids.append(i[&#39;edid&#39;])
+                    info.append(i)
+        __cache__.store(&#39;linux_monitors_info&#39;, info, method=method, allow_duplicates=allow_duplicates)
+        return info</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.linux.set_brightness"><code class="name flex">
@@ -1327,13 +1346,13 @@ sbc.linux.set_brightness(25, method='xrandr')
         monitors = DDCUtil.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;i2c_bus&#39;])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command &#39;ddcutil detect&#39; and parsing the output.
 
         Args:
-            monitor (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index
+            display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid, i2c bus or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -1349,50 +1368,56 @@ sbc.linux.set_brightness(25, method='xrandr')
                 for key, value in i.items():
                     print(key, &#39;:&#39;, value)
 
-            # get information about the first XRandr addressable monitor
+            # get information about the first DDCUtil addressable monitor
             primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
             # get information about a monitor with a specific name
             benq_info = sbc.linux.DDCUtil.get_display_info(&#39;BenQ GL2450HM&#39;)
             ```
         &#39;&#39;&#39;
-        out = []
-        #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
-        for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
-            if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
-                out.append(line)
-        data = []
-        tmp = {}
-        count = 0
-        for i in range(len(out)):
-            line = out[i]
-            if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
-                data.append(tmp)
-                tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                count+=1
-            else:
-                if &#39;I2C bus&#39; in line:
-                    tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
-                    tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
-                elif &#39;Mfg id&#39; in line:
-                    tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-                    tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
-                elif &#39;Model&#39; in line:
-                    name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
-                    try:name[0] = name[0].lower().capitalize()
-                    except IndexError:pass
-                    tmp[&#39;name&#39;] = &#39; &#39;.join(name)
-                    try:tmp[&#39;model&#39;] = name[1]
-                    except IndexError:pass
-                elif &#39;Serial number&#39; in line:
-                    tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-                elif &#39;EDID hex dump:&#39; in line:
-                    try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
-                    except:pass
-        data.append(tmp)
-        ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
-        if len(args)==1:
-            ret = DDCUtil.__filter_monitors(args[0], data)
+        try:
+            ret = __cache__.get(&#39;ddcutil_monitors_info&#39;)
+        except:
+            out = []
+            #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
+            for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
+                if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
+                    out.append(line)
+            data = []
+            tmp = {}
+            count = 0
+            for i in range(len(out)):
+                line = out[i]
+                if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
+                    data.append(tmp)
+                    tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                    count+=1
+                else:
+                    if &#39;I2C bus&#39; in line:
+                        tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
+                        tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
+                    elif &#39;Mfg id&#39; in line:
+                        tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                        try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
+                        except:tmp[&#39;manufacturer&#39;] = None
+                    elif &#39;Model&#39; in line:
+                        name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
+                        try:name[0] = name[0].lower().capitalize()
+                        except IndexError:pass
+                        tmp[&#39;name&#39;] = &#39; &#39;.join(name)
+                        try:tmp[&#39;model&#39;] = name[1]
+                        except IndexError:pass
+                    elif &#39;Serial number&#39; in line:
+                        tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                    elif &#39;EDID hex dump:&#39; in line:
+                        try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
+                        except:pass
+            data.append(tmp)
+            ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
+            __cache__.store(&#39;ddcutil_monitors_info&#39;, ret)
+
+        if display!=None:
+            ret = DDCUtil.__filter_monitors(display, data)
             if len(ret)==1:
                 ret=ret[0]
         return ret
@@ -1441,7 +1466,13 @@ sbc.linux.set_brightness(25, method='xrandr')
             monitors = DDCUtil.__filter_monitors(display, monitors)
         res = []
         for m in monitors:
-            out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+            try:
+                out = __cache__.get(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;)
+                if out==None:
+                    raise Exception
+            except:
+                out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+                __cache__.store(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;, out, expires=0.5)
             try:res.append(int(out))
             except:pass
         if len(res) == 1:
@@ -1549,7 +1580,13 @@ primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)
         monitors = DDCUtil.__filter_monitors(display, monitors)
     res = []
     for m in monitors:
-        out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+        try:
+            out = __cache__.get(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;)
+            if out==None:
+                raise Exception
+        except:
+            out = subprocess.check_output([DDCUtil.executable,&#39;getvcp&#39;,&#39;10&#39;,&#39;-t&#39;,&#39;-b&#39;,str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;]).decode().split(&#39; &#39;)[-2]
+            __cache__.store(&#39;ddcutil_&#39;+m[&#39;edid&#39;]+&#39;_brightness&#39;, out, expires=0.5)
         try:res.append(int(out))
         except:pass
     if len(res) == 1:
@@ -1558,15 +1595,15 @@ primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)
 </details>
 </dd>
 <dt id="screen_brightness_control.linux.DDCUtil.get_display_info"><code class="name flex">
-<span>def <span class="ident">get_display_info</span></span>(<span>*args)</span>
+<span>def <span class="ident">get_display_info</span></span>(<span>display=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns information about all DDC compatible monitors shown by DDCUtil
 Works by calling the command 'ddcutil detect' and parsing the output.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>monitor</code></strong> :&ensp;<code>int</code> or <code>str</code></dt>
-<dd>[<em>Optional</em>] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index</dd>
+<dt><strong><code>display</code></strong> :&ensp;<code>int</code> or <code>str</code></dt>
+<dd>[<em>Optional</em>] the monitor to return info about. Pass in the serial number, name, model, edid, i2c bus or index</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1584,7 +1621,7 @@ for i in info:
     for key, value in i.items():
         print(key, ':', value)
 
-# get information about the first XRandr addressable monitor
+# get information about the first DDCUtil addressable monitor
 primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
 # get information about a monitor with a specific name
@@ -1595,13 +1632,13 @@ benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_display_info(*args):
+<pre><code class="python">def get_display_info(display = None):
     &#39;&#39;&#39;
     Returns information about all DDC compatible monitors shown by DDCUtil
     Works by calling the command &#39;ddcutil detect&#39; and parsing the output.
 
     Args:
-        monitor (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index
+        display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid, i2c bus or index
 
     Returns:
         list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -1617,50 +1654,56 @@ benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')
             for key, value in i.items():
                 print(key, &#39;:&#39;, value)
 
-        # get information about the first XRandr addressable monitor
+        # get information about the first DDCUtil addressable monitor
         primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
         # get information about a monitor with a specific name
         benq_info = sbc.linux.DDCUtil.get_display_info(&#39;BenQ GL2450HM&#39;)
         ```
     &#39;&#39;&#39;
-    out = []
-    #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
-    for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
-        if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
-            out.append(line)
-    data = []
-    tmp = {}
-    count = 0
-    for i in range(len(out)):
-        line = out[i]
-        if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
-            data.append(tmp)
-            tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-            count+=1
-        else:
-            if &#39;I2C bus&#39; in line:
-                tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
-                tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
-            elif &#39;Mfg id&#39; in line:
-                tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-                tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
-            elif &#39;Model&#39; in line:
-                name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
-                try:name[0] = name[0].lower().capitalize()
-                except IndexError:pass
-                tmp[&#39;name&#39;] = &#39; &#39;.join(name)
-                try:tmp[&#39;model&#39;] = name[1]
-                except IndexError:pass
-            elif &#39;Serial number&#39; in line:
-                tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
-            elif &#39;EDID hex dump:&#39; in line:
-                try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
-                except:pass
-    data.append(tmp)
-    ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
-    if len(args)==1:
-        ret = DDCUtil.__filter_monitors(args[0], data)
+    try:
+        ret = __cache__.get(&#39;ddcutil_monitors_info&#39;)
+    except:
+        out = []
+        #use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
+        for line in str(subprocess.check_output([DDCUtil.executable, &#39;detect&#39;, &#39;-v&#39;, f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;], stderr=subprocess.DEVNULL))[2:-1].split(&#39;\\n&#39;):
+            if line!=&#39;&#39; and line.startswith((&#39;Invalid display&#39;, &#39;Display&#39;, &#39;\t&#39;, &#39; &#39;)):
+                out.append(line)
+        data = []
+        tmp = {}
+        count = 0
+        for i in range(len(out)):
+            line = out[i]
+            if not line.startswith((&#39;\t&#39;, &#39; &#39;)):
+                data.append(tmp)
+                tmp = {&#39;tmp&#39;: line, &#39;method&#39;:DDCUtil, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                count+=1
+            else:
+                if &#39;I2C bus&#39; in line:
+                    tmp[&#39;i2c_bus&#39;] = line[line.index(&#39;/&#39;):]
+                    tmp[&#39;bus_number&#39;] = int(tmp[&#39;i2c_bus&#39;].replace(&#39;/dev/i2c-&#39;,&#39;&#39;))
+                elif &#39;Mfg id&#39; in line:
+                    tmp[&#39;manufacturer_id&#39;] = line.replace(&#39;Mfg id:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                    try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer_id&#39;])
+                    except:tmp[&#39;manufacturer&#39;] = None
+                elif &#39;Model&#39; in line:
+                    name = [i for i in line.replace(&#39;Model:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).split(&#39; &#39;) if i!=&#39;&#39;]
+                    try:name[0] = name[0].lower().capitalize()
+                    except IndexError:pass
+                    tmp[&#39;name&#39;] = &#39; &#39;.join(name)
+                    try:tmp[&#39;model&#39;] = name[1]
+                    except IndexError:pass
+                elif &#39;Serial number&#39; in line:
+                    tmp[&#39;serial&#39;] = line.replace(&#39;Serial number:&#39;, &#39;&#39;).replace(&#39;\t&#39;, &#39;&#39;).replace(&#39; &#39;, &#39;&#39;)
+                elif &#39;EDID hex dump:&#39; in line:
+                    try:tmp[&#39;edid&#39;] = &#39;&#39;.join([j[j.index(&#39;+0&#39;)+8:j.index(&#39;+0&#39;)+55].replace(&#39; &#39;,&#39;&#39;) for j in out[i+2:i+10]])
+                    except:pass
+        data.append(tmp)
+        ret = [{k:v for k,v in i.items() if k!=&#39;tmp&#39;} for i in data if i!={} and &#39;Invalid display&#39; not in i[&#39;tmp&#39;]]
+        __cache__.store(&#39;ddcutil_monitors_info&#39;, ret)
+
+    if display!=None:
+        ret = DDCUtil.__filter_monitors(display, data)
         if len(ret)==1:
             ret=ret[0]
     return ret</code></pre>
@@ -1785,12 +1828,12 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
         &#39;&#39;&#39;internal function, do not call&#39;&#39;&#39;
         monitors = Light.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;path&#39;, &#39;light_path&#39;])
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns information about detected displays as reported by Light
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return information about. Can be index, name, path or edid
+            display (str or int): [*Optional*] the monitor to return information about. Can be index, name, path, model, index or edid
 
         Returns:
             list: list of dictionaries if no monitor is specified
@@ -1811,16 +1854,18 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
             edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)
             ```
         &#39;&#39;&#39;
-        res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
-        displays = []
-        count=0
-        for r in res:
-            if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
-                r = r[r.index(&#39;backlight/&#39;)+10:]
-                if os.path.isdir(f&#39;/sys/class/backlight/{r}&#39;):
-                    tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                    count+=1
-                    if os.path.isfile(tmp[&#39;path&#39;]+&#39;/device/edid&#39;):
+        try:
+            displays = __cache__.get(&#39;light_monitors_info&#39;)
+        except:
+            res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
+            displays = []
+            count=0
+            for r in res:
+                if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
+                    r = r[r.index(&#39;backlight/&#39;)+10:]
+                    if os.path.isfile(f&#39;/sys/class/backlight/{r}/device/edid&#39;):
+                        tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                        count+=1
                         try:
                             out = subprocess.check_output([&#39;hexdump&#39;, tmp[&#39;path&#39;]+&#39;/device/edid&#39;], stderr=subprocess.DEVNULL).decode().split(&#39;\n&#39;)
                             #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
@@ -1836,14 +1881,16 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
                                 tmp[&#39;serial&#39;] = serial
                                 tmp[&#39;name&#39;] = name
                             tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                            tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                            try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                            except:tmp[&#39;manufacturer_id&#39;] = None
                             tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
                         except:
                             pass
                         displays.append(tmp)
+            __cache__.store(&#39;light_monitors_info&#39;, displays)
 
-        if len(args)==1:
-            displays = Light.__filter_monitors(args[0], displays)
+        if display!=None:
+            displays = Light.__filter_monitors(display, displays)
             if len(displays)==1:
                 displays = displays[0]
         return displays
@@ -1896,8 +1943,7 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
             info = Light.__filter_monitors(display, info)
         for i in info:
             light_path = i[&#39;light_path&#39;]
-            command = f&#39;{Light.executable} -S {value} -s {light_path}&#39;
-            subprocess.call(command.split(&#34; &#34;))
+            subprocess.call(f&#39;{Light.executable} -S {value} -s {light_path}&#39;.split(&#34; &#34;))
         return Light.get_brightness(display=display) if not no_return else None
 
     def get_brightness(display = None):
@@ -1931,8 +1977,7 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
         results = []
         for i in info:
             light_path = i[&#39;light_path&#39;]
-            command = f&#39;{Light.executable} -G -s {light_path}&#39;
-            results.append(subprocess.run(command.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
+            results.append(subprocess.run(f&#39;{Light.executable} -G -s {light_path}&#39;.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
         results = [int(round(float(str(i)),0)) for i in results]
         return results[0] if len(results)==1 else results</code></pre>
 </details>
@@ -2009,21 +2054,20 @@ edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')
     results = []
     for i in info:
         light_path = i[&#39;light_path&#39;]
-        command = f&#39;{Light.executable} -G -s {light_path}&#39;
-        results.append(subprocess.run(command.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
+        results.append(subprocess.run(f&#39;{Light.executable} -G -s {light_path}&#39;.split(&#39; &#39;),stdout=subprocess.PIPE).stdout.decode())
     results = [int(round(float(str(i)),0)) for i in results]
     return results[0] if len(results)==1 else results</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.linux.Light.get_display_info"><code class="name flex">
-<span>def <span class="ident">get_display_info</span></span>(<span>*args)</span>
+<span>def <span class="ident">get_display_info</span></span>(<span>display=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns information about detected displays as reported by Light</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>monitor</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>[<em>Optional</em>] the monitor to return information about. Can be index, name, path or edid</dd>
+<dt><strong><code>display</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>[<em>Optional</em>] the monitor to return information about. Can be index, name, path, model, index or edid</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2049,12 +2093,12 @@ edp_info = sbc.linux.Light.get_display_info('edp-backlight')
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_display_info(*args):
+<pre><code class="python">def get_display_info(display = None):
     &#39;&#39;&#39;
     Returns information about detected displays as reported by Light
 
     Args:
-        monitor (str or int): [*Optional*] the monitor to return information about. Can be index, name, path or edid
+        display (str or int): [*Optional*] the monitor to return information about. Can be index, name, path, model, index or edid
 
     Returns:
         list: list of dictionaries if no monitor is specified
@@ -2075,16 +2119,18 @@ edp_info = sbc.linux.Light.get_display_info('edp-backlight')
         edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)
         ```
     &#39;&#39;&#39;
-    res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
-    displays = []
-    count=0
-    for r in res:
-        if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
-            r = r[r.index(&#39;backlight/&#39;)+10:]
-            if os.path.isdir(f&#39;/sys/class/backlight/{r}&#39;):
-                tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                count+=1
-                if os.path.isfile(tmp[&#39;path&#39;]+&#39;/device/edid&#39;):
+    try:
+        displays = __cache__.get(&#39;light_monitors_info&#39;)
+    except:
+        res=subprocess.run([Light.executable, &#39;-L&#39;],stdout=subprocess.PIPE).stdout.decode().split(&#39;\n&#39;)
+        displays = []
+        count=0
+        for r in res:
+            if &#39;backlight&#39; in r and &#39;sysfs/backlight/auto&#39; not in r:
+                r = r[r.index(&#39;backlight/&#39;)+10:]
+                if os.path.isfile(f&#39;/sys/class/backlight/{r}/device/edid&#39;):
+                    tmp = {&#39;name&#39;:r, &#39;path&#39;: f&#39;/sys/class/backlight/{r}&#39;, &#39;light_path&#39;: f&#39;sysfs/backlight/{r}&#39;, &#39;method&#39;: Light, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                    count+=1
                     try:
                         out = subprocess.check_output([&#39;hexdump&#39;, tmp[&#39;path&#39;]+&#39;/device/edid&#39;], stderr=subprocess.DEVNULL).decode().split(&#39;\n&#39;)
                         #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
@@ -2100,14 +2146,16 @@ edp_info = sbc.linux.Light.get_display_info('edp-backlight')
                             tmp[&#39;serial&#39;] = serial
                             tmp[&#39;name&#39;] = name
                         tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                        tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                        try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                        except:tmp[&#39;manufacturer_id&#39;] = None
                         tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
                     except:
                         pass
                     displays.append(tmp)
+        __cache__.store(&#39;light_monitors_info&#39;, displays)
 
-    if len(args)==1:
-        displays = Light.__filter_monitors(args[0], displays)
+    if display!=None:
+        displays = Light.__filter_monitors(display, displays)
         if len(displays)==1:
             displays = displays[0]
     return displays</code></pre>
@@ -2214,8 +2262,7 @@ sbc.linux.Light.set_brightness(75, display = 'edp-backlight')
         info = Light.__filter_monitors(display, info)
     for i in info:
         light_path = i[&#39;light_path&#39;]
-        command = f&#39;{Light.executable} -S {value} -s {light_path}&#39;
-        subprocess.call(command.split(&#34; &#34;))
+        subprocess.call(f&#39;{Light.executable} -S {value} -s {light_path}&#39;.split(&#34; &#34;))
     return Light.get_brightness(display=display) if not no_return else None</code></pre>
 </details>
 </dd>
@@ -2393,12 +2440,12 @@ sbc.linux.XBacklight.set_brightness(100)
         monitors = XRandr.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=[&#39;interface&#39;])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns a dictionary of info about all detected monitors as reported by xrandr
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface or index
+            display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface, edid or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -2421,35 +2468,40 @@ sbc.linux.XBacklight.set_brightness(100)
             benq_info = sbc.linux.XRandr.get_display_info(&#39;BenQ GL2450HM&#39;)
             ```
         &#39;&#39;&#39;
-        out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
-        names = XRandr.get_display_interfaces()
-        data = []
-        tmp = {}
-        count = 0
-        for i in out:
-            if i.startswith(tuple(names)):
-                data.append(tmp)
-                tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-                count+=1
-            elif &#39;EDID:&#39; in i:
-                st = out[out.index(tmp[&#39;line&#39;]):]
-                edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
-                edid = &#39;&#39;.join(edid)
-                tmp[&#39;edid&#39;] = edid
-                name, serial = _EDID.parse_edid(edid)
-                tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
-                if name!=None:
-                    tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                    tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
-                    tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
-                    tmp[&#39;serial&#39;] = serial
-            elif &#39;Brightness:&#39; in i:
-                tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
+        try:
+            data = __cache__.get(&#39;xrandr_monitors_info&#39;)
+        except:
+            out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
+            names = XRandr.get_display_interfaces()
+            data = []
+            tmp = {}
+            count = 0
+            for i in out:
+                if i.startswith(tuple(names)):
+                    data.append(tmp)
+                    tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                    count+=1
+                elif &#39;EDID:&#39; in i:
+                    st = out[out.index(tmp[&#39;line&#39;]):]
+                    edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
+                    edid = &#39;&#39;.join(edid)
+                    tmp[&#39;edid&#39;] = edid
+                    name, serial = _EDID.parse_edid(edid)
+                    tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
+                    if name!=None:
+                        tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
+                        try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                        except:tmp[&#39;manufacturer_id&#39;] = None
+                        tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
+                        tmp[&#39;serial&#39;] = serial
+                elif &#39;Brightness:&#39; in i:
+                    tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
 
-        data.append(tmp)
-        data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
-        if len(args)==1:
-            data = XRandr.__filter_monitors(args[0], data)
+            data.append(tmp)
+            data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
+            __cache__.store(&#39;xrandr_monitors_info&#39;, data)
+        if display!=None:
+            data = XRandr.__filter_monitors(display, data)
             if len(data)==1:
                 data=data[0]
         return data
@@ -2619,14 +2671,14 @@ primary_brightness = sbc.linux.XRandr.get_brightness(display=0)
 </details>
 </dd>
 <dt id="screen_brightness_control.linux.XRandr.get_display_info"><code class="name flex">
-<span>def <span class="ident">get_display_info</span></span>(<span>*args)</span>
+<span>def <span class="ident">get_display_info</span></span>(<span>display=None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns a dictionary of info about all detected monitors as reported by xrandr</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>monitor</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>[<em>Optional</em>] the monitor to return info about. Pass in the serial number, name, model, interface or index</dd>
+<dt><strong><code>display</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>[<em>Optional</em>] the monitor to return info about. Pass in the serial number, name, model, interface, edid or index</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2654,12 +2706,12 @@ benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_display_info(*args):
+<pre><code class="python">def get_display_info(display = None):
     &#39;&#39;&#39;
     Returns a dictionary of info about all detected monitors as reported by xrandr
 
     Args:
-        monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface or index
+        display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface, edid or index
 
     Returns:
         list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -2682,35 +2734,40 @@ benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')
         benq_info = sbc.linux.XRandr.get_display_info(&#39;BenQ GL2450HM&#39;)
         ```
     &#39;&#39;&#39;
-    out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
-    names = XRandr.get_display_interfaces()
-    data = []
-    tmp = {}
-    count = 0
-    for i in out:
-        if i.startswith(tuple(names)):
-            data.append(tmp)
-            tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
-            count+=1
-        elif &#39;EDID:&#39; in i:
-            st = out[out.index(tmp[&#39;line&#39;]):]
-            edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
-            edid = &#39;&#39;.join(edid)
-            tmp[&#39;edid&#39;] = edid
-            name, serial = _EDID.parse_edid(edid)
-            tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
-            if name!=None:
-                tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
-                tmp[&#39;manufacturer_id&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
-                tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
-                tmp[&#39;serial&#39;] = serial
-        elif &#39;Brightness:&#39; in i:
-            tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
+    try:
+        data = __cache__.get(&#39;xrandr_monitors_info&#39;)
+    except:
+        out = [i for i in subprocess.check_output([XRandr.executable, &#39;--verbose&#39;]).decode().split(&#39;\n&#39;) if i!=&#39;&#39;]
+        names = XRandr.get_display_interfaces()
+        data = []
+        tmp = {}
+        count = 0
+        for i in out:
+            if i.startswith(tuple(names)):
+                data.append(tmp)
+                tmp = {&#39;interface&#39;:i.split(&#39; &#39;)[0], &#39;line&#39;:i, &#39;method&#39;:XRandr, &#39;index&#39;:count, &#39;model&#39;:None, &#39;serial&#39;:None, &#39;manufacturer&#39;:None, &#39;manufacturer_id&#39;:None, &#39;edid&#39;:None}
+                count+=1
+            elif &#39;EDID:&#39; in i:
+                st = out[out.index(tmp[&#39;line&#39;]):]
+                edid = [st[j].replace(&#39;\t&#39;,&#39;&#39;).replace(&#39; &#39;, &#39;&#39;) for j in range(st.index(i)+1, st.index(i)+9)]
+                edid = &#39;&#39;.join(edid)
+                tmp[&#39;edid&#39;] = edid
+                name, serial = _EDID.parse_edid(edid)
+                tmp[&#39;name&#39;] = name if name!=None else tmp[&#39;interface&#39;]
+                if name!=None:
+                    tmp[&#39;manufacturer&#39;] = name.split(&#39; &#39;)[0]
+                    try:tmp[&#39;manufacturer_id&#39;], tmp[&#39;manufacturer&#39;] = _monitor_brand_lookup(tmp[&#39;manufacturer&#39;])
+                    except:tmp[&#39;manufacturer_id&#39;] = None
+                    tmp[&#39;model&#39;] = name.split(&#39; &#39;)[1]
+                    tmp[&#39;serial&#39;] = serial
+            elif &#39;Brightness:&#39; in i:
+                tmp[&#39;brightness&#39;] = int(float(i.replace(&#39;Brightness:&#39;,&#39;&#39;).replace(&#39; &#39;,&#39;&#39;).replace(&#39;\t&#39;,&#39;&#39;))*100)
 
-    data.append(tmp)
-    data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
-    if len(args)==1:
-        data = XRandr.__filter_monitors(args[0], data)
+        data.append(tmp)
+        data = [{k:v for k,v in i.items() if k!=&#39;line&#39;} for i in data if i!={} and (i[&#39;serial&#39;]==None or &#39;\\x&#39; not in i[&#39;serial&#39;])]
+        __cache__.store(&#39;xrandr_monitors_info&#39;, data)
+    if display!=None:
+        data = XRandr.__filter_monitors(display, data)
         if len(data)==1:
             data=data[0]
     return data</code></pre>
