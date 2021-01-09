@@ -388,9 +388,6 @@ class VCP:
             benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
             ```
         '''
-        import time
-        start=time.time()
-
         if display!=None:
             all_monitors = VCP.get_display_info()
             monitors = filter_monitors(display = display, haystack=all_monitors)
