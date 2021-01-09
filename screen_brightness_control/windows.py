@@ -5,15 +5,11 @@ from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __c
 
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
-    try:
-        return __cache__.get('wmi_instance')
-    except:
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        instance = wmi.WMI(namespace='wmi')
-        __cache__.store('wmi_instance', instance)
-        return instance
+    #WMI calls don't work in new threads so we have to run this check
+    if threading.current_thread() != threading.main_thread():
+        pythoncom.CoInitialize()
+    instance = wmi.WMI(namespace='wmi')
+    return instance
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -65,18 +61,22 @@ class WMI:
                     except:manufacturer = None
 
                     try:
-                        edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[m.InstanceName][0]])
+                        edid = ''
+                        for char in descriptors[m.InstanceName][0]:
+                            char = str(hex(char)).replace('0x','')
+                            if len(char)==1:
+                                char = '0'+char
+                            edid+=char
                     except:
                         edid = None
 
-                    tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid}
-                    info.append(tmp)
+                    info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid})
                     a+=1
             except:
                 pass
             __cache__.store('wmi_monitor_info', info)
         if display!=None:
-            indexes = [i['index'] for i in filter_monitors(display=display, haystack=info, method='wmi')]
+            indexes = [i['index'] for i in filter_monitors(display=display, haystack=info)]
             info = [info[i] for i in indexes]
         return info
     def get_display_names():
@@ -167,8 +167,11 @@ class WMI:
         '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display!=None:
-            indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
-            brightness_method = [brightness_method[i] for i in indexes]
+            displays = WMI.get_display_info(display)
+            if displays is dict:
+                displays = [displays]
+            brightness_method = [i['index'] for i in displays]
+
         values = [i.CurrentBrightness for i in brightness_method]
         return values[0] if len(values)==1 else values
 
@@ -247,7 +250,7 @@ class VCP:
             info = args[0]
         else:
             info = VCP.get_display_info()
-        return filter_monitors(display = display, haystack = info, method='vcp')
+        return filter_monitors(display = display, haystack = info)
     def get_display_info(display=None):
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
@@ -290,15 +293,21 @@ class VCP:
                         serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
                         manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
                         manufacturer = manufacturer.lower().capitalize()
-                        try:man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                        except:man_id = None
                         try:
-                            edid = ''.join([str(hex(i)).replace('0x','') for i in descriptors[monitor.InstanceName][0]])
+                            man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                        except:
+                            man_id = None
+                        try:
+                            edid = ''
+                            for char in descriptors[monitor.InstanceName][0]:
+                                char = str(hex(char)).replace('0x','')
+                                if len(char) == 1:
+                                    char = '0'+char
+                                edid+=char
                         except:
                             edid = None
 
-                        tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid}
-                        info.append(tmp)
+                        info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
                         a+=1
                     except:
                         pass
@@ -307,7 +316,7 @@ class VCP:
             __cache__.store('vcp_monitor_info', info)
         if display!=None:
             try:
-                info = filter_monitors(display=display, haystack=info, method='vcp')
+                info = filter_monitors(display=display, haystack=info)
                 return info[0] if len(info)==1 else info
             except:
                 pass
