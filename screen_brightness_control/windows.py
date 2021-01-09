@@ -1,4 +1,4 @@
-import wmi, threading, pythoncom, ctypes
+import wmi, threading, pythoncom, ctypes, win32api
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
@@ -278,8 +278,12 @@ class VCP:
         except:
             info = []
             try:
+                monitors_enum = win32api.EnumDisplayMonitors()
+                monitors_sorted = [win32api.EnumDisplayDevices(win32api.GetMonitorInfo(i[0])['Device'], 0, 1).DeviceID.split('#')[2] for i in monitors_enum]
+
                 wmi = _wmi_init()
-                monitors = wmi.WmiMonitorID()
+                monitors = sorted(wmi.WmiMonitorID(), key=lambda x:monitors_sorted.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+
                 try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
                 except:pass
                 a=0
