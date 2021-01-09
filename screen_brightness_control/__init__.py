@@ -362,9 +362,10 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
         ```
     '''
-
     if haystack:
-        monitors = [i for i in haystack if method==None or method.lower()==i['method'].__name__.lower()]
+        monitors = haystack
+        if method!=None:
+            monitors = [i for i in haystack if method.lower()==i['method'].__name__.lower()]
     else:
         monitors = list_monitors_info(method=method)
 
@@ -374,7 +375,13 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         if type(display) is int:
             return [monitors[display]]
         else:
-            monitors = [i for i in monitors if any(display==i[j] for j in ['name','serial','model','edid']+include if i[j]!=None)]
+            result = []
+            for monitor in monitors:
+                for field in ['edid','serial','name','model']+include:
+                    if monitor[field]!=None and display == monitor[field]:
+                        result.append(monitor)
+                        break
+            monitors = result
 
     if monitors == []:
         msg = 'no monitors found'

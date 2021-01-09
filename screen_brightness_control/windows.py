@@ -278,9 +278,7 @@ class VCP:
         except:
             info = []
             try:
-                monitors_enum = win32api.EnumDisplayMonitors()
-                monitors_sorted = [win32api.EnumDisplayDevices(win32api.GetMonitorInfo(i[0])['Device'], 0, 1).DeviceID.split('#')[2] for i in monitors_enum]
-
+                monitors_sorted = [win32api.EnumDisplayDevices(win32api.GetMonitorInfo(i[0])['Device'], 0, 1).DeviceID.split('#')[2] for i in win32api.EnumDisplayMonitors()]
                 wmi = _wmi_init()
                 monitors = sorted(wmi.WmiMonitorID(), key=lambda x:monitors_sorted.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
 
@@ -392,20 +390,31 @@ class VCP:
         '''
         import time
         start=time.time()
-        values = []
-        for m in VCP.iter_physical_monitors():
-            cur_out = DWORD()
-            if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
-                values.append(cur_out.value)
-            else:
-                values.append(None)
-            del(cur_out)
 
         if display!=None:
-            display = filter_monitors(display = display, method='vcp')
-            values = [values[i['index']] for i in display]
+            all_monitors = VCP.get_display_info()
+            monitors = filter_monitors(display = display, haystack=all_monitors)
+            indexes = [i['index'] for i in monitors]
 
-        values = [i for i in values if i!=None]
+        count = 0
+        values = []
+        for m in VCP.iter_physical_monitors():
+            try:
+                v = __cache__.get('vcp_'+all_monitors[count]['edid']+'_brightness')
+            except:
+                cur_out = DWORD()
+                if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
+                    v = cur_out.value
+                else:
+                    v = None
+                del(cur_out)
+            if v!=None and (display==None or (count in indexes)):
+                try:
+                    __cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.5)
+                except IndexError:pass
+                values.append(v)
+            count+=1
+
         if values==[]:
             return None
         return values[0] if len(values)==1 else values
