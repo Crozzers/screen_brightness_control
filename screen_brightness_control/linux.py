@@ -86,12 +86,12 @@ class Light:
         '''internal function, do not call'''
         monitors = Light.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=['path', 'light_path'])
-    def get_display_info(*args):
+    def get_display_info(display = None):
         '''
         Returns information about detected displays as reported by Light
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return information about. Can be index, name, path or edid
+            display (str or int): [*Optional*] the monitor to return information about. Can be index, name, path, model, index or edid
 
         Returns:
             list: list of dictionaries if no monitor is specified
@@ -121,35 +121,34 @@ class Light:
             for r in res:
                 if 'backlight' in r and 'sysfs/backlight/auto' not in r:
                     r = r[r.index('backlight/')+10:]
-                    if os.path.isdir(f'/sys/class/backlight/{r}'):
+                    if os.path.isfile(f'/sys/class/backlight/{r}/device/edid'):
                         tmp = {'name':r, 'path': f'/sys/class/backlight/{r}', 'light_path': f'sysfs/backlight/{r}', 'method': Light, 'index':count, 'model':None, 'serial':None, 'manufacturer':None, 'manufacturer_id':None, 'edid':None}
                         count+=1
-                        if os.path.isfile(tmp['path']+'/device/edid'):
-                            try:
-                                out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
-                                #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
-                                edid = ''
-                                for line in out:
-                                    line = line.split(' ')
-                                    for i in line:
-                                        if len(i)==4:
-                                            edid+=i[2:]+i[:2]
-                                tmp['edid'] = edid
-                                name, serial = _EDID.parse_edid(edid)
-                                if name!=None:
-                                    tmp['serial'] = serial
-                                    tmp['name'] = name
-                                tmp['manufacturer'] = name.split(' ')[0]
-                                try:tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
-                                except:tmp['manufacturer_id'] = None
-                                tmp['model'] = name.split(' ')[1]
-                            except:
-                                pass
-                            displays.append(tmp)
+                        try:
+                            out = subprocess.check_output(['hexdump', tmp['path']+'/device/edid'], stderr=subprocess.DEVNULL).decode().split('\n')
+                            #either the hexdump reports each hex char backwards (ff00 instead of 00ff) or both xrandr and ddcutil do so I swap these bits around
+                            edid = ''
+                            for line in out:
+                                line = line.split(' ')
+                                for i in line:
+                                    if len(i)==4:
+                                        edid+=i[2:]+i[:2]
+                            tmp['edid'] = edid
+                            name, serial = _EDID.parse_edid(edid)
+                            if name!=None:
+                                tmp['serial'] = serial
+                                tmp['name'] = name
+                            tmp['manufacturer'] = name.split(' ')[0]
+                            try:tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
+                            except:tmp['manufacturer_id'] = None
+                            tmp['model'] = name.split(' ')[1]
+                        except:
+                            pass
+                        displays.append(tmp)
             __cache__.store('light_monitors_info', displays)
 
-        if len(args)==1:
-            displays = Light.__filter_monitors(args[0], displays)
+        if display!=None:
+            displays = Light.__filter_monitors(display, displays)
             if len(displays)==1:
                 displays = displays[0]
         return displays
@@ -202,8 +201,7 @@ class Light:
             info = Light.__filter_monitors(display, info)
         for i in info:
             light_path = i['light_path']
-            command = f'{Light.executable} -S {value} -s {light_path}'
-            subprocess.call(command.split(" "))
+            subprocess.call(f'{Light.executable} -S {value} -s {light_path}'.split(" "))
         return Light.get_brightness(display=display) if not no_return else None
 
     def get_brightness(display = None):
@@ -237,8 +235,7 @@ class Light:
         results = []
         for i in info:
             light_path = i['light_path']
-            command = f'{Light.executable} -G -s {light_path}'
-            results.append(subprocess.run(command.split(' '),stdout=subprocess.PIPE).stdout.decode())
+            results.append(subprocess.run(f'{Light.executable} -G -s {light_path}'.split(' '),stdout=subprocess.PIPE).stdout.decode())
         results = [int(round(float(str(i)),0)) for i in results]
         return results[0] if len(results)==1 else results
 
@@ -298,12 +295,12 @@ class XRandr:
         monitors = XRandr.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=['interface'])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         '''
         Returns a dictionary of info about all detected monitors as reported by xrandr
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface or index
+            display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, interface, edid or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -358,8 +355,8 @@ class XRandr:
             data.append(tmp)
             data = [{k:v for k,v in i.items() if k!='line'} for i in data if i!={} and (i['serial']==None or '\\x' not in i['serial'])]
             __cache__.store('xrandr_monitors_info', data)
-        if len(args)==1:
-            data = XRandr.__filter_monitors(args[0], data)
+        if display!=None:
+            data = XRandr.__filter_monitors(display, data)
             if len(data)==1:
                 data=data[0]
         return data
@@ -473,13 +470,13 @@ class DDCUtil:
         monitors = DDCUtil.get_display_info() if len(args)==0 else args[0]
         return filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
 
-    def get_display_info(*args):
+    def get_display_info(display = None):
         '''
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command 'ddcutil detect' and parsing the output.
 
         Args:
-            monitor (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, i2c bus or index
+            display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid, i2c bus or index
 
         Returns:
             list: list of dictonaries if a monitor is not specified or the given `monitor` argument has multiple matches
@@ -495,7 +492,7 @@ class DDCUtil:
                 for key, value in i.items():
                     print(key, ':', value)
 
-            # get information about the first XRandr addressable monitor
+            # get information about the first DDCUtil addressable monitor
             primary_info = sbc.linux.DDCUtil.get_display_info(0)
 
             # get information about a monitor with a specific name
@@ -543,8 +540,8 @@ class DDCUtil:
             ret = [{k:v for k,v in i.items() if k!='tmp'} for i in data if i!={} and 'Invalid display' not in i['tmp']]
             __cache__.store('ddcutil_monitors_info', ret)
 
-        if len(args)==1:
-            ret = DDCUtil.__filter_monitors(args[0], data)
+        if display!=None:
+            ret = DDCUtil.__filter_monitors(display, data)
             if len(ret)==1:
                 ret=ret[0]
         return ret
@@ -593,7 +590,13 @@ class DDCUtil:
             monitors = DDCUtil.__filter_monitors(display, monitors)
         res = []
         for m in monitors:
-            out = subprocess.check_output([DDCUtil.executable,'getvcp','10','-t','-b',str(m['bus_number']), f'--sleep-multiplier={DDCUtil.sleep_multiplier}']).decode().split(' ')[-2]
+            try:
+                out = __cache__.get('ddcutil_'+m['edid']+'_brightness')
+                if out==None:
+                    raise Exception
+            except:
+                out = subprocess.check_output([DDCUtil.executable,'getvcp','10','-t','-b',str(m['bus_number']), f'--sleep-multiplier={DDCUtil.sleep_multiplier}']).decode().split(' ')[-2]
+                __cache__.store('ddcutil_'+m['edid']+'_brightness', out, expires=0.5)
             try:res.append(int(out))
             except:pass
         if len(res) == 1:
@@ -631,12 +634,13 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None):
+def list_monitors_info(method=None, allow_duplicates=False):
     '''
     Lists detailed information about all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
+        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -661,7 +665,7 @@ def list_monitors_info(method=None):
         ```
     '''
     try:
-        return __cache__.get('linux_monitors_info', method=method)
+        return __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
     except:
         methods = [XRandr, DDCUtil, Light]
         if method!=None:
@@ -674,10 +678,10 @@ def list_monitors_info(method=None):
         for m in methods:
             #to make sure each display (with unique edid) is only reported once
             for i in m.get_display_info():
-                if i['edid'] not in edids:
+                if allow_duplicates or i['edid'] not in edids:
                     edids.append(i['edid'])
                     info.append(i)
-        __cache__.store('linux_monitors_info', info, method=method)
+        __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
 def list_monitors(method=None):

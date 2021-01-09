@@ -144,7 +144,7 @@ class Monitor():
             print(benq_monitor['name'])
             ```
         '''
-        monitors_info = list_monitors_info()
+        monitors_info = list_monitors_info(allow_duplicates=True)
         if type(display) is dict:
             if display in monitors_info:
                 info = display
@@ -367,7 +367,7 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         if method!=None:
             monitors = [i for i in haystack if method.lower()==i['method'].__name__.lower()]
     else:
-        monitors = list_monitors_info(method=method)
+        monitors = list_monitors_info(method=method, allow_duplicates=True)
 
     if display!=None:
         if type(display) not in (str, int):

@@ -463,12 +463,13 @@ class VCP:
         return VCP.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None):
+def list_monitors_info(method=None, allow_duplicates=False):
     '''
     Lists detailed information about all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
+        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -491,7 +492,7 @@ def list_monitors_info(method=None):
         ```
     '''
     try:
-        return __cache__.get('windows_monitors_info', method=method)
+        return __cache__.get('windows_monitors_info', method=method, allow_duplicates=allow_duplicates)
     except:
         methods = [WMI,VCP]
         if method!=None:
@@ -504,10 +505,10 @@ def list_monitors_info(method=None):
         for m in methods:
             #to make sure each display (with unique edid) is only reported once
             for i in m.get_display_info():
-                if i['edid'] not in edids:
+                if allow_duplicates or i['edid'] not in edids:
                     edids.append(i['edid'])
                     info.append(i)
-        __cache__.store('windows_monitors_info', info, method=method)
+        __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
 def list_monitors(method=None):
