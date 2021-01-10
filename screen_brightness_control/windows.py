@@ -170,7 +170,7 @@ class WMI:
             displays = WMI.get_display_info(display)
             if displays is dict:
                 displays = [displays]
-            brightness_method = [i['index'] for i in displays]
+            brightness_method = [brightness_method[i['index']] for i in displays]
 
         values = [i.CurrentBrightness for i in brightness_method]
         return values[0] if len(values)==1 else values
