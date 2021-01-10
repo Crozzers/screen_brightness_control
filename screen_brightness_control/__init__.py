@@ -13,6 +13,8 @@ class __Cache(dict):
         return self.__getitem__(*args, **kwargs)
     def store(self, *args, **kwargs):
         return self.__setitem__(*args, **kwargs)
+    def expire(self, key):
+        del(self[key])
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",

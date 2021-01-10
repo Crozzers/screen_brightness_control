@@ -454,12 +454,14 @@ class VCP:
         '''
         if display!=None:
             displays = filter_monitors(display = display, method='vcp')
-            displays = [i['index'] for i in displays]
-        loops = 0
+            indexes = [i['index'] for i in displays]
+        count = 0
         for m in VCP.iter_physical_monitors():
-            if display==None or (loops in displays):
+            if display==None or (count in indexes):
                 windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
-            loops+=1
+                try:__cache__.expire('vcp_'+displays[indexes.index(count)]['edid']+'_brightness')
+                except:pass
+            count+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
 

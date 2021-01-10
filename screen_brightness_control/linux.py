@@ -631,6 +631,8 @@ class DDCUtil:
             monitors = DDCUtil.__filter_monitors(display, monitors)
         for m in monitors:
             subprocess.run([DDCUtil.executable,'setvcp','10',str(value),'-b', str(m['bus_number']), f'--sleep-multiplier={DDCUtil.sleep_multiplier}'])
+            try:__cache__.expire('ddcutil_'+m['edid']+'_brightness')
+            except:pass
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
