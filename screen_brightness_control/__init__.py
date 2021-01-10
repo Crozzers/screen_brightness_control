@@ -2,9 +2,14 @@ import platform,time,threading
 
 class __Cache(dict):
     '''class to cache data with a short shelf life'''
+    def __init__(self):
+        self.enabled = True
+        super().__init__()
     def __setitem__(self, key, value, *args, expires=1, **kwargs):
         super().__setitem__(key, (value, expires, time.time(), args, kwargs))
     def __getitem__(self, key, *args, **kwargs):
+        if not self.enabled:
+            raise Exception
         value, expires, created, orig_args, orig_kwargs = super().__getitem__(key)
         if time.time()-expires<created and orig_args==args and orig_kwargs==kwargs:
             return value
@@ -14,7 +19,8 @@ class __Cache(dict):
     def store(self, *args, **kwargs):
         return self.__setitem__(*args, **kwargs)
     def expire(self, key):
-        del(self[key])
+        try:del(self[key])
+        except:pass
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
