@@ -1,4 +1,4 @@
-import wmi, threading, pythoncom, ctypes, win32api
+import wmi, threading, pythoncom, ctypes, win32api, time
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
@@ -409,14 +409,20 @@ class VCP:
                 v = __cache__.get('vcp_'+all_monitors[count]['edid']+'_brightness')
             except:
                 cur_out = DWORD()
-                if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
-                    v = cur_out.value
-                else:
-                    v = None
+                func = lambda: windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None)
+                for i in range(10):
+                    if func():
+                        v = cur_out.value
+                        break
+                    else:
+                        time.sleep(0.02)
+                        v = None
                 del(cur_out)
+                del(func)
+            if v==None:
+                print('MUNKEE')
             if v!=None and (display==None or (count in indexes)):
-                try:
-                    __cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.5)
+                try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.5)
                 except IndexError:pass
                 values.append(v)
             count+=1
@@ -458,9 +464,13 @@ class VCP:
         count = 0
         for m in VCP.iter_physical_monitors():
             if display==None or (count in indexes):
-                windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
-                try:__cache__.expire('vcp_'+displays[indexes.index(count)]['edid']+'_brightness')
-                except:pass
+                func = lambda: windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
+                for i in range(10):
+                    if func():
+                        break
+                    else:
+                        time.sleep(0.02)
+                __cache__.expire('vcp_'+displays[indexes.index(count)]['edid']+'_brightness')
             count+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
