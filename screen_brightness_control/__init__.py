@@ -18,9 +18,23 @@ class __Cache(dict):
         return self.__getitem__(*args, **kwargs)
     def store(self, *args, **kwargs):
         return self.__setitem__(*args, **kwargs)
-    def expire(self, key):
-        try:del(self[key])
-        except:pass
+    def expire(self, key = None, startswith = None, endswith = None):
+        if key!=None:
+            try:del(self[key])
+            except:pass
+        else:
+            badkeys = []
+            for i in self.keys():
+                if startswith!=None and endswith!=None and i.startswith(startswith) and i.endswith(endswith):
+                    badkeys.append(i)
+                elif startswith!=None and endswith==None and i.startswith(startswith):
+                    badkeys.append(i)
+                elif startswith==None and endswith!=None and i.endswith(endswith):
+                    badkeys.append(i)
+                else:
+                    pass
+            for key in badkeys:
+                del(self[key])
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",

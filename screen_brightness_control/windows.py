@@ -418,8 +418,9 @@ class VCP:
                         v = None
                 del(cur_out)
             if v!=None and (display==None or (count in indexes)):
-                try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.5)
-                except IndexError:pass
+                if display!=None and count in indexes:
+                    try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.2)
+                    except IndexError:pass
                 values.append(v)
             count+=1
 
@@ -455,8 +456,11 @@ class VCP:
             ```
         '''
         if display!=None:
-            displays = filter_monitors(display = display, method='vcp')
-            indexes = [i['index'] for i in displays]
+            all_monitors = VCP.get_display_info()
+            indexes = [i['index'] for i in filter_monitors(display = display, haystack = all_monitors)]
+
+        __cache__.expire(startswith='vcp_', endswith='_brightness')
+
         count = 0
         for m in VCP.iter_physical_monitors():
             if display==None or (count in indexes):
@@ -465,7 +469,6 @@ class VCP:
                         break
                     else:
                         time.sleep(0.02)
-                __cache__.expire('vcp_'+displays[indexes.index(count)]['edid']+'_brightness')
             count+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
