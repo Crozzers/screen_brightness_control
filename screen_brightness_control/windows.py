@@ -409,18 +409,14 @@ class VCP:
                 v = __cache__.get('vcp_'+all_monitors[count]['edid']+'_brightness')
             except:
                 cur_out = DWORD()
-                func = lambda: windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None)
                 for i in range(10):
-                    if func():
+                    if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
                         v = cur_out.value
                         break
                     else:
                         time.sleep(0.02)
                         v = None
                 del(cur_out)
-                del(func)
-            if v==None:
-                print('MUNKEE')
             if v!=None and (display==None or (count in indexes)):
                 try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.5)
                 except IndexError:pass
@@ -464,9 +460,8 @@ class VCP:
         count = 0
         for m in VCP.iter_physical_monitors():
             if display==None or (count in indexes):
-                func = lambda: windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
                 for i in range(10):
-                    if func():
+                    if windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value)):
                         break
                     else:
                         time.sleep(0.02)
