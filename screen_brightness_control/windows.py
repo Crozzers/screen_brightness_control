@@ -419,7 +419,7 @@ class VCP:
                 del(cur_out)
             if v!=None and (display==None or (count in indexes)):
                 if display!=None and count in indexes:
-                    try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.2)
+                    try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.1)
                     except IndexError:pass
                 values.append(v)
             count+=1

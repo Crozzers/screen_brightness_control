@@ -23,18 +23,15 @@ class __Cache(dict):
             try:del(self[key])
             except:pass
         else:
-            badkeys = []
-            for i in self.keys():
+            for i in list(self.keys()):
                 if startswith!=None and endswith!=None and i.startswith(startswith) and i.endswith(endswith):
-                    badkeys.append(i)
+                    del(self[i])
                 elif startswith!=None and endswith==None and i.startswith(startswith):
-                    badkeys.append(i)
+                    del(self[i])
                 elif startswith==None and endswith!=None and i.endswith(endswith):
-                    badkeys.append(i)
+                    del(self[i])
                 else:
                     pass
-            for key in badkeys:
-                del(self[key])
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
@@ -570,9 +567,15 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     threads = []
     if 'verbose_error' in kwargs.keys():
         del(kwargs['verbose_error'])
-    for i in filter_monitors(**kwargs):
-        monitor = Monitor(i)
+    
+    try:
+        available_monitors = filter_monitors(**kwargs)
+    except (IndexError, LookupError) as e:
+        raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
+
+    for i in available_monitors:
         try:
+            monitor = Monitor(i)
             #same effect as monitor.is_active()
             current = monitor.get_brightness()
             st, fi = start, finish
