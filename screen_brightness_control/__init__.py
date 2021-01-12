@@ -191,6 +191,8 @@ class Monitor():
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
         self.edid = info['edid']
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
+    def __getitem__(self, item):
+        return getattr(self, item)
     def set_brightness(self, *args, **kwargs):
         '''
         Sets the brightness for this display
