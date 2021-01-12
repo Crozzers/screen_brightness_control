@@ -290,8 +290,6 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         ```
     &#39;&#39;&#39;
     def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
@@ -299,9 +297,8 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+            set_brightness(finish, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
@@ -500,8 +497,6 @@ sbc.fade_brightness(100, blocking=False)
         ```
     &#39;&#39;&#39;
     def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
@@ -509,9 +504,8 @@ sbc.fade_brightness(100, blocking=False)
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+            set_brightness(finish, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
