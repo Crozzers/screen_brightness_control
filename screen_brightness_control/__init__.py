@@ -384,11 +384,18 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         ```
     '''
     if haystack:
-        monitors = haystack
+        monitors_with_duplicates = haystack
         if method!=None:
-            monitors = [i for i in haystack if method.lower()==i['method'].__name__.lower()]
+            monitors_with_duplicates = [i for i in haystack if method.lower()==i['method'].__name__.lower()]
     else:
-        monitors = list_monitors_info(method=method, allow_duplicates=True)
+        monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
+
+    edids = []
+    monitors = []
+    for monitor in monitors_with_duplicates:
+        if monitor['edid'] not in edids:
+            edids.append(monitor['edid'])
+            monitors.append(monitor)
 
     if display!=None:
         if type(display) not in (str, int):
@@ -397,11 +404,13 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
             return [monitors[display]]
         else:
             result = []
-            for monitor in monitors:
+            for monitor in monitors_with_duplicates:
                 for field in ['edid','serial','name','model']+include:
                     if monitor[field]!=None and display == monitor[field]:
-                        result.append(monitor)
-                        break
+                        if monitor['edid'] in edids:
+                            result.append(monitor)
+                            edids.remove(monitor['edid'])
+                            break
             monitors = result
 
     if monitors == []:

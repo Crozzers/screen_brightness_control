@@ -27,7 +27,7 @@ if __name__=='__main__':
 
         if args.get:
             try:
-                monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method=args.method)]
+                monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method = args.method)]
                 for monitor in monitors:
                     name = monitor.name
                     if args.verbose:
@@ -40,7 +40,7 @@ if __name__=='__main__':
                     except:
                         print(f'{name}: Failed')
             except:
-                print(SBC.get_brightness(display = args.display, method=args.method))
+                print(SBC.get_brightness(display = args.display, method = args.method))
         elif args.set!=None:
             SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:
@@ -65,8 +65,8 @@ if __name__=='__main__':
                         if monitors[i]['edid']!=None:
                             #split str into pairs of characters
                             edid = [monitors[i]['edid'][j:j+2] for j in range(0, len(monitors[i]['edid']), 2)]
-                            #make the characters form 8 pair long lines
-                            msg += '\n\t\t'+'\n\t\t'.join([' '.join(edid[j:j+8]) for j in range(0, len(edid), 8)])
+                            #make the characters form 16 pair long lines
+                            msg += '\n\t\t'+'\n\t\t'.join([' '.join(edid[j:j+16]) for j in range(0, len(edid), 16)])
                         else:
                             msg+=' None'
 
