@@ -262,8 +262,6 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         ```
     '''
     def fade(start, finish, increment, **kwargs):
-        if 'no_return' not in kwargs.keys():
-            kwargs['no_return']=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start>finish:
@@ -271,9 +269,8 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        del(kwargs['no_return'])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+            set_brightness(finish, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
