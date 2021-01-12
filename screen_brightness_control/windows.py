@@ -560,7 +560,8 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                 output.append(None)
                 errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
 
-        if output!=[] and not all(i==None for i in output): # flatten and return any output
+        if output!=[] and not (all(i==None for i in output) and ('no_return' not in kwargs.keys() or kwargs['no_return']==False)):
+            # flatten and return any output (taking into account the no_return parameter)
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
 
