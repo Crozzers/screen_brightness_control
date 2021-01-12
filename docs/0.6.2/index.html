@@ -94,6 +94,20 @@ MONITOR_MANUFACTURER_CODES = {
     &#34;UNK&#34;: &#34;Unknown&#34;,
     &#34;_YV&#34;: &#34;Fujitsu&#34;,
 }
+def _monitor_brand_lookup(search):
+    &#39;&#39;&#39;internal function to search the monitor manufacturer codes dict&#39;&#39;&#39;
+    keys = list(MONITOR_MANUFACTURER_CODES.keys())
+    keys_lower = [i.lower() for i in keys]
+    values = list(MONITOR_MANUFACTURER_CODES.values())
+    values_lower = [i.lower() for i in values]
+    search_lower = search.lower()
+
+    if search_lower in keys_lower:
+        return values[keys_lower.index(search_lower)]
+    elif search_lower in values_lower:
+        return keys[values_lower.index(search_lower)]
+    else:
+        return None
 
 class ScreenBrightnessError(Exception):
     &#39;&#39;&#39;
@@ -253,7 +267,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
     
     Returns:
-        Returns a list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of get_brightness()
+        list: list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of `get_brightness()`
 
     Example:
         ```
@@ -276,8 +290,6 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         ```
     &#39;&#39;&#39;
     def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
@@ -285,9 +297,8 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+            set_brightness(finish, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
@@ -337,7 +348,7 @@ def get_brightness(verbose_error=False,**kwargs):
     
     Returns:
         int: an integer from 0 to 100 if only one display is detected
-        list: if there a multiple displays connected it may return a list of integers
+        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
 
     Example:
         ```python
@@ -381,7 +392,7 @@ if platform.system()==&#39;Windows&#39;:
 elif platform.system()==&#39;Linux&#39;:
     from . import linux
 
-__version__=&#39;0.6.0&#39;
+__version__=&#39;0.6.2&#39;
 __author__=&#39;Crozzers&#39;</code></pre>
 </details>
 </section>
@@ -424,7 +435,10 @@ __author__=&#39;Crozzers&#39;</code></pre>
 <dd>passed directly to set_brightness (see <code><a title="screen_brightness_control.set_brightness" href="#screen_brightness_control.set_brightness">set_brightness()</a></code> docs for available kwargs)</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>Returns a list of <code>threading.Thread</code> objects if blocking is set to False, otherwise it returns the result of get_brightness()</p>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of <code>threading.Thread</code> objects if blocking is set to False, otherwise it returns the result of <code><a title="screen_brightness_control.get_brightness" href="#screen_brightness_control.get_brightness">get_brightness()</a></code></dd>
+</dl>
 <h2 id="example">Example</h2>
 <pre><code>import screen_brightness_control as sbc
 
@@ -460,7 +474,7 @@ sbc.fade_brightness(100, blocking=False)
         kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
     
     Returns:
-        Returns a list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of get_brightness()
+        list: list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of `get_brightness()`
 
     Example:
         ```
@@ -483,8 +497,6 @@ sbc.fade_brightness(100, blocking=False)
         ```
     &#39;&#39;&#39;
     def fade(start, finish, increment, **kwargs):
-        if &#39;no_return&#39; not in kwargs.keys():
-            kwargs[&#39;no_return&#39;]=True
         for i in range(min(start,finish),max(start,finish),increment):
             val=i
             if start&gt;finish:
@@ -492,9 +504,8 @@ sbc.fade_brightness(100, blocking=False)
             set_brightness(val, **kwargs)
             time.sleep(interval)
 
-        del(kwargs[&#39;no_return&#39;])
         if get_brightness(**kwargs)!=finish:
-            set_brightness(finish, no_return = True, **kwargs)
+            set_brightness(finish, **kwargs)
         return
 
     current_vals = get_brightness(**kwargs)
@@ -604,7 +615,7 @@ flat_list = sbc.flatten_list(thick_list)
 <dt><code>int</code></dt>
 <dd>an integer from 0 to 100 if only one display is detected</dd>
 <dt><code>list</code></dt>
-<dd>if there a multiple displays connected it may return a list of integers</dd>
+<dd>if there a multiple displays connected it may return a list of integers (invalid monitors return <code>None</code>)</dd>
 </dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -632,7 +643,7 @@ secondary_brightness = sbc.get_brightness(display=1)
     
     Returns:
         int: an integer from 0 to 100 if only one display is detected
-        list: if there a multiple displays connected it may return a list of integers
+        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
 
     Example:
         ```python
