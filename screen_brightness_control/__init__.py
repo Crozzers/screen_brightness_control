@@ -383,6 +383,8 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
         ```
     '''
+    # if we have been provided with a list of monitors to sift through then use that
+    # otherwise, get the info ourselves
     if haystack:
         monitors_with_duplicates = haystack
         if method!=None:
@@ -390,33 +392,38 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
     else:
         monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
+    if display is not None and type(display) not in (str, int):
+        raise TypeError(f'display kwarg must be int or str, not {type(display)}')
+
+    # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
     edids = []
     monitors = []
     for monitor in monitors_with_duplicates:
-        if monitor['edid'] not in edids:
-            edids.append(monitor['edid'])
-            monitors.append(monitor)
-
-    if display!=None:
-        if type(display) not in (str, int):
-            raise TypeError(f'display kwarg must be int or str, not {type(display)}')
-        if type(display) is int:
-            return [monitors[display]]
+        valid = False
+        if type(display) is str:
+            # if the display kwarg matches any of the information given (edid, serial...), add it to the list
+            for field in ['edid','serial','name','model']+include:
+                if monitor[field]!=None and display == monitor[field]:
+                    valid = True
+                    break
         else:
-            result = []
-            for monitor in monitors_with_duplicates:
-                for field in ['edid','serial','name','model']+include:
-                    if monitor[field]!=None and display == monitor[field]:
-                        if monitor['edid'] in edids:
-                            result.append(monitor)
-                            edids.remove(monitor['edid'])
-                            break
-            monitors = result
+            valid = True
 
-    if monitors == []:
+        # if the monitor is valid and we haven't already added it
+        if valid and monitor['edid'] not in edids:
+            monitors.append(monitor)
+            edids.append(monitor['edid'])
+
+            # if the display kwarg is an integer and we are currently at that index
+            if type(display) is int and len(monitors)-1 == display:
+                return [monitor]
+
+    # if no monitors matched the query OR if display kwarg was an int
+    # if the latter and we made it this far then the int was out of range
+    if monitors == [] or type(display) is int:
         msg = 'no monitors found'
         if display!=None:
-            msg+=f' with name/serial/model/edid of "{display}"'
+            msg+=f' with name/serial/model/edid/index of "{display}"'
         if method!=None:
             msg+=f' with method of "{method}"'
         raise LookupError(msg)
