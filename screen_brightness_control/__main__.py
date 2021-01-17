@@ -15,49 +15,62 @@ if __name__=='__main__':
         elif platform.system() == 'Linux':
             parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'xrandr\' or \'ddcutil\' or \'light\' or \'xbacklight\')')
         parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
-        parser.add_argument('-v', '--verbose', action='store_true', help='any error messages will be more detailed')
+        parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
         parser.add_argument('-V', '--version', action='store_true', help='print the current version')
 
         args = parser.parse_args()
-        kw = {}
         if args.display!=None:
             if type(args.display) not in (str, int):
                 raise TypeError('display arg must be str or int')
             if type(args.display) is str and args.display.isdigit():
                 args.display = int(args.display)
-            kw['display'] = args.display
-        if args.verbose:
-            kw['verbose_error']=True
-        if args.method!=None:
-            kw['method'] = args.method
 
         if args.get:
-            values = SBC.get_brightness(**kw)
-            try:monitors = SBC.list_monitors(**kw)
-            except:monitors = None
-            if monitors == None:
-                print(values)
-            else:
-                values = [values] if type(values) is int else values
-                if args.display == None or type(values)==list:
-                    for i in range(len(monitors)):
-                        try:print(f'{monitors[i]}: {values[i]}{"%" if values[i]!=None else ""}')
-                        except IndexError:break
-                else:
-                    print(f'Display {args.display}: {values}')
+            try:
+                monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display = args.display, method = args.method)]
+                for monitor in monitors:
+                    name = monitor.name
+                    if args.verbose:
+                        name+=f' ({monitor.serial}) [{monitor.method.__name__}]'
+                    try:
+                        brightness = monitor.get_brightness()
+                        if brightness==None:
+                            raise Exception
+                        print(f'{name}: {brightness}%')
+                    except:
+                        print(f'{name}: Failed')
+            except:
+                print(SBC.get_brightness(display = args.display, method = args.method))
         elif args.set!=None:
-            SBC.set_brightness(args.set, **kw)
+            SBC.set_brightness(args.set, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.fade!=None:
-            SBC.fade_brightness(args.fade, **kw)
+            SBC.fade_brightness(args.fade, display = args.display, method = args.method, verbose_error = args.verbose)
         elif args.version:
             print(SBC.__version__)
         elif args.list:
-            monitors = SBC.list_monitors(**kw)
+            if args.verbose:
+                monitors = SBC.list_monitors_info(method = args.method)
+            else:
+                monitors = SBC.list_monitors(method = args.method)
             if len(monitors) == 0:
                 print('No monitors detected')
             else:
                 for i in range(len(monitors)):
-                    print(f'Display {i}: {monitors[i]}')
+                    if type(monitors[i]) is str:
+                        print(f'Display {i}: {monitors[i]}')
+                    else:
+                        msg = 'Display {}:\n\tName: {}\n\tModel: {}\n\tManufacturer: {}\n\tManufacturer ID: {}\n\tSerial: {}\n\tMethod: {}\n\tEDID:'
+                        msg = msg.format(i, monitors[i]['name'], monitors[i]['model'], monitors[i]['manufacturer'], monitors[i]['manufacturer_id'], monitors[i]['serial'], monitors[i]['method'].__name__)
+                        #format the edid string
+                        if monitors[i]['edid']!=None:
+                            #split str into pairs of characters
+                            edid = [monitors[i]['edid'][j:j+2] for j in range(0, len(monitors[i]['edid']), 2)]
+                            #make the characters form 16 pair long lines
+                            msg += '\n\t\t'+'\n\t\t'.join([' '.join(edid[j:j+16]) for j in range(0, len(edid), 16)])
+                        else:
+                            msg+=' None'
+
+                        print(msg)
         else:
             print("No valid arguments")
 

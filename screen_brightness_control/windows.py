@@ -1,28 +1,24 @@
-import wmi, threading, pythoncom, ctypes, win32api
+import wmi, threading, pythoncom, ctypes, win32api, time
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
+
+def _wmi_init():
+    '''internal function to create and return a wmi instance'''
+    #WMI calls don't work in new threads so we have to run this check
+    if threading.current_thread() != threading.main_thread():
+        pythoncom.CoInitialize()
+    instance = wmi.WMI(namespace='wmi')
+    return instance
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
-    def _get_display_index(display, *args):
-        '''internal function, do not call'''
-        if len(args)==1:
-            info = args[0]
-        else:
-            info = WMI.get_display_info()
-        a = 0
-        for i in info:
-            if display in (i['serial'], i['model'], i['name']):
-                return a
-            a+=1
-        return None
-    def get_display_info(*args):
+    def get_display_info(display=None):
         '''
         Returns a dictionary of info about all detected monitors
 
         Args:
-            monitor (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model or index
+            display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
             list: list of dictonaries
@@ -42,36 +38,46 @@ class WMI:
             primary_info = sbc.windows.WMI.get_display_info(0)
 
             # get information about a monitor with a specific name
-            benq_info = sbc.windows.WMI.get_display_info('BenQ BNQ78A7')
+            benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        info = []
-        a = 0
         try:
-            monitors = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
-            for m in monitors:
-                instance = m.InstanceName.split('\\')
-                serial = instance[-1]
-                model = instance[1]
-
-                man_id = model[:3]
-                manufacturer = _monitor_brand_lookup(man_id)
-                manufacturer = 'Unknown' if manufacturer==None else manufacturer
-
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI}
-                info.append(tmp)
-                a+=1
+            info = __cache__.get('wmi_monitor_info')
         except:
-            pass
-        if len(args)==1:
-            index = WMI._get_display_index(args[0], info)
-            if index==None:
-                raise LookupError('display not in list')
-            else:
-                info = info[index]
+            info = []
+            a = 0
+            try:
+                wmi = _wmi_init()
+                monitors = wmi.WmiMonitorBrightness()
+                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+                except:pass
+                for m in monitors:
+                    instance = m.InstanceName.split('\\')
+                    serial = instance[-1]
+                    model = instance[1]
+
+                    man_id = model[:3]
+                    try:man_id, manufacturer = _monitor_brand_lookup(model[:3])
+                    except:manufacturer = None
+
+                    try:
+                        edid = ''
+                        for char in descriptors[m.InstanceName][0]:
+                            char = str(hex(char)).replace('0x','')
+                            if len(char)==1:
+                                char = '0'+char
+                            edid+=char
+                    except:
+                        edid = None
+
+                    info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': WMI, 'edid':edid})
+                    a+=1
+            except:
+                pass
+            __cache__.store('wmi_monitor_info', info)
+        if display!=None:
+            indexes = [i['index'] for i in filter_monitors(display=display, haystack=info)]
+            info = [info[i] for i in indexes]
         return info
     def get_display_names():
         '''
@@ -88,9 +94,7 @@ class WMI:
                 print(name)
             ```
         '''
-        info = WMI.get_display_info()
-        names = [i['name'] for i in info]
-        return names
+        return [i['name'] for i in WMI.get_display_info()]
     def set_brightness(value, display = None, no_return = False):
         '''
         Sets the display brightness for Windows using WMI
@@ -119,20 +123,13 @@ class WMI:
             sbc.windows.WMI.set_brightness(75, display = 0)
 
             # set the brightness of a named monitor to 25%
-            sbc.windows.WMI.set_brightness(25, display = 'BenQ BNQ78A7')
+            sbc.windows.WMI.set_brightness(25, display = 'BenQ GL2450H')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-
-        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightnessMethods()
+        brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
         if display!=None:
-            if type(display) is str:
-                display = WMI._get_display_index(display)
-                if display == None:
-                    raise LookupError('display name not found')
-            brightness_method = [brightness_method[display]]
+            indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
+            brightness_method = [brightness_method[i] for i in indexes]
         for method in brightness_method:
             method.WmiSetBrightness(value,0)
         return WMI.get_brightness(display=display) if not no_return else None
@@ -165,22 +162,18 @@ class WMI:
             primary_brightness = sbc.windows.WMI.get_brightness(display = 0)
 
             # get the brightness of a named monitor
-            benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ BNQ78A7')
+            benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ GL2450H')
             ```
         '''
-        #WMI calls don't work in new threads so we have to run this check
-        if threading.current_thread() != threading.main_thread():
-            pythoncom.CoInitialize()
-        brightness_method = wmi.WMI(namespace='wmi').WmiMonitorBrightness()
-        values = [i.CurrentBrightness for i in brightness_method]
+        brightness_method = _wmi_init().WmiMonitorBrightness()
         if display!=None:
-            if type(display) is str:
-                display = WMI._get_display_index(display)
-                if display == None:
-                    raise LookupError('display name not found')
-            values = [values[display]]
-        values = values[0] if len(values)==1 else values
-        return values
+            displays = WMI.get_display_info(display)
+            if displays is dict:
+                displays = [displays]
+            brightness_method = [brightness_method[i['index']] for i in displays]
+
+        values = [i.CurrentBrightness for i in brightness_method]
+        return values[0] if len(values)==1 else values
 
 class VCP:
     '''Collection of screen brightness related methods using the DDC/CI commands'''
@@ -228,12 +221,13 @@ class VCP:
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
     def filter_displays(display, *args):
         '''
-        Searches through the information for all detected displays and attempts to return the info matching the value given.
-        Will attempt to match against index, name, model and serial
+        Deprecated. Redirects to top-level `filter_monitors` function.
+        Searches through the information for all detected VCP displays and attempts to return the info matching the value given.
+        Will attempt to match against index, name, model, edid and serial
 
         Args:
-            display (str or int): what you are searching for. Can be serial number, name, model number or index of the display
             args (tuple): [*Optional*] if `args` isn't empty the function searches through args[0]. Otherwise it searches through the return of `VCP.get_display_info()`
+            display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
 
         Raises:
             IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
@@ -246,29 +240,23 @@ class VCP:
             ```python
             import screen_brightness_control as sbc
 
-            search = 'BNQ78A7'
+            search = 'GL2450H'
             match = sbc.windows.VCP.filter_displays(search)
             print(match)
-            # EG output: {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }
+            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
         if len(args)==1:
             info = args[0]
         else:
             info = VCP.get_display_info()
-        if type(display) is int:
-            return info[display]
-        else:
-            for i in info:
-                if display in (i['serial'], i['model'], i['name']):
-                    return i
-            raise LookupError('could not find matching display')
-    def get_display_info(*args):
+        return filter_monitors(display = display, haystack = info)
+    def get_display_info(display=None):
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
         Args:
-            args (tuple): [*Optional*] a variable list of monitors. Pass in a monitor's name/serial/model/index and only the information corresponding to these monitors will be returned
+            display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
             list: list of dicts if `args` is empty or there are multiple values passed in `args`
@@ -281,40 +269,54 @@ class VCP:
             # get the information about all monitors
             vcp_info = sbc.windows.VCP.get_display_info()
             print(vcp_info)
-            # EG output: [{'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }, {'name': 'Dell DEL405E', 'model': 'DEL405E', ... }]
+            # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }, {'name': 'Dell U2211H', 'model': 'U2211H', ... }]
 
             # get information about a monitor with this specific model
-            bnq_info = sbc.windows.VCP.get_display_info('BNQ78A7')
-            # EG output: {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }
-
-            # get information about 2 specific monitors at the same time
-            sbc.windows.VCP.get_display_info('DEL405E', 'BNQ78A7')
-            # EG output: [{'name': 'Dell DEL405E', 'model': 'DEL405E', ... }, {'name': 'BenQ BNQ78A7', 'model': 'BNQ78A7', ... }]
+            bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
+            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
-        info = []
         try:
-            monitors_enum = win32api.EnumDisplayMonitors()
-            monitors = [win32api.GetMonitorInfo(i[0]) for i in monitors_enum]
-            monitors = [win32api.EnumDisplayDevices(i['Device'], 0, 1).DeviceID for i in monitors]
-            a=0
-            for ms in monitors:
-                m = ms.split('#')
-                serial = m[2]
-                model = m[1]
-
-                man_id = model[:3]
-                manufacturer = _monitor_brand_lookup(man_id)
-                manufacturer = 'Unknown' if manufacturer==None else manufacturer
-
-                tmp = {'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP}
-                info.append(tmp)
-                a+=1
+            info = __cache__.get('vcp_monitor_info')
         except:
-            pass
-        if len(args)>0:
+            info = []
             try:
-                info = [VCP.filter_displays(i, info) for i in args]
+                monitors_sorted = [win32api.EnumDisplayDevices(win32api.GetMonitorInfo(i[0])['Device'], 0, 1).DeviceID.split('#')[2] for i in win32api.EnumDisplayMonitors()]
+                wmi = _wmi_init()
+                monitors = sorted(wmi.WmiMonitorID(), key=lambda x:monitors_sorted.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+
+                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+                except:pass
+                a=0
+                for monitor in monitors:
+                    try:
+                        serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                        manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
+                        manufacturer = manufacturer.lower().capitalize()
+                        try:
+                            man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                        except:
+                            man_id = None
+                        try:
+                            edid = ''
+                            for char in descriptors[monitor.InstanceName][0]:
+                                char = str(hex(char)).replace('0x','')
+                                if len(char) == 1:
+                                    char = '0'+char
+                                edid+=char
+                        except:
+                            edid = None
+
+                        info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
+                        a+=1
+                    except:
+                        pass
+            except:
+                pass
+            __cache__.store('vcp_monitor_info', info)
+        if display!=None:
+            try:
+                info = filter_monitors(display=display, haystack=info)
                 return info[0] if len(info)==1 else info
             except:
                 pass
@@ -346,14 +348,9 @@ class VCP:
         if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
             return
         return caps_string.value.decode('ASCII')
-    def get_display_names(*args):
+    def get_display_names():
         '''
-        Parse the VCP capabilities string of a monitor to get the actual model name of the monitor.
-        So instead of this generic panel model (eg: BNQ78A7) it returns the user-friendly version (GL2450HM).
-        This function takes a few seconds to run as it calls `VCP.get_monitor_caps()` for each monitor requested
-
-        Args:
-            args (tuple): [*Optional*] a variable list of monitors to get the names of, each item must be the monitor's handle as returned by `VCP.iter_physical_monitors()`
+        Return the names of each detected monitor
         
         Returns:
             list: list of strings
@@ -364,37 +361,16 @@ class VCP:
 
             names = sbc.windows.VCP.get_display_names()
             print(names)
-            # EG output: ['GL2450HM', 'U2211H']
-
-            # Get all the names if a monitor is not None
-            names = []
-            for monitor in sbc.windows.VCP.iter_physical_monitors():
-                if monitor:
-                    names.append(
-                        sbc.windows.VCP.get_display_names(monitor)
-                    )
-            print(names)
-            # EG output: ['U2211H']
+            # EG output: ['BenQ GL2450H', 'Dell U2211H']
             ```
         '''
-        names = []
-        if len(args)>0:
-            monitors = lambda:args
-        else:
-            monitors = VCP.iter_physical_monitors
-
-        for monitor in monitors():
-            key = VCP.get_monitor_caps(monitor)
-            cap = key[key.index('model(')+6:]
-            cap = cap[:cap.index(')')]
-            names.append(cap)
-        return names
+        return [i['name'] for i in VCP.get_display_info()]
     def get_brightness(display=None):
         '''
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query. Is passed to `VCP.filter_displays` to match to a display
+            display (int or str): the specific display you wish to query. Is passed to `filter_monitors` to match to a display
         
         Returns:
             list: list of ints from 0 to 100 if multiple displays are detected and the `display` kwarg is not set
@@ -417,28 +393,46 @@ class VCP:
             # Get the brightness for a secondary display
             secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)
 
-            # Get the brightness for a display with the model 'BNQ78A7'
-            benq_brightness = sbc.windows.VCP.get_brightness(display = 'BNQ78A7')
+            # Get the brightness for a display with the model 'GL2450H'
+            benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
             ```
         '''
+        if display!=None:
+            all_monitors = VCP.get_display_info()
+            monitors = filter_monitors(display = display, haystack=all_monitors)
+            indexes = [i['index'] for i in monitors]
+
+        count = 0
         values = []
         for m in VCP.iter_physical_monitors():
-            cur_out = DWORD()
-            if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
-                values.append(cur_out.value)
-            del(cur_out)
+            try:
+                v = __cache__.get('vcp_'+all_monitors[count]['edid']+'_brightness')
+            except:
+                cur_out = DWORD()
+                for i in range(10):
+                    if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(HANDLE(m), BYTE(0x10), None, byref(cur_out), None):
+                        v = cur_out.value
+                        break
+                    else:
+                        time.sleep(0.02)
+                        v = None
+                del(cur_out)
+            if v!=None and (display==None or (count in indexes)):
+                if display!=None and count in indexes:
+                    try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.1)
+                    except IndexError:pass
+                values.append(v)
+            count+=1
 
-        if display!=None:
-            display = VCP.filter_displays(display)
-            values = [values[display['index']]]
-
+        if values==[]:
+            return None
         return values[0] if len(values)==1 else values
     def set_brightness(value, display=None, no_return=False):
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query. Is passed to `VCP.filter_displays` to match to a display
+            display (int or str): the specific display you wish to query. Is passed to `filter_monitors` to match to a display
             no_return (bool): if set to `True` this function will return `None`
         
         Returns:
@@ -457,199 +451,35 @@ class VCP:
             # Set the brightness for a secondary display to 25%
             sbc.windows.VCP.set_brightness(25, display = 1)
 
-            # Set the brightness for a display with the model 'BNQ78A7' to 100%
-            sbc.windows.VCP.set_brightness(100, display = 'BNQ78A7')
+            # Set the brightness for a display with the model 'GL2450H' to 100%
+            sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             ```
         '''
         if display!=None:
-            display = VCP.filter_displays(display)
-            display = display['index']
-        loops = 0
+            all_monitors = VCP.get_display_info()
+            indexes = [i['index'] for i in filter_monitors(display = display, haystack = all_monitors)]
+
+        __cache__.expire(startswith='vcp_', endswith='_brightness')
+
+        count = 0
         for m in VCP.iter_physical_monitors():
-            if display==None or (display == loops):
-                windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value))
-            loops+=1
+            if display==None or (count in indexes):
+                for i in range(10):
+                    if windll.dxva2.SetVCPFeature(HANDLE(m), BYTE(0x10), DWORD(value)):
+                        break
+                    else:
+                        time.sleep(0.02)
+            count+=1
         return VCP.get_brightness(display=display) if not no_return else None
 
-class Monitor(object):
-    '''A class to manage a single monitor and its relevant information'''
-    def __init__(self, display):
-        '''
-        Args:
-            display (int or str): the index/model name/serial of the display you wish to control
-        
-        Raises:
-            LookupError: if the given display is a string but that string does not match any known displays
-            TypeError: if the given display type is not int or str
-        
-        Example:
-            ```python
-            import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specificly named monitor
-            primary = sbc.windows.Monitor(0)
-            benq_monitor = sbc.windows.Monitor('BenQ BNQ78A7')
-
-            # check if the benq monitor is the primary one
-            if primary.serial == benq_monitor.serial:
-                print('BNQ78A7 is the primary display')
-            else:
-                print('The primary display is', primary.name)
-            
-            # this class can also be accessed like a dictionary
-            print(primary['name'])
-            print(benq_monitor['name'])
-            ```
-        '''
-        if type(display) is dict:
-            info = display
-        else:
-            info = list_monitors_info()
-            if type(display) is int:
-                info = info[display]
-            elif type(display) is str:
-                for i in info:
-                    if display in (i['serial'], i['name'], i['model']):
-                        info = i
-                if type(info) == list:#we haven't found a match
-                    raise LookupError('could not match display info to known displays')
-            else:
-                raise TypeError(f'display arg must be int or str, not {type(display)}')
-
-        self.serial = info['serial']
-        '''a unique string assigned by Windows to this monitor'''
-        self.name = info['name']
-        '''the monitors manufacturer name plus its model'''
-        self.method = info['method']
-        '''the method by which this monitor can be addressed. Will be either `WMI` or `VCP`'''
-        self.manufacturer = info['manufacturer']
-        '''the name of the brand of the monitor'''
-        self.manufacturer_id = info['manufacturer_id']
-        '''the 3 letter manufacturing code corresponding to the manufacturer name'''
-        self.model = info['model']
-        '''the general model of the display'''
-        self.model_name = info['model_name']
-        '''the model name of the display. Is always equal to `None` unless the method is `VCP`.
-        If the method is `VCP` and you try to access this variable it will be loaded on-request (because it takes 1-2 seconds)'''
-        self.index = info['index']
-        '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.
-        This means that if the monitor uses `WMI`, the index is out of the list of `WMI` addressable monitors ONLY. Same for `VCP`'''
-    def __getitem__(self, item):
-        return getattr(self, item)
-    def __getattribute__(self, attr):
-        if attr == 'model_name' and object.__getattribute__(self, 'model_name')==None:
-            model_name = object.__getattribute__(self, 'method').get_display_names()[object.__getattribute__(self, 'index')]
-            setattr(self, 'model_name', model_name)
-            return model_name
-        else:
-            return object.__getattribute__(self, attr)
-    def set_brightness(self, *args, **kwargs):
-        '''
-        Sets the brightness for this display
-
-        Args:
-            args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness of the primary monitor to 50%
-            primary = sbc.windows.Monitor(0)
-            primary_brightness = primary.set_brightness(50)
-            ```
-        '''
-        kwargs['display'] = self.serial
-        return self.method.set_brightness(*args, **kwargs)
-    def get_brightness(self, **kwargs):
-        '''
-        Returns the brightness of this display
-
-        Args:
-            kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the brightness of the primary monitor
-            primary = sbc.windows.Monitor(0)
-            primary_brightness = primary.get_brightness()
-            ```
-        '''
-        kwargs['display'] = self.serial
-        return self.method.get_brightness(**kwargs)
-    def get_info(self):
-        '''
-        Returns all known information about this monitor instance.
-        If the monitor's method is `VCP` it also loads the `Monitor.model_name` attribute
-
-        Returns:
-            dict
-        
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # initialize class for primary monitor
-            primary = sbc.windows.Monitor(0)
-            # get the info
-            info = primary.get_info()
-            ```
-        '''
-        try:
-            if self.model_name == None:
-                info = self.method.get_display_info()
-                for i in range(len(info)):
-                    if info[i]['serial']==self.serial:
-                        self.model_name = info[i]
-        except:
-            pass
-        return {
-            'name':self.name,
-            'model':self.model,
-            'model_name': self.model_name,
-            'serial':self.serial,
-            'manufacturer': self.manufacturer,
-            'manufacturer_id': self.manufacturer_id,
-            'method': self.method,
-            'index': self.index
-        }
-    def is_active(self):
-        '''
-        Attempts to retrieve the brightness for this display. If it works the display is deemed active
-
-        Returns:
-            bool: True means active, False means inactive
-        
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            primary = sbc.windows.Monitor(0)
-            if primary.is_active():
-                primary.set_brightness(50)
-            ```
-        '''
-        try:
-            self.get_brightness()
-            return True
-        except:
-            return False
-
-def list_monitors_info(method=None):
+def list_monitors_info(method = None, allow_duplicates = False):
     '''
     Lists detailed information about all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
+        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
         list: list of dictionaries upon success, empty list upon failure
@@ -668,27 +498,30 @@ def list_monitors_info(method=None):
             print('Manufacturer ID:', info['manufacturer_id']) # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ  
             print('Index:', info['index']) # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Method:', info['method']) # the method this monitor can be addressed by
+            print('EDID:', info['edid']) # the EDID string of the monitor
         ```
     '''
-    tmp = []
-    methods = [WMI,VCP]
-    if method!=None:
-        if method.lower()=='wmi':methods=[WMI]
-        elif method.lower()=='vcp':methods=[VCP]
-        else:raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
-    for m in methods:
-        tmp.append(m.get_display_info())
-    tmp = flatten_list(tmp)
-    info = []
-    serials = []
-    #to make sure each display (with unique serial) is only reported once
-    for i in tmp:
-        if i['serial'] not in serials:
-            serials.append(i['serial'])
-            info.append(i)
-    return flatten_list(info)
+    try:
+        return __cache__.get('windows_monitors_info', method=method, allow_duplicates=allow_duplicates)
+    except:
+        methods = [WMI,VCP]
+        if method!=None:
+            methods = [i for i in methods if i.__name__.lower() == method.lower()]
+            if methods==[]:
+                raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
 
-def list_monitors(method=None):
+        info = []
+        edids = []
+        for m in methods:
+            #to make sure each display (with unique edid) is only reported once
+            for i in m.get_display_info():
+                if allow_duplicates or i['edid'] not in edids:
+                    edids.append(i['edid'])
+                    info.append(i)
+        __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
+        return info
+
+def list_monitors(method = None):
     '''
     Returns a list of all addressable monitor names
 
@@ -703,55 +536,17 @@ def list_monitors(method=None):
         import screen_brightness_control as sbc
 
         monitors = sbc.windows.list_monitors()
-        # EG output: ['BenQ BNQ78A7', 'Dell DEL405E']
+        # EG output: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    displays = [i['name'] for i in list_monitors_info(method=method)]
-    return flatten_list(displays)
+    return [i['name'] for i in list_monitors_info(method=method)]
 
-def __filter_monitors(display=None, method=None):
-    '''internal function, do not call
-    filters the list of all addressable monitors by:
-        whether their name/model/serial/model_name matches the display kwarg
-        whether they use the method matching the method kwarg'''
-    methods = [WMI, VCP]
-    #parse the method kwarg
-    monitors = list_monitors_info(method = method)
-    if method!=None and monitors==[]:
-        raise LookupError('no monitors detected with matching method')
-
-    #parse display kwarg by trying to match given term to known monitors
-    if display!=None:
-        if type(display) is int:
-            monitors = [monitors[display]]
-        elif type(display) is str:
-            #see if display matches serial names, models or given names for monitors
-            m = [i for i in monitors if display in (i['serial'], i['name'], i['model'])]
-            #if no matches found, try to match model_name (takes longer)
-            if m == []:
-                names = [i.get_display_names() for i in methods]
-                names = flatten_list(names)
-                if display in names:
-                    display = names.index(display)
-                    m = [monitors[display]]
-            monitors = m
-        else:
-            raise TypeError(f'display must be int or str, not {type(display)}')
-    if monitors == []:
-        msg = 'no monitors found'
-        if display!=None:
-            msg+=f' with name/serial/model of "{display}"'
-        if method!=None:
-            msg+=f' with method of "{method}"'
-        raise LookupError(msg)
-    return monitors
-
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+def __set_and_get_brightness(*args, display = None, method = None, meta_method = 'get', **kwargs):
     '''internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
     errors = []
     try: # filter known list of monitors according to kwargs
-        monitors = __filter_monitors(display = display, method = method)
+        monitors = filter_monitors(display = display, method = method)
     except Exception as e:
         errors.append(['',type(e).__name__, e])
     else:
@@ -765,7 +560,8 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                 output.append(None)
                 errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
 
-        if output!=[] and not all(i==None for i in output): # flatten and return any output
+        if output!=[] and not (all(i==None for i in output) and ('no_return' not in kwargs.keys() or kwargs['no_return']==False)):
+            # flatten and return any output (taking into account the no_return parameter)
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
 
@@ -777,7 +573,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
         msg+='\tno valid output was received from brightness methods'
     raise Exception(msg)
 
-def set_brightness(value, display=None, method = None, **kwargs):
+def set_brightness(value, display = None, method = None, **kwargs):
     '''
     Sets the brightness of any connected monitors
 
@@ -810,8 +606,8 @@ def set_brightness(value, display=None, method = None, **kwargs):
         # set the brightness of any displays using VCP to 25%
         sbc.windows.set_brightness(25, method = 'vcp')
 
-        # set the brightness of displays with the model name 'BenQ BNQ78A7' (see `list_monitors` and `list_monitors_info`) to 100%
-        sbc.windows.set_brightness(100, display = 'BenQ BNQ78A7')
+        # set the brightness of displays with the model name 'BenQ GL2450H' (see `list_monitors` and `list_monitors_info`) to 100%
+        sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
         ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
@@ -854,8 +650,8 @@ def get_brightness(display = None, method = None, **kwargs):
         # get the brightness of any displays using VCP
         vcp_brightness = sbc.windows.get_brightness(method = 'vcp')
 
-        # get the brightness of displays with the model name 'BenQ BNQ78A7'
-        benq_brightness = sbc.windows.get_brightness(display = 'BenQ BNQ78A7')
+        # get the brightness of displays with the model name 'BenQ GL2450H'
+        benq_brightness = sbc.windows.get_brightness(display = 'BenQ GL2450H')
         ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code
