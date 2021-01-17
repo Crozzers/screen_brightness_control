@@ -657,12 +657,15 @@ class DDCUtil:
         monitors = DDCUtil.get_display_info()
         if display!=None:
             monitors = DDCUtil.__filter_monitors(display, monitors)
+
+        __cache__.expire(startswith=&#39;ddcutil_&#39;, endswith=&#39;_brightness&#39;)
         for m in monitors:
             subprocess.run([DDCUtil.executable,&#39;setvcp&#39;,&#39;10&#39;,str(value),&#39;-b&#39;, str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;])
+
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None, allow_duplicates=False):
+def list_monitors_info(method = None, allow_duplicates = False):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
 
@@ -712,7 +715,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         __cache__.store(&#39;linux_monitors_info&#39;, info, method=method, allow_duplicates=allow_duplicates)
         return info
 
-def list_monitors(method=None):
+def list_monitors(method = None):
     &#39;&#39;&#39;
     Returns a list of all addressable monitor names
 
@@ -787,7 +790,7 @@ def get_brightness_from_sysfiles(display = None):
         raise Exception(exc)
     raise FileNotFoundError(f&#39;Backlight directory {backlight_dir} not found&#39;)
 
-def __set_and_get_brightness(*args, display=None, method=None, meta_method=&#39;get&#39;, **kwargs):
+def __set_and_get_brightness(*args, display = None, method = None, meta_method = &#39;get&#39;, **kwargs):
     &#39;&#39;&#39;internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences&#39;&#39;&#39;
     errors = []
@@ -807,7 +810,8 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method=&#39;
                 output.append(None)
                 errors.append([f&#34;{m[&#39;name&#39;]}&#34;, type(e).__name__, e])
 
-        if output!=[] and not all(i==None for i in output): # flatten and return any valid output
+        if output!=[] and not (all(i==None for i in output) and (&#39;no_return&#39; not in kwargs.keys() or kwargs[&#39;no_return&#39;]==False)):
+            # flatten and return any valid output (taking into account the no_return parameter)
             output = flatten_list(output)
             return output[0] if len(output)==1 else output
         else:
@@ -1118,7 +1122,7 @@ monitors = sbc.linux.list_monitors()
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors(method=None):
+<pre><code class="python">def list_monitors(method = None):
     &#39;&#39;&#39;
     Returns a list of all addressable monitor names
 
@@ -1180,7 +1184,7 @@ for monitor in monitors:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def list_monitors_info(method=None, allow_duplicates=False):
+<pre><code class="python">def list_monitors_info(method = None, allow_duplicates = False):
     &#39;&#39;&#39;
     Lists detailed information about all detected monitors
 
@@ -1505,8 +1509,11 @@ sbc.linux.set_brightness(25, method='xrandr')
         monitors = DDCUtil.get_display_info()
         if display!=None:
             monitors = DDCUtil.__filter_monitors(display, monitors)
+
+        __cache__.expire(startswith=&#39;ddcutil_&#39;, endswith=&#39;_brightness&#39;)
         for m in monitors:
             subprocess.run([DDCUtil.executable,&#39;setvcp&#39;,&#39;10&#39;,str(value),&#39;-b&#39;, str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;])
+
         return DDCUtil.get_brightness(display=display) if not no_return else None</code></pre>
 </details>
 <h3>Class variables</h3>
@@ -1802,8 +1809,11 @@ sbc.linux.DDCUtil.set_brightness(75, display=0)
     monitors = DDCUtil.get_display_info()
     if display!=None:
         monitors = DDCUtil.__filter_monitors(display, monitors)
+
+    __cache__.expire(startswith=&#39;ddcutil_&#39;, endswith=&#39;_brightness&#39;)
     for m in monitors:
         subprocess.run([DDCUtil.executable,&#39;setvcp&#39;,&#39;10&#39;,str(value),&#39;-b&#39;, str(m[&#39;bus_number&#39;]), f&#39;--sleep-multiplier={DDCUtil.sleep_multiplier}&#39;])
+
     return DDCUtil.get_brightness(display=display) if not no_return else None</code></pre>
 </details>
 </dd>
