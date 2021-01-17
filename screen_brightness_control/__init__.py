@@ -493,12 +493,14 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
     if type(value) not in (int, float, str):
         raise TypeError(f'value must be int, float or str, not {type(value)}')
 
+    # convert values like '+5' and '-25' to integers and add/subtract them from the current brightness
     if type(value) is str and value.startswith(('+', '-')):
         if 'display' in kwargs.keys():
             current = get_brightness(display=kwargs['display'])
         else:
             current = get_brightness()
             if type(current) is list:
+                # apply the offset to all displays by setting the brightness for each one individually
                 out = []
                 for i in range(len(current)):
                     out.append(set_brightness(current[i] + int(float(str(value))), display = i, **kwargs))
@@ -512,6 +514,7 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
     value = max(0, min(100, value))
 
+    # decide upon the OS relevant method to run
     method = None
     if platform.system()=='Windows':
         method = windows.set_brightness
@@ -590,6 +593,11 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         available_monitors = filter_monitors(**kwargs)
     except (IndexError, LookupError) as e:
         raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
+    except ValueError as e:
+        if platform.system()=='Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+            available_monitors = [None]
+        else:
+            raise e
 
     for i in available_monitors:
         try:
