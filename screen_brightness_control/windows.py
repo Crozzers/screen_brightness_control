@@ -473,7 +473,7 @@ class VCP:
         return VCP.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None, allow_duplicates=False):
+def list_monitors_info(method = None, allow_duplicates = False):
     '''
     Lists detailed information about all detected monitors
 
@@ -521,7 +521,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
-def list_monitors(method=None):
+def list_monitors(method = None):
     '''
     Returns a list of all addressable monitor names
 
@@ -541,7 +541,7 @@ def list_monitors(method=None):
     '''
     return [i['name'] for i in list_monitors_info(method=method)]
 
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+def __set_and_get_brightness(*args, display = None, method = None, meta_method = 'get', **kwargs):
     '''internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
     errors = []
@@ -573,7 +573,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
         msg+='\tno valid output was received from brightness methods'
     raise Exception(msg)
 
-def set_brightness(value, display=None, method = None, **kwargs):
+def set_brightness(value, display = None, method = None, **kwargs):
     '''
     Sets the brightness of any connected monitors
 

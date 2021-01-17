@@ -637,7 +637,7 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None, allow_duplicates=False):
+def list_monitors_info(method = None, allow_duplicates = False):
     '''
     Lists detailed information about all detected monitors
 
@@ -687,7 +687,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
-def list_monitors(method=None):
+def list_monitors(method = None):
     '''
     Returns a list of all addressable monitor names
 
@@ -762,7 +762,7 @@ def get_brightness_from_sysfiles(display = None):
         raise Exception(exc)
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+def __set_and_get_brightness(*args, display = None, method = None, meta_method = 'get', **kwargs):
     '''internal function, do not call.
     either sets the brightness or gets it. Exists because set_brightness and get_brightness only have a couple differences'''
     errors = []
