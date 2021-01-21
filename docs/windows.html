@@ -484,8 +484,7 @@ class VCP:
             ```
         &#39;&#39;&#39;
         if display!=None:
-            all_monitors = VCP.get_display_info()
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = all_monitors)]
+            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
@@ -1311,8 +1310,7 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
             ```
         &#39;&#39;&#39;
         if display!=None:
-            all_monitors = VCP.get_display_info()
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = all_monitors)]
+            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
@@ -1824,8 +1822,7 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
         ```
     &#39;&#39;&#39;
     if display!=None:
-        all_monitors = VCP.get_display_info()
-        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = all_monitors)]
+        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
     __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
