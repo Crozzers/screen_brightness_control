@@ -456,8 +456,7 @@ class VCP:
             ```
         '''
         if display!=None:
-            all_monitors = VCP.get_display_info()
-            indexes = [i['index'] for i in filter_monitors(display = display, haystack = all_monitors)]
+            indexes = [i['index'] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith='vcp_', endswith='_brightness')
 

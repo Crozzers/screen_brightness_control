@@ -7,9 +7,9 @@ if __name__=='__main__':
     else:
         parser = argparse.ArgumentParser(prog='screen_brightness_control')
         parser.add_argument('-d', '--display', help='the display to be used')
-        parser.add_argument('-s', '--set', type=int, help='set the brightness to this value')
+        parser.add_argument('-s', '--set', type=int, help='set the brightness to this value', metavar='VALUE')
         parser.add_argument('-g', '--get', action='store_true', help='get the current screen brightness')
-        parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value')
+        parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value', metavar='VALUE')
         if platform.system() == 'Windows':
             parser.add_argument('-m', '--method', type=str, help='specify which method to use (\'wmi\' or \'vcp\')')
         elif platform.system() == 'Linux':
