@@ -25,15 +25,17 @@ You can call this module from your command line or use it as a python library (s
 
 ```
 python -m screen_brightness_control --help
-> usage: screen_brightness_control [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
+> usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-v]
 >
 > optional arguments:
 >   -h, --help            show this help message and exit
 >   -d DISPLAY, --display DISPLAY
 >                         the display to be used
->   -s SET, --set SET     set the brightness to this value
+>   -s VALUE, --set VALUE 
+>                         set the brightness to this value
 >   -g, --get             get the current screen brightness
->   -f FADE, --fade FADE  fade the brightness to this value
+>   -f VALUE, --fade VALUE
+>                         fade the brightness to this value
 >   -m METHOD, --method METHOD
 >                         specify which method to use
 >   -l, --list            list all monitors
@@ -159,6 +161,10 @@ To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://git
 This software is licensed under the [MIT license](https://mit-license.org/)
 
 # FAQ
+### Cannot use the module with external monitors (Windows)
+I recently changed how external monitors are handled which has caused [some issues](https://github.com/Crozzers/screen_brightness_control/issues/6). Untill I fix it, try using `v0.6.2` by running the command `pip3 install screen_brightness_control==0.6.2`
+
+
 ### Why do I always get `ScreenBrightnessError` on Linux?
 **Why this happens:**  
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
