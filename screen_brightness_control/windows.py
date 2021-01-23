@@ -281,33 +281,69 @@ class VCP:
         except:
             info = []
             try:
-                monitors_sorted = [win32api.EnumDisplayDevices(win32api.GetMonitorInfo(i[0])['Device'], 0, 1).DeviceID.split('#')[2] for i in win32api.EnumDisplayMonitors()]
-                wmi = _wmi_init()
-                monitors = sorted(wmi.WmiMonitorID(), key=lambda x:monitors_sorted.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+                # collect all monitors DeviceID's and UIDs (derived from DeviceID)
+                monitor_enums = []
+                monitor_uids = []
+                for i in win32api.EnumDisplayMonitors():
+                    tmp = win32api.GetMonitorInfo(i[0])
+                    device = None
+                    # iterate up to 4 display adapters
+                    for j in range(5):
+                        try:
+                            device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
+                            break
+                        except:
+                            pass
+                    if device!=None:
+                        monitor_enums.append(device)
+                        monitor_uids.append(device.DeviceID.split('#')[2])
 
-                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
+                # sort the WMI available monitors in the same order as win32api reports them
+                wmi_instance = _wmi_init()
+                monitors = sorted(wmi_instance.WmiMonitorID(), key=lambda x:monitor_uids.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+                # if we have extra monitors from win32api add them on the end
+                if len(monitor_enums)>len(monitors):
+                    monitors+=monitor_enums
+
+                # get all available EDID strings
+                try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi_instance.WmiMonitorDescriptorMethods()}
                 except:pass
                 a=0
                 for monitor in monitors:
                     try:
-                        serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
-                        manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
-                        manufacturer = manufacturer.lower().capitalize()
-                        try:
-                            man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                        except:
-                            man_id = None
-                        try:
-                            edid = ''
-                            for char in descriptors[monitor.InstanceName][0]:
-                                char = str(hex(char)).replace('0x','')
-                                if len(char) == 1:
-                                    char = '0'+char
-                                edid+=char
-                        except:
-                            edid = None
+                        if type(monitor) == wmi._wmi_object:
+                            # if the monitor shows up via WMI
+                            serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                            manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
+                            manufacturer = manufacturer.lower().capitalize()
+                            try:
+                                man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                            except:
+                                man_id = None
+                            try:
+                                edid = ''
+                                for char in descriptors[monitor.InstanceName][0]:
+                                    char = str(hex(char)).replace('0x','')
+                                    if len(char) == 1:
+                                        char = '0'+char
+                                    edid+=char
+                            except:
+                                edid = None
+                            name = f'{manufacturer} {model}'
+                        else:
+                            # if the monitor doesn't show up via WMI but does elsewhere
+                            dev_id = monitor.DeviceID.split('#')
+                            serial = dev_id[2] # not an actual serial but the Windows UID
+                            man_id = dev_id[1][:3]
+                            model = dev_id[1][3:]
+                            try:
+                                manufacturer = _monitor_brand_lookup(man_id)
+                            except:
+                                manufacturer = None
+                            name = monitor.DeviceString
 
-                        info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
+
+                        info.append({'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
                         a+=1
                     except:
                         pass
@@ -512,10 +548,10 @@ def list_monitors_info(method = None, allow_duplicates = False):
         info = []
         edids = []
         for m in methods:
-            #to make sure each display (with unique edid) is only reported once
+            #to make sure each display (with unique serial) is only reported once
             for i in m.get_display_info():
-                if allow_duplicates or i['edid'] not in edids:
-                    edids.append(i['edid'])
+                if allow_duplicates or i['serial'] not in edids:
+                    edids.append(i['serial'])
                     info.append(i)
         __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info

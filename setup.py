@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='screen_brightness_control',
-    version='0.7.0',
+    version='0.7.1-dev',
     url='https://github.com/Crozzers/screen_brightness_control',
     project_urls={
         'Documentation': 'https://crozzers.github.io/screen_brightness_control',
