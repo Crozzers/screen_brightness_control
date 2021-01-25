@@ -396,7 +396,7 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         raise TypeError(f'display kwarg must be int or str, not {type(display)}')
 
     # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
-    edids = []
+    unique_identifiers = []
     monitors = []
     for monitor in monitors_with_duplicates:
         valid = False
@@ -409,14 +409,19 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         else:
             valid = True
 
-        # if the monitor is valid and we haven't already added it
-        if valid and monitor['edid'] not in edids:
-            monitors.append(monitor)
-            edids.append(monitor['edid'])
+        # find a valid identifier for a monitor, excluding any which are equal to None
+        identifier = 'edid'
+        for identifier in ('edid', 'serial', 'name', 'model'):
+            if monitor[identifier]!=None:
+                # if the monitor is valid and we haven't already added it
+                if valid and monitor[identifier] not in unique_identifiers:
+                    monitors.append(monitor)
+                    unique_identifiers.append(monitor[identifier])
 
-            # if the display kwarg is an integer and we are currently at that index
-            if type(display) is int and len(monitors)-1 == display:
-                return [monitor]
+                    # if the display kwarg is an integer and we are currently at that index
+                    if type(display) is int and len(monitors)-1 == display:
+                        return [monitor]
+                break
 
     # if no monitors matched the query OR if display kwarg was an int
     # if the latter and we made it this far then the int was out of range
