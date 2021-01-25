@@ -301,9 +301,10 @@ class VCP:
                 # sort the WMI available monitors in the same order as win32api reports them
                 wmi_instance = _wmi_init()
                 monitors = sorted(wmi_instance.WmiMonitorID(), key=lambda x:monitor_uids.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+
                 # if we have extra monitors from win32api add them on the end
                 if len(monitor_enums)>len(monitors):
-                    monitors+=monitor_enums
+                    monitors+=monitor_enums[len(monitors):]
 
                 # get all available EDID strings
                 try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi_instance.WmiMonitorDescriptorMethods()}
@@ -337,10 +338,19 @@ class VCP:
                             man_id = dev_id[1][:3]
                             model = dev_id[1][3:]
                             try:
-                                manufacturer = _monitor_brand_lookup(man_id)
+                                man_id, manufacturer = _monitor_brand_lookup(man_id)
                             except:
                                 manufacturer = None
                             name = monitor.DeviceString
+                            try:
+                                edid = ''
+                                for char in descriptors[monitor.InstanceName][0]:
+                                    char = str(hex(char)).replace('0x','')
+                                    if len(char) == 1:
+                                        char = '0'+char
+                                    edid+=char
+                            except:
+                                edid = None
 
 
                         info.append({'name':name, 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
