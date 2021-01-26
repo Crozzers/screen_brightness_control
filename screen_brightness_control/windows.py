@@ -282,7 +282,7 @@ class VCP:
             info = []
             try:
                 # collect all monitor UIDs (derived from DeviceID)
-                monitor_uids = []
+                monitor_uids = {}
                 for i in win32api.EnumDisplayMonitors():
                     tmp = win32api.GetMonitorInfo(i[0])
                     device = None
@@ -295,7 +295,8 @@ class VCP:
                         except:
                             pass
                     if device!=None:
-                        monitor_uids.append(device.DeviceID.split('#')[2])
+                        monitor_uids[device.DeviceID.split('#')[2]] = device
+                        #monitor_uids.append(device.DeviceID.split('#')[2])
 
                 # this seperation of monitors is to fix issue #6
                 # https://github.com/Crozzers/screen_brightness_control/issues/6
@@ -304,14 +305,14 @@ class VCP:
                 extras = []
                 for m in wmi.WmiMonitorID():
                     name = m.InstanceName.replace('_0','',1).split('\\')[2]
-                    if name in monitor_uids:
+                    if name in monitor_uids.keys():
                         monitors.append(m)
                     else:
                         extras.append(m)
 
                 # sort the monitors in the same order as win32api reports them
                 # because the first item in win32api's list is usually the primary display
-                monitors = sorted(monitors, key=lambda x:monitor_uids.index(x.InstanceName.replace('_0','',1).split('\\')[2]))
+                monitors = sorted(monitors, key=lambda x:list(monitor_uids.keys()).index(x.InstanceName.replace('_0','',1).split('\\')[2]))
                 monitors+=extras
 
                 # get all available edid strings
@@ -319,6 +320,8 @@ class VCP:
                 except:pass
                 a=0
                 for monitor in monitors:
+                    valid = False
+                    name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
                     try:
                         serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
                         manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
@@ -336,11 +339,34 @@ class VCP:
                                 edid+=char
                         except:
                             edid = None
-
+                        valid = True
+                    except:
+                        try:
+                            # if there's an error scraping the WMI data, try scraping more basic data instead
+                            monitor = monitor_uids[monitor.InstanceName.replace('_0','',1).split('\\')[2]]
+                            dev_id = monitor.DeviceID.split('#')
+                            serial = dev_id[2] # not an actual serial but the Windows UID
+                            man_id = dev_id[1][:3]
+                            model = dev_id[1][3:]
+                            try:
+                                man_id, manufacturer = _monitor_brand_lookup(man_id)
+                            except:
+                                manufacturer = None
+                            try:
+                                edid = ''
+                                for char in descriptors[monitor.InstanceName][0]:
+                                    char = str(hex(char)).replace('0x','')
+                                    if len(char) == 1:
+                                        char = '0'+char
+                                    edid+=char
+                            except:
+                                edid = None
+                            valid = True
+                        except:
+                            pass
+                    if valid:
                         info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
                         a+=1
-                    except:
-                        pass
             except:
                 pass
             __cache__.store('vcp_monitor_info', info)
@@ -544,8 +570,8 @@ def list_monitors_info(method = None, allow_duplicates = False):
         for m in methods:
             #to make sure each display (with unique edid) is only reported once
             for i in m.get_display_info():
-                if allow_duplicates or i['edid'] not in edids:
-                    edids.append(i['edid'])
+                if allow_duplicates or i['serial'] not in edids:
+                    edids.append(i['serial'])
                     info.append(i)
         __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
