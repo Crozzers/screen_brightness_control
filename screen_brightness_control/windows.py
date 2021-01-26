@@ -339,6 +339,8 @@ class VCP:
                                 edid+=char
                         except:
                             edid = None
+                        if manufacturer=='Dell':
+                            raise Exception
                         valid = True
                     except:
                         try:
@@ -462,7 +464,7 @@ class VCP:
         values = []
         for m in VCP.iter_physical_monitors():
             try:
-                v = __cache__.get('vcp_'+all_monitors[count]['edid']+'_brightness')
+                v = __cache__.get('vcp_'+all_monitors[count]['serial']+'_brightness')
             except:
                 cur_out = DWORD()
                 for i in range(10):
@@ -475,7 +477,7 @@ class VCP:
                 del(cur_out)
             if v!=None and (display==None or (count in indexes)):
                 if display!=None and count in indexes:
-                    try:__cache__.store('vcp_'+all_monitors[count]['edid']+'_brightness', v, expires=0.1)
+                    try:__cache__.store('vcp_'+all_monitors[count]['serial']+'_brightness', v, expires=0.1)
                     except IndexError:pass
                 values.append(v)
             count+=1
