@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title"><code>screen_brightness_control </code><br /><code>v0.7.0</code></h1>
+<h1 class="title"><code>screen_brightness_control </code><br /><code>v0.7.1</code></h1>
 </header>
 
 <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.</p>
@@ -46,15 +46,17 @@ If you're using a laptop with a display driver that doesn't support RandR, use <
 <h1>Usage</h1>
 <p>You can call this module from your command line or use it as a python library (see the documentation section below).</p>
 <pre><code>python -m screen_brightness_control --help
-&gt; usage: screen_brightness_control [-h] [-d DISPLAY] [-s SET] [-g] [-f FADE] [-v]
+&gt; usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-v]
 &gt;
 &gt; optional arguments:
 &gt;   -h, --help            show this help message and exit
 &gt;   -d DISPLAY, --display DISPLAY
 &gt;                         the display to be used
-&gt;   -s SET, --set SET     set the brightness to this value
+&gt;   -s VALUE, --set VALUE 
+&gt;                         set the brightness to this value
 &gt;   -g, --get             get the current screen brightness
-&gt;   -f FADE, --fade FADE  fade the brightness to this value
+&gt;   -f VALUE, --fade VALUE
+&gt;                         fade the brightness to this value
 &gt;   -m METHOD, --method METHOD
 &gt;                         specify which method to use
 &gt;   -l, --list            list all monitors
@@ -160,6 +162,8 @@ sbc.fade_brightness(100, blocking=False)
 <h2>License</h2>
 <p>This software is licensed under the <a href="https://mit-license.org/">MIT license</a></p>
 <h1>FAQ</h1>
+<h3>Cannot use the module with external monitors (Windows)</h3>
+<p>I recently changed how external monitors are handled which has caused <a href="https://github.com/Crozzers/screen_brightness_control/issues/6">some issues</a>. Untill I fix it, try using <code>v0.6.2</code> by running the command <code>pip3 install screen_brightness_control==0.6.2</code></p>
 <h3>Why do I always get <code>ScreenBrightnessError</code> on Linux?</h3>
 <p><strong>Why this happens:</strong><br />
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
@@ -231,7 +235,8 @@ print(monitor.Level)
 <ul id="index">
 <li><h3><a>Version</a></h3>
 <ul><!--VERSION START-->
-<li><code><a href="docs/0.7.0/index.html">Latest</a></code></li>
+<li><code><a href="docs/0.7.1/index.html">Latest</a></code></li>
+<li><code><a href="docs/0.7.1/index.html">0.7.1</a></code></li>
 <li><code><a href="docs/0.7.0/index.html">0.7.0</a></code></li>
 <li><code><a href="docs/0.6.2/index.html">0.6.2</a></code></li>
 <li><code><a href="docs/0.6.1/index.html">0.6.1</a></code></li>
