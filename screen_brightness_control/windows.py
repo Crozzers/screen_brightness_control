@@ -339,8 +339,6 @@ class VCP:
                                 edid+=char
                         except:
                             edid = None
-                        if manufacturer=='Dell':
-                            raise Exception
                         valid = True
                     except:
                         try:
