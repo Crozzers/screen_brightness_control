@@ -52,7 +52,7 @@ class WMI:
                 try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
                 except:pass
                 for m in monitors:
-                    instance = m.InstanceName.split('\\')
+                    instance = m.InstanceName.replace('_0','',1).split('\\')
                     serial = instance[-1]
                     model = instance[1]
 
