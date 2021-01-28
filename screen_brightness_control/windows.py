@@ -301,6 +301,10 @@ class VCP:
                 # this seperation of monitors is to fix issue #6
                 # https://github.com/Crozzers/screen_brightness_control/issues/6
                 wmi = _wmi_init()
+                try:
+                    blacklist = [i.InstanceName.replace('_0', '', 1) for i in wmi.WmiMonitorBrightness()]
+                except:
+                    blacklist = []
                 monitors = []
                 extras = []
                 for m in wmi.WmiMonitorID():
@@ -322,6 +326,7 @@ class VCP:
                 for monitor in monitors:
                     valid = False
                     name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
+                    monitor_alt = None
                     try:
                         serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
                         manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
@@ -343,8 +348,8 @@ class VCP:
                     except:
                         try:
                             # if there's an error scraping the WMI data, try scraping more basic data instead
-                            monitor = monitor_uids[monitor.InstanceName.replace('_0','',1).split('\\')[2]]
-                            dev_id = monitor.DeviceID.split('#')
+                            monitor_alt = monitor_uids[monitor.InstanceName.replace('_0','',1).split('\\')[2]]
+                            dev_id = monitor_alt.DeviceID.split('#')
                             serial = dev_id[2] # not an actual serial but the Windows UID
                             man_id = dev_id[1][:3]
                             model = dev_id[1][3:]
@@ -354,7 +359,7 @@ class VCP:
                                 manufacturer = None
                             try:
                                 edid = ''
-                                for char in descriptors[monitor.InstanceName][0]:
+                                for char in descriptors[monitor_alt.InstanceName][0]:
                                     char = str(hex(char)).replace('0x','')
                                     if len(char) == 1:
                                         char = '0'+char
@@ -365,7 +370,8 @@ class VCP:
                         except:
                             pass
                     if valid:
-                        info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
+                        if monitor.InstanceName.replace('_0', '', 1) not in blacklist:
+                            info.append({'name':f'{manufacturer} {model}', 'model':model, 'model_name': None, 'serial':serial, 'manufacturer': manufacturer, 'manufacturer_id': man_id , 'index': a, 'method': VCP, 'edid': edid})
                         a+=1
             except:
                 pass
