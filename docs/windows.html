@@ -49,8 +49,8 @@ class WMI:
             display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dictonaries
-            dict: one dictionary if a monitor is specified
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -80,7 +80,7 @@ class WMI:
                 try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
                 except:pass
                 for m in monitors:
-                    instance = m.InstanceName.split(&#39;\\&#39;)
+                    instance = m.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)
                     serial = instance[-1]
                     model = instance[1]
 
@@ -104,8 +104,9 @@ class WMI:
                 pass
             __cache__.store(&#39;wmi_monitor_info&#39;, info)
         if display!=None:
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display=display, haystack=info)]
-            info = [info[i] for i in indexes]
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_display_names():
         &#39;&#39;&#39;
@@ -196,7 +197,7 @@ class WMI:
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display!=None:
             displays = WMI.get_display_info(display)
-            if displays is dict:
+            if type(displays) == dict:
                 displays = [displays]
             brightness_method = [brightness_method[i[&#39;index&#39;]] for i in displays]
 
@@ -279,7 +280,7 @@ class VCP:
         else:
             info = VCP.get_display_info()
         return filter_monitors(display = display, haystack = info)
-    def get_display_info(display=None):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
@@ -287,8 +288,8 @@ class VCP:
             display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dicts if `args` is empty or there are multiple values passed in `args`
-            dict: if one value was passed through `args` and it matched a known monitor
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -329,6 +330,10 @@ class VCP:
                 # this seperation of monitors is to fix issue #6
                 # https://github.com/Crozzers/screen_brightness_control/issues/6
                 wmi = _wmi_init()
+                try:
+                    blacklist = [i.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) for i in wmi.WmiMonitorBrightness()]
+                except:
+                    blacklist = []
                 monitors = []
                 extras = []
                 for m in wmi.WmiMonitorID():
@@ -350,6 +355,7 @@ class VCP:
                 for monitor in monitors:
                     valid = False
                     name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
+                    monitor_alt = None
                     try:
                         serial = bytes(monitor.SerialNumberID).decode().replace(&#39;\x00&#39;, &#39;&#39;)
                         manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
@@ -367,14 +373,12 @@ class VCP:
                                 edid+=char
                         except:
                             edid = None
-                        if manufacturer==&#39;Dell&#39;:
-                            raise Exception
                         valid = True
                     except:
                         try:
                             # if there&#39;s an error scraping the WMI data, try scraping more basic data instead
-                            monitor = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
-                            dev_id = monitor.DeviceID.split(&#39;#&#39;)
+                            monitor_alt = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
+                            dev_id = monitor_alt.DeviceID.split(&#39;#&#39;)
                             serial = dev_id[2] # not an actual serial but the Windows UID
                             man_id = dev_id[1][:3]
                             model = dev_id[1][3:]
@@ -384,7 +388,7 @@ class VCP:
                                 manufacturer = None
                             try:
                                 edid = &#39;&#39;
-                                for char in descriptors[monitor.InstanceName][0]:
+                                for char in descriptors[monitor_alt.InstanceName][0]:
                                     char = str(hex(char)).replace(&#39;0x&#39;,&#39;&#39;)
                                     if len(char) == 1:
                                         char = &#39;0&#39;+char
@@ -395,17 +399,16 @@ class VCP:
                         except:
                             pass
                     if valid:
-                        info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
+                        if monitor.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) not in blacklist:
+                            info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
                         a+=1
             except:
                 pass
             __cache__.store(&#39;vcp_monitor_info&#39;, info)
         if display!=None:
-            try:
-                info = filter_monitors(display=display, haystack=info)
-                return info[0] if len(info)==1 else info
-            except:
-                pass
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_monitor_caps(monitor):
         &#39;&#39;&#39;
@@ -483,10 +486,15 @@ class VCP:
             benq_brightness = sbc.windows.VCP.get_brightness(display = &#39;GL2450H&#39;)
             ```
         &#39;&#39;&#39;
-        if display!=None:
-            all_monitors = VCP.get_display_info()
-            monitors = filter_monitors(display = display, haystack=all_monitors)
-            indexes = [i[&#39;index&#39;] for i in monitors]
+        # filter monitors even if display kwarg is not specified due to oddities surrounding issues #7 and #8
+        # https://github.com/Crozzers/screen_brightness_control/issues/7
+        # https://github.com/Crozzers/screen_brightness_control/issues/8
+        # essentially, we get &#39;ghost&#39; monitors showing up here that cannot actually be adjusted (even if no error gets raised)
+        # so we use this to filter out such ghost monitors by only attempting to get the brightness for valid monitors (determined by VCP.get_display_info)
+        # yes, it does add an unnecessary function call but thats only if you&#39;re using this module low-level.
+        # Top-level functions always end up specifying the display kwarg anyway
+        all_monitors = VCP.get_display_info()
+        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack=all_monitors)]
 
         count = 0
         values = []
@@ -503,8 +511,8 @@ class VCP:
                         time.sleep(0.02)
                         v = None
                 del(cur_out)
-            if v!=None and (display==None or (count in indexes)):
-                if display!=None and count in indexes:
+            if v!=None and count in indexes:
+                if count in indexes:
                     try:__cache__.store(&#39;vcp_&#39;+all_monitors[count][&#39;serial&#39;]+&#39;_brightness&#39;, v, expires=0.1)
                     except IndexError:pass
                 values.append(v)
@@ -541,8 +549,8 @@ class VCP:
             sbc.windows.VCP.set_brightness(100, display = &#39;GL2450H&#39;)
             ```
         &#39;&#39;&#39;
-        if display!=None:
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
+        # see VCP.set_brightness for the explanation for why we always gather this list
+        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
@@ -1163,7 +1171,7 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
         else:
             info = VCP.get_display_info()
         return filter_monitors(display = display, haystack = info)
-    def get_display_info(display=None):
+    def get_display_info(display = None):
         &#39;&#39;&#39;
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
@@ -1171,8 +1179,8 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
             display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dicts if `args` is empty or there are multiple values passed in `args`
-            dict: if one value was passed through `args` and it matched a known monitor
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -1213,6 +1221,10 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                 # this seperation of monitors is to fix issue #6
                 # https://github.com/Crozzers/screen_brightness_control/issues/6
                 wmi = _wmi_init()
+                try:
+                    blacklist = [i.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) for i in wmi.WmiMonitorBrightness()]
+                except:
+                    blacklist = []
                 monitors = []
                 extras = []
                 for m in wmi.WmiMonitorID():
@@ -1234,6 +1246,7 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                 for monitor in monitors:
                     valid = False
                     name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
+                    monitor_alt = None
                     try:
                         serial = bytes(monitor.SerialNumberID).decode().replace(&#39;\x00&#39;, &#39;&#39;)
                         manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
@@ -1251,14 +1264,12 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                                 edid+=char
                         except:
                             edid = None
-                        if manufacturer==&#39;Dell&#39;:
-                            raise Exception
                         valid = True
                     except:
                         try:
                             # if there&#39;s an error scraping the WMI data, try scraping more basic data instead
-                            monitor = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
-                            dev_id = monitor.DeviceID.split(&#39;#&#39;)
+                            monitor_alt = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
+                            dev_id = monitor_alt.DeviceID.split(&#39;#&#39;)
                             serial = dev_id[2] # not an actual serial but the Windows UID
                             man_id = dev_id[1][:3]
                             model = dev_id[1][3:]
@@ -1268,7 +1279,7 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                                 manufacturer = None
                             try:
                                 edid = &#39;&#39;
-                                for char in descriptors[monitor.InstanceName][0]:
+                                for char in descriptors[monitor_alt.InstanceName][0]:
                                     char = str(hex(char)).replace(&#39;0x&#39;,&#39;&#39;)
                                     if len(char) == 1:
                                         char = &#39;0&#39;+char
@@ -1279,17 +1290,16 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                         except:
                             pass
                     if valid:
-                        info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
+                        if monitor.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) not in blacklist:
+                            info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
                         a+=1
             except:
                 pass
             __cache__.store(&#39;vcp_monitor_info&#39;, info)
         if display!=None:
-            try:
-                info = filter_monitors(display=display, haystack=info)
-                return info[0] if len(info)==1 else info
-            except:
-                pass
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_monitor_caps(monitor):
         &#39;&#39;&#39;
@@ -1367,10 +1377,15 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
             benq_brightness = sbc.windows.VCP.get_brightness(display = &#39;GL2450H&#39;)
             ```
         &#39;&#39;&#39;
-        if display!=None:
-            all_monitors = VCP.get_display_info()
-            monitors = filter_monitors(display = display, haystack=all_monitors)
-            indexes = [i[&#39;index&#39;] for i in monitors]
+        # filter monitors even if display kwarg is not specified due to oddities surrounding issues #7 and #8
+        # https://github.com/Crozzers/screen_brightness_control/issues/7
+        # https://github.com/Crozzers/screen_brightness_control/issues/8
+        # essentially, we get &#39;ghost&#39; monitors showing up here that cannot actually be adjusted (even if no error gets raised)
+        # so we use this to filter out such ghost monitors by only attempting to get the brightness for valid monitors (determined by VCP.get_display_info)
+        # yes, it does add an unnecessary function call but thats only if you&#39;re using this module low-level.
+        # Top-level functions always end up specifying the display kwarg anyway
+        all_monitors = VCP.get_display_info()
+        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack=all_monitors)]
 
         count = 0
         values = []
@@ -1387,8 +1402,8 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
                         time.sleep(0.02)
                         v = None
                 del(cur_out)
-            if v!=None and (display==None or (count in indexes)):
-                if display!=None and count in indexes:
+            if v!=None and count in indexes:
+                if count in indexes:
                     try:__cache__.store(&#39;vcp_&#39;+all_monitors[count][&#39;serial&#39;]+&#39;_brightness&#39;, v, expires=0.1)
                     except IndexError:pass
                 values.append(v)
@@ -1425,8 +1440,8 @@ sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
             sbc.windows.VCP.set_brightness(100, display = &#39;GL2450H&#39;)
             ```
         &#39;&#39;&#39;
-        if display!=None:
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
+        # see VCP.set_brightness for the explanation for why we always gather this list
+        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
@@ -1584,10 +1599,15 @@ benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
         benq_brightness = sbc.windows.VCP.get_brightness(display = &#39;GL2450H&#39;)
         ```
     &#39;&#39;&#39;
-    if display!=None:
-        all_monitors = VCP.get_display_info()
-        monitors = filter_monitors(display = display, haystack=all_monitors)
-        indexes = [i[&#39;index&#39;] for i in monitors]
+    # filter monitors even if display kwarg is not specified due to oddities surrounding issues #7 and #8
+    # https://github.com/Crozzers/screen_brightness_control/issues/7
+    # https://github.com/Crozzers/screen_brightness_control/issues/8
+    # essentially, we get &#39;ghost&#39; monitors showing up here that cannot actually be adjusted (even if no error gets raised)
+    # so we use this to filter out such ghost monitors by only attempting to get the brightness for valid monitors (determined by VCP.get_display_info)
+    # yes, it does add an unnecessary function call but thats only if you&#39;re using this module low-level.
+    # Top-level functions always end up specifying the display kwarg anyway
+    all_monitors = VCP.get_display_info()
+    indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack=all_monitors)]
 
     count = 0
     values = []
@@ -1604,8 +1624,8 @@ benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
                     time.sleep(0.02)
                     v = None
             del(cur_out)
-        if v!=None and (display==None or (count in indexes)):
-            if display!=None and count in indexes:
+        if v!=None and count in indexes:
+            if count in indexes:
                 try:__cache__.store(&#39;vcp_&#39;+all_monitors[count][&#39;serial&#39;]+&#39;_brightness&#39;, v, expires=0.1)
                 except IndexError:pass
             values.append(v)
@@ -1629,9 +1649,9 @@ benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list</code></dt>
-<dd>list of dicts if <code>args</code> is empty or there are multiple values passed in <code>args</code></dd>
+<dd>list of dicts if the <code>display</code> kwarg is equal to <code>None</code> or if the <code>display</code> kwarg only matched one display</dd>
 <dt><code>dict</code></dt>
-<dd>if one value was passed through <code>args</code> and it matched a known monitor</dd>
+<dd>if the <code>display</code> kwarg is not equal to <code>None</code> and only matched one display</dd>
 </dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -1649,7 +1669,7 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_display_info(display=None):
+<pre><code class="python">def get_display_info(display = None):
     &#39;&#39;&#39;
     Returns a dictionary of info about all detected monitors or a selection of monitors
 
@@ -1657,8 +1677,8 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
         display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
     Returns:
-        list: list of dicts if `args` is empty or there are multiple values passed in `args`
-        dict: if one value was passed through `args` and it matched a known monitor
+        list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+        dict: if the `display` kwarg is not equal to `None` and only matched one display
     
     Example:
         ```python
@@ -1699,6 +1719,10 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
             # this seperation of monitors is to fix issue #6
             # https://github.com/Crozzers/screen_brightness_control/issues/6
             wmi = _wmi_init()
+            try:
+                blacklist = [i.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) for i in wmi.WmiMonitorBrightness()]
+            except:
+                blacklist = []
             monitors = []
             extras = []
             for m in wmi.WmiMonitorID():
@@ -1720,6 +1744,7 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
             for monitor in monitors:
                 valid = False
                 name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
+                monitor_alt = None
                 try:
                     serial = bytes(monitor.SerialNumberID).decode().replace(&#39;\x00&#39;, &#39;&#39;)
                     manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace(&#39;\x00&#39;, &#39;&#39;).split(&#39; &#39;)
@@ -1737,14 +1762,12 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
                             edid+=char
                     except:
                         edid = None
-                    if manufacturer==&#39;Dell&#39;:
-                        raise Exception
                     valid = True
                 except:
                     try:
                         # if there&#39;s an error scraping the WMI data, try scraping more basic data instead
-                        monitor = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
-                        dev_id = monitor.DeviceID.split(&#39;#&#39;)
+                        monitor_alt = monitor_uids[monitor.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)[2]]
+                        dev_id = monitor_alt.DeviceID.split(&#39;#&#39;)
                         serial = dev_id[2] # not an actual serial but the Windows UID
                         man_id = dev_id[1][:3]
                         model = dev_id[1][3:]
@@ -1754,7 +1777,7 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
                             manufacturer = None
                         try:
                             edid = &#39;&#39;
-                            for char in descriptors[monitor.InstanceName][0]:
+                            for char in descriptors[monitor_alt.InstanceName][0]:
                                 char = str(hex(char)).replace(&#39;0x&#39;,&#39;&#39;)
                                 if len(char) == 1:
                                     char = &#39;0&#39;+char
@@ -1765,17 +1788,16 @@ bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
                     except:
                         pass
                 if valid:
-                    info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
+                    if monitor.InstanceName.replace(&#39;_0&#39;, &#39;&#39;, 1) not in blacklist:
+                        info.append({&#39;name&#39;:f&#39;{manufacturer} {model}&#39;, &#39;model&#39;:model, &#39;model_name&#39;: None, &#39;serial&#39;:serial, &#39;manufacturer&#39;: manufacturer, &#39;manufacturer_id&#39;: man_id , &#39;index&#39;: a, &#39;method&#39;: VCP, &#39;edid&#39;: edid})
                     a+=1
         except:
             pass
         __cache__.store(&#39;vcp_monitor_info&#39;, info)
     if display!=None:
-        try:
-            info = filter_monitors(display=display, haystack=info)
-            return info[0] if len(info)==1 else info
-        except:
-            pass
+        info = filter_monitors(display=display, haystack=info)
+        if len(info) == 1:
+            info = info[0]
     return info</code></pre>
 </details>
 </dd>
@@ -1995,8 +2017,8 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
         sbc.windows.VCP.set_brightness(100, display = &#39;GL2450H&#39;)
         ```
     &#39;&#39;&#39;
-    if display!=None:
-        indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
+    # see VCP.set_brightness for the explanation for why we always gather this list
+    indexes = [i[&#39;index&#39;] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
     __cache__.expire(startswith=&#39;vcp_&#39;, endswith=&#39;_brightness&#39;)
 
@@ -2033,8 +2055,8 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dictonaries
-            dict: one dictionary if a monitor is specified
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -2064,7 +2086,7 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
                 try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
                 except:pass
                 for m in monitors:
-                    instance = m.InstanceName.split(&#39;\\&#39;)
+                    instance = m.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)
                     serial = instance[-1]
                     model = instance[1]
 
@@ -2088,8 +2110,9 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
                 pass
             __cache__.store(&#39;wmi_monitor_info&#39;, info)
         if display!=None:
-            indexes = [i[&#39;index&#39;] for i in filter_monitors(display=display, haystack=info)]
-            info = [info[i] for i in indexes]
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_display_names():
         &#39;&#39;&#39;
@@ -2180,7 +2203,7 @@ sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display!=None:
             displays = WMI.get_display_info(display)
-            if displays is dict:
+            if type(displays) == dict:
                 displays = [displays]
             brightness_method = [brightness_method[i[&#39;index&#39;]] for i in displays]
 
@@ -2266,7 +2289,7 @@ benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ GL2450H')
     brightness_method = _wmi_init().WmiMonitorBrightness()
     if display!=None:
         displays = WMI.get_display_info(display)
-        if displays is dict:
+        if type(displays) == dict:
             displays = [displays]
         brightness_method = [brightness_method[i[&#39;index&#39;]] for i in displays]
 
@@ -2287,9 +2310,9 @@ benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ GL2450H')
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list</code></dt>
-<dd>list of dictonaries</dd>
+<dd>list of dicts if the <code>display</code> kwarg is equal to <code>None</code> or if the <code>display</code> kwarg only matched one display</dd>
 <dt><code>dict</code></dt>
-<dd>one dictionary if a monitor is specified</dd>
+<dd>if the <code>display</code> kwarg is not equal to <code>None</code> and only matched one display</dd>
 </dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -2318,8 +2341,8 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
         display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
     Returns:
-        list: list of dictonaries
-        dict: one dictionary if a monitor is specified
+        list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+        dict: if the `display` kwarg is not equal to `None` and only matched one display
     
     Example:
         ```python
@@ -2349,7 +2372,7 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             try:descriptors = {i.InstanceName:i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()}
             except:pass
             for m in monitors:
-                instance = m.InstanceName.split(&#39;\\&#39;)
+                instance = m.InstanceName.replace(&#39;_0&#39;,&#39;&#39;,1).split(&#39;\\&#39;)
                 serial = instance[-1]
                 model = instance[1]
 
@@ -2373,8 +2396,9 @@ benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             pass
         __cache__.store(&#39;wmi_monitor_info&#39;, info)
     if display!=None:
-        indexes = [i[&#39;index&#39;] for i in filter_monitors(display=display, haystack=info)]
-        info = [info[i] for i in indexes]
+        info = filter_monitors(display=display, haystack=info)
+        if len(info) == 1:
+            info = info[0]
     return info</code></pre>
 </details>
 </dd>
