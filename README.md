@@ -161,7 +161,7 @@ To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://git
 This software is licensed under the [MIT license](https://mit-license.org/)
 
 # FAQ
-### Why do I always get `ScreenBrightnessError` on Linux?
+### Why do I always get `ScreenBrightnessError` (Linux)?
 **Why this happens:**  
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
 The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
@@ -171,7 +171,7 @@ If none of these programs can be called a `ScreenBrightnessError` is raised
 Install `xrandr`, `ddcutil`, `light`, or `xbacklight` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
 
 
-### I call `set_brightness()` and nothing happens on Linux
+### I call `set_brightness()` and nothing happens (Linux)
 **Why this happens:**  
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
@@ -187,7 +187,7 @@ sh autogen.sh && ./configure && make && sudo make install
 ```
 
 
-### Using the `display` kwarg does nothing/creates exceptions on Linux
+### Using the `display` kwarg does nothing/creates exceptions (Linux)
 **Why this happens:**  
 The `display` kwarg is only supported by the `Light`, `XRandr` and `DDCUtil` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
 
@@ -196,27 +196,11 @@ Install `xrandr` or `ddcutil` or `light` using your system package manager. See 
 
 
 ### The model of my monitor/display is not what the program says it is (Windows)
-**Why this happens:**  
 If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
-If your display is a desktop monitor with a Virtual Control Panel (VCP) then there is a way to get the actual model, but the function call takes
-anywhere between 1 and 2 seconds to run, which is why it doesn't automatically.
-To get the actual model number use this:
-```python
-import screen_brightness_control as sbc
-sbc.list_monitors()
-> ['BenQ BNQ78A7', 'Dell DEL405E']
-monitor = sbc.windows.Monitor('BenQ BNQ78A7') # swap this argument for the preferred monitor name
-print(monitor.model_name)
-> 'GL2450HM'
-```
-
-### The serial number of my monitor/display is not what the program says it is (Windows)
-**Why this happens:**  
-I do not know how to get a monitor's serial number using VCP and WMI. If you know and want to contribute then feel free to [raise an issue](https://github.com/Crozzers/screen_brightness_control/issues), [raise a pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to email me [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com).  
-The "serial" reported by this library is a unique identifier that Windows gives each display that I could reliably extract using both VCP and WMI. I decided that, for what I needed it for, it was good enough.
+If you know how this might be done, feel free to [create a pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to ping me an email [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com)
 
 ### When I call `get_brightness()` the returned value isn't what I set it to (Windows)
-Not all monitors can set the brightness for every value between 0 and 100. Most of them have a number of 'levels' that they can set them to.
+Not all monitors can set the brightness for every value between 0 and 100. Some of them have a number of 'levels' that they can be set to.
 You can likely see this if you open your display settings and very slowly move the brightness slider.  
 You can find out your brightness 'levels' by running the following python code:
 ```python
