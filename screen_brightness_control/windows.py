@@ -21,8 +21,8 @@ class WMI:
             display (str or int): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dictonaries
-            dict: one dictionary if a monitor is specified
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -76,8 +76,9 @@ class WMI:
                 pass
             __cache__.store('wmi_monitor_info', info)
         if display!=None:
-            indexes = [i['index'] for i in filter_monitors(display=display, haystack=info)]
-            info = [info[i] for i in indexes]
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_display_names():
         '''
@@ -168,7 +169,7 @@ class WMI:
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display!=None:
             displays = WMI.get_display_info(display)
-            if displays is dict:
+            if type(displays) == dict:
                 displays = [displays]
             brightness_method = [brightness_method[i['index']] for i in displays]
 
@@ -251,7 +252,7 @@ class VCP:
         else:
             info = VCP.get_display_info()
         return filter_monitors(display = display, haystack = info)
-    def get_display_info(display=None):
+    def get_display_info(display = None):
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
@@ -259,8 +260,8 @@ class VCP:
             display (int or str): [*Optional*] the monitor to return info about. Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dicts if `args` is empty or there are multiple values passed in `args`
-            dict: if one value was passed through `args` and it matched a known monitor
+            list: list of dicts if the `display` kwarg is equal to `None` or if the `display` kwarg only matched one display
+            dict: if the `display` kwarg is not equal to `None` and only matched one display
         
         Example:
             ```python
@@ -377,11 +378,9 @@ class VCP:
                 pass
             __cache__.store('vcp_monitor_info', info)
         if display!=None:
-            try:
-                info = filter_monitors(display=display, haystack=info)
-                return info[0] if len(info)==1 else info
-            except:
-                pass
+            info = filter_monitors(display=display, haystack=info)
+            if len(info) == 1:
+                info = info[0]
         return info
     def get_monitor_caps(monitor):
         '''
@@ -459,10 +458,15 @@ class VCP:
             benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
             ```
         '''
-        if display!=None:
-            all_monitors = VCP.get_display_info()
-            monitors = filter_monitors(display = display, haystack=all_monitors)
-            indexes = [i['index'] for i in monitors]
+        # filter monitors even if display kwarg is not specified due to oddities surrounding issues #7 and #8
+        # https://github.com/Crozzers/screen_brightness_control/issues/7
+        # https://github.com/Crozzers/screen_brightness_control/issues/8
+        # essentially, we get 'ghost' monitors showing up here that cannot actually be adjusted (even if no error gets raised)
+        # so we use this to filter out such ghost monitors by only attempting to get the brightness for valid monitors (determined by VCP.get_display_info)
+        # yes, it does add an unnecessary function call but thats only if you're using this module low-level.
+        # Top-level functions always end up specifying the display kwarg anyway
+        all_monitors = VCP.get_display_info()
+        indexes = [i['index'] for i in filter_monitors(display = display, haystack=all_monitors)]
 
         count = 0
         values = []
@@ -479,8 +483,8 @@ class VCP:
                         time.sleep(0.02)
                         v = None
                 del(cur_out)
-            if v!=None and (display==None or (count in indexes)):
-                if display!=None and count in indexes:
+            if v!=None and count in indexes:
+                if count in indexes:
                     try:__cache__.store('vcp_'+all_monitors[count]['serial']+'_brightness', v, expires=0.1)
                     except IndexError:pass
                 values.append(v)
@@ -517,8 +521,8 @@ class VCP:
             sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             ```
         '''
-        if display!=None:
-            indexes = [i['index'] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
+        # see VCP.set_brightness for the explanation for why we always gather this list
+        indexes = [i['index'] for i in filter_monitors(display = display, haystack = VCP.get_display_info())]
 
         __cache__.expire(startswith='vcp_', endswith='_brightness')
 
