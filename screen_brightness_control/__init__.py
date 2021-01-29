@@ -691,5 +691,5 @@ if platform.system()=='Windows':
 elif platform.system()=='Linux':
     from . import linux
 
-__version__='0.7.1'
+__version__='0.7.2'
 __author__='Crozzers'
