@@ -161,10 +161,6 @@ To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://git
 This software is licensed under the [MIT license](https://mit-license.org/)
 
 # FAQ
-### Cannot use the module with external monitors (Windows)
-I recently changed how external monitors are handled which has caused [some issues](https://github.com/Crozzers/screen_brightness_control/issues/6). Untill I fix it, try using `v0.6.2` by running the command `pip3 install screen_brightness_control==0.6.2`
-
-
 ### Why do I always get `ScreenBrightnessError` on Linux?
 **Why this happens:**  
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
