@@ -1,37 +1,48 @@
-import platform,time,threading
+import platform
+import time
+import threading
+
 
 class __Cache(dict):
     '''class to cache data with a short shelf life'''
     def __init__(self):
         self.enabled = True
         super().__init__()
+
     def __setitem__(self, key, value, *args, expires=1, **kwargs):
         super().__setitem__(key, (value, expires, time.time(), args, kwargs))
+
     def __getitem__(self, key, *args, **kwargs):
         if not self.enabled:
             raise Exception
         value, expires, created, orig_args, orig_kwargs = super().__getitem__(key)
-        if time.time()-expires<created and orig_args==args and orig_kwargs==kwargs:
+        if time.time() - expires < created and orig_args == args and orig_kwargs == kwargs:
             return value
         raise KeyError
+
     def get(self, *args, **kwargs):
         return self.__getitem__(*args, **kwargs)
+
     def store(self, *args, **kwargs):
         return self.__setitem__(*args, **kwargs)
-    def expire(self, key = None, startswith = None, endswith = None):
-        if key!=None:
-            try:del(self[key])
-            except:pass
+
+    def expire(self, key=None, startswith=None, endswith=None):
+        if key is not None:
+            try:
+                del(self[key])
+            except Exception:
+                pass
         else:
             for i in list(self.keys()):
-                if startswith!=None and endswith!=None and i.startswith(startswith) and i.endswith(endswith):
+                if (startswith, endswith) != (None, None) and i.startswith(startswith) and i.endswith(endswith):
                     del(self[i])
-                elif startswith!=None and endswith==None and i.startswith(startswith):
+                elif startswith is not None and endswith is None and i.startswith(startswith):
                     del(self[i])
-                elif startswith==None and endswith!=None and i.endswith(endswith):
+                elif startswith is None and endswith is not None and i.endswith(endswith):
                     del(self[i])
                 else:
                     pass
+
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
@@ -99,6 +110,8 @@ MONITOR_MANUFACTURER_CODES = {
     "UNK": "Unknown",
     "_YV": "Fujitsu",
 }
+
+
 def _monitor_brand_lookup(search):
     '''internal function to search the monitor manufacturer codes dict'''
     keys = list(MONITOR_MANUFACTURER_CODES.keys())
@@ -115,6 +128,7 @@ def _monitor_brand_lookup(search):
         return None
     return keys[index], values[index]
 
+
 class ScreenBrightnessError(Exception):
     '''
     Generic error class designed to make catching errors under one umbrella easy.
@@ -130,8 +144,9 @@ class ScreenBrightnessError(Exception):
         ```
     '''
     def __init__(self, message="Cannot set/retrieve brightness level"):
-        self.message=message
+        self.message = message
         super().__init__(self.message)
+
 
 class Monitor():
     '''A class to manage a single monitor and its relevant information'''
@@ -184,22 +199,25 @@ class Monitor():
         '''the 3 letter manufacturing code corresponding to the manufacturer name'''
         self.model = info['model']
         '''the general model of the display'''
-        if platform.system()=='Windows':
+        if platform.system() == 'Windows':
             self.model_name = info['model']
             '''(Windows Only) Deprecated, always equal to the model. Will be removed soon'''
         self.index = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
         self.edid = info['edid']
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
+
     def __getitem__(self, item):
         return getattr(self, item)
+
     def set_brightness(self, *args, **kwargs):
         '''
         Sets the brightness for this display
 
         Args:
             args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method (the `display` kwarg is always overwritten)
+            kwargs (dict): passed directly to this monitor's brightness method.
+                            The `display` kwarg is always overwritten
 
         Returns:
             int: from 0 to 100
@@ -213,13 +231,14 @@ class Monitor():
             primary.set_brightness(50)
             ```
         '''
-        if self.edid!=None:
+        if self.edid is not None:
             kwargs['display'] = self.edid
-        elif self.serial!=None:
+        elif self.serial is not None:
             kwargs['display'] = self.serial
         else:
             kwargs['display'] = self.index
         return self.method.set_brightness(*args, **kwargs)
+
     def get_brightness(self, **kwargs):
         '''
         Returns the brightness of this display
@@ -239,13 +258,14 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         '''
-        if self.edid!=None:
+        if self.edid is not None:
             kwargs['display'] = self.edid
-        elif self.serial!=None:
+        elif self.serial is not None:
             kwargs['display'] = self.serial
         else:
             kwargs['display'] = self.index
         return self.method.get_brightness(**kwargs)
+
     def get_info(self):
         '''
         Returns all known information about this monitor instance
@@ -264,19 +284,20 @@ class Monitor():
             ```
         '''
         info = {
-            'name':self.name,
-            'model':self.model,
-            'serial':self.serial,
+            'name': self.name,
+            'model': self.model,
+            'serial': self.serial,
             'manufacturer': self.manufacturer,
             'manufacturer_id': self.manufacturer_id,
             'method': self.method,
             'index': self.index,
             'edid': self.edid
         }
-        if platform.system()=='Windows':
+        if platform.system() == 'Windows':
             info['model_name'] = info['model']
-            #deprecated, will be removed in v0.8.0. Only here for compatibility
+            # deprecated, will be removed in v0.8.0. Only here for compatibility
         return info
+
     def is_active(self):
         '''
         Attempts to retrieve the brightness for this display. If it works the display is deemed active
@@ -296,7 +317,7 @@ class Monitor():
         try:
             self.get_brightness()
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -316,25 +337,42 @@ def list_monitors_info(**kwargs):
         monitors = sbc.list_monitors_info()
         for monitor in monitors:
             print('=======================')
-            print('Name:', monitor['name'])                        # the manufacturer name plus the model
-            print('Model:', monitor['model'])                      # the general model of the display
-            print('Serial:', monitor['serial'])                    # a unique string assigned by Windows to this display
-            print('Manufacturer:', monitor['manufacturer'])        # the name of the brand of the monitor
-            print('Manufacturer ID:', monitor['manufacturer_id'])  # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Index:', monitor['index'])                      # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Method:', monitor['method'])                    # the method this monitor can be addressed by
-            print('EDID:', monitor['edid'])                        # the EDID string associated with that monitor
+
+            # the manufacturer name plus the model
+            print('Name:', monitor['name'])
+
+            # the general model of the display
+            print('Model:', monitor['model'])
+
+            # a unique string assigned by Windows to this display
+            print('Serial:', monitor['serial'])
+
+            # the name of the brand of the monitor
+            print('Manufacturer:', monitor['manufacturer'])
+
+            # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
+            print('Manufacturer ID:', monitor['manufacturer_id'])
+
+            # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Index:', monitor['index'])
+
+            # the method this monitor can be addressed by
+            print('Method:', monitor['method'])
+
+            # the EDID string associated with that monitor
+            print('EDID:', monitor['edid'])
         ```
     '''
     try:
         return __cache__.get('monitors_info', **kwargs)
-    except:
+    except Exception:
         if platform.system() == 'Windows':
             info = windows.list_monitors_info(**kwargs)
         elif platform.system() == 'Linux':
             info = linux.list_monitors_info(**kwargs)
         __cache__.store('monitors_info', info, **kwargs)
         return info
+
 
 def list_monitors(**kwargs):
     '''
@@ -345,7 +383,7 @@ def list_monitors(**kwargs):
 
     Returns:
         list: list of strings
-    
+
     Example:
         ```python
         import screen_brightness_control as sbc
@@ -355,14 +393,18 @@ def list_monitors(**kwargs):
     '''
     return [i['name'] for i in list_monitors_info(**kwargs)]
 
+
 def filter_monitors(display=None, haystack=None, method=None, include=[]):
     '''
-    Searches through the information for all detected displays and attempts to return the info matching the value given.
+    Searches through the information for all detected displays
+    and attempts to return the info matching the value given.
     Will attempt to match against index, name, model, edid, method and serial
 
     Args:
-        display (str or int): what you are searching for. Can be serial number, name, model number, edid string or index of the display
-        haystack (list): the information to filter from. If this isn't set it defaults to the return of `list_monitors_info`
+        display (str or int): what you are searching for.
+                        Can be serial number, name, model number, edid string or index of the display
+        haystack (list): the information to filter from.
+                        If this isn't set it defaults to the return of `list_monitors_info`
         method (str): the method the monitors use
         include (list): extra fields of information to sort by
 
@@ -387,8 +429,8 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
     # otherwise, get the info ourselves
     if haystack:
         monitors_with_duplicates = haystack
-        if method!=None:
-            monitors_with_duplicates = [i for i in haystack if method.lower()==i['method'].__name__.lower()]
+        if method is not None:
+            monitors_with_duplicates = [i for i in haystack if method.lower() == i['method'].__name__.lower()]
     else:
         monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
@@ -402,8 +444,8 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         valid = False
         if type(display) is str:
             # if the display kwarg matches any of the information given (edid, serial...), add it to the list
-            for field in ['edid','serial','name','model']+include:
-                if monitor[field]!=None and display == monitor[field]:
+            for field in ['edid', 'serial', 'name', 'model'] + include:
+                if monitor[field] is not None and display == monitor[field]:
                     valid = True
                     break
         else:
@@ -412,14 +454,14 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         # find a valid identifier for a monitor, excluding any which are equal to None
         identifier = 'edid'
         for identifier in ('edid', 'serial', 'name', 'model'):
-            if monitor[identifier]!=None:
+            if monitor[identifier] is not None:
                 # if the monitor is valid and we haven't already added it
                 if valid and monitor[identifier] not in unique_identifiers:
                     monitors.append(monitor)
                     unique_identifiers.append(monitor[identifier])
 
                     # if the display kwarg is an integer and we are currently at that index
-                    if type(display) is int and len(monitors)-1 == display:
+                    if type(display) is int and len(monitors) - 1 == display:
                         return [monitor]
                 break
 
@@ -427,18 +469,19 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
     # if the latter and we made it this far then the int was out of range
     if monitors == [] or type(display) is int:
         msg = 'no monitors found'
-        if display!=None:
-            msg+=f' with name/serial/model/edid/index of "{display}"'
-        if method!=None:
-            msg+=f' with method of "{method}"'
+        if display is not None:
+            msg += f' with name/serial/model/edid/index of "{display}"'
+        if method is not None:
+            msg += f' with method of "{method}"'
         raise LookupError(msg)
 
     return monitors
 
+
 def flatten_list(thick_list):
     '''
     Internal function I use to flatten lists, because I do that often
-    
+
     Args:
         thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
 
@@ -456,21 +499,24 @@ def flatten_list(thick_list):
     flat_list = []
     for item in thick_list:
         if type(item) is list:
-            flat_list+=flatten_list(item)
+            flat_list += flatten_list(item)
         else:
             flat_list.append(item)
     return flat_list
 
-def set_brightness(value,force=False,verbose_error=False,**kwargs):
+
+def set_brightness(value, force=False, verbose_error=False, **kwargs):
     '''
     Sets the screen brightness
 
     Args:
         value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        force (bool): [Linux Only] if False the brightness will never be set lower than 1 (as 0 usually turns the screen off). If True, this check is bypassed
+        force (bool): [Linux Only] if False the brightness will never be set lower than 1.
+                    This is because on most displays a brightness of 0 will turn off the backlight.
+                    If True, this check is bypassed
         verbose_error (bool): boolean value controls the amount of detail error messages will contain
         kwargs (dict): passed to the OS relevant brightness method
-    
+
     Returns:
         Returns the result of `get_brightness()`
 
@@ -494,7 +540,6 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
         sbc.set_brightness(50, display=0)
         ```
     '''
-    
     if type(value) not in (int, float, str):
         raise TypeError(f'value must be int, float or str, not {type(value)}')
 
@@ -508,10 +553,10 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
                 # apply the offset to all displays by setting the brightness for each one individually
                 out = []
                 for i in range(len(current)):
-                    out.append(set_brightness(current[i] + int(float(str(value))), display = i, **kwargs))
-                #flatten the list output
+                    out.append(set_brightness(current[i] + int(float(str(value))), display=i, **kwargs))
+                # flatten the list output
                 out = flatten_list(out)
-                return out[0] if len(out)==1 else out 
+                return out[0] if len(out) == 1 else out
 
         value = current + int(float(str(value)))
     else:
@@ -521,18 +566,18 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
 
     # decide upon the OS relevant method to run
     method = None
-    if platform.system()=='Windows':
+    if platform.system() == 'Windows':
         method = windows.set_brightness
-    elif platform.system()=='Linux':
+    elif platform.system() == 'Linux':
         if not force:
             value = max(1, value)
         method = linux.set_brightness
-    elif platform.system()=='Darwin':
+    elif platform.system() == 'Darwin':
         error = 'MAC is not supported'
     else:
         error = f'{platform.system()} is not supported'
 
-    if method!=None:
+    if method is not None:
         try:
             return method(value, **kwargs)
         except Exception as e:
@@ -540,23 +585,26 @@ def set_brightness(value,force=False,verbose_error=False,**kwargs):
                 raise ScreenBrightnessError from e
             error = e
 
-    #if the function has not returned by now it failed
+    # if the function has not returned by now it failed
     raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
+
 
 def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
     '''
-    A function to somewhat gently fade the screen brightness from `start` (the current brightness or a defined value) to `finish`
+    A function to somewhat gently fade the screen brightness from `start` to `finish`
 
     Args:
-        finish (int or str): the brighness level to end up on
-        start (int or str): where the brightness should fade from. If not specified the fucntion starts from the current screen brightness
+        finish (int or str): the brightness level to end up on
+        start (int or str): where the brightness should fade from.
+                            If not specified the function starts from the current screen brightness
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
         kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
-    
+
     Returns:
-        list: list of `threading.Thread` objects if blocking is set to False, otherwise it returns the result of `get_brightness()`
+        list: list of `threading.Thread` objects if blocking == False,
+            otherwise it returns the result of `get_brightness()`
 
     Example:
         ```
@@ -579,27 +627,27 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         ```
     '''
     def fade(start, finish, increment, monitor):
-        for i in range(min(start,finish),max(start,finish),increment):
-            val=i
-            if start>finish:
-                val = start - (val-finish)
-            monitor.set_brightness(val, no_return = True)
+        for i in range(min(start, finish), max(start, finish), increment):
+            val = i
+            if start > finish:
+                val = start - (val - finish)
+            monitor.set_brightness(val, no_return=True)
             time.sleep(interval)
 
-        if monitor.get_brightness()!=finish:
-            monitor.set_brightness(finish, no_return = True)
+        if monitor.get_brightness() != finish:
+            monitor.set_brightness(finish, no_return=True)
         return
 
     threads = []
     if 'verbose_error' in kwargs.keys():
         del(kwargs['verbose_error'])
-    
+
     try:
         available_monitors = filter_monitors(**kwargs)
     except (IndexError, LookupError) as e:
         raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
     except ValueError as e:
-        if platform.system()=='Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+        if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
             available_monitors = [None]
         else:
             raise e
@@ -607,27 +655,27 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
     for i in available_monitors:
         try:
             monitor = Monitor(i)
-            #same effect as monitor.is_active()
+            # same effect as monitor.is_active()
             current = monitor.get_brightness()
             st, fi = start, finish
-            #convert strings like '+5' to an actual brightness value
-            if type(fi)==str:
+            # convert strings like '+5' to an actual brightness value
+            if type(fi) == str:
                 if "+" in fi or "-" in fi:
-                    fi=current+int(float(fi))
-            if type(st)==str:
+                    fi = current + int(float(fi))
+            if type(st) == str:
                 if "+" in st or "-" in st:
-                    st=current+int(float(st))
+                    st = current + int(float(st))
 
-            st = current if st==None else st
-            #make sure both values are within the correct range
-            fi = min(max(int(fi),0),100)
-            st = min(max(int(st),0),100)
+            st = current if st is None else st
+            # make sure both values are within the correct range
+            fi = min(max(int(fi), 0), 100)
+            st = min(max(int(st), 0), 100)
 
-            if finish!=start:
+            if finish != start:
                 t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
                 t1.start()
                 threads.append(t1)
-        except:
+        except Exception:
             pass
 
     if not blocking:
@@ -637,14 +685,15 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
             t.join()
         return get_brightness(**kwargs)
 
-def get_brightness(verbose_error=False,**kwargs):
+
+def get_brightness(verbose_error=False, **kwargs):
     '''
     Returns the current display brightness
 
     Args:
         verbose_error (bool): controls the level of detail in the error messages
         kwargs (dict): is passed directly to the OS relevant brightness method
-    
+
     Returns:
         int: an integer from 0 to 100 if only one display is detected
         list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
@@ -663,18 +712,17 @@ def get_brightness(verbose_error=False,**kwargs):
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-
     method = None
-    if platform.system()=='Windows':
+    if platform.system() == 'Windows':
         method = windows.get_brightness
-    elif platform.system()=='Linux':
+    elif platform.system() == 'Linux':
         method = linux.get_brightness
-    elif platform.system()=='Darwin':
+    elif platform.system() == 'Darwin':
         error = 'MAC is not supported'
     else:
         error = f'{platform.system()} is not supported'
 
-    if method!=None:
+    if method is not None:
         try:
             return method(**kwargs)
         except Exception as e:
@@ -682,14 +730,15 @@ def get_brightness(verbose_error=False,**kwargs):
                 raise ScreenBrightnessError from e
             error = e
 
-    #if the function has not returned by now it failed
+    # if the function has not returned by now it failed
     raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
 
+
 __cache__ = __Cache()
-if platform.system()=='Windows':
+if platform.system() == 'Windows':
     from . import windows
-elif platform.system()=='Linux':
+elif platform.system() == 'Linux':
     from . import linux
 
-__version__='0.7.2'
-__author__='Crozzers'
+__version__ = '0.7.2'
+__author__ = 'Crozzers'
