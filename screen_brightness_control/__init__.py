@@ -10,13 +10,14 @@ class __Cache(dict):
         super().__init__()
 
     def __setitem__(self, key, value, *args, expires=1, **kwargs):
-        super().__setitem__(key, (value, expires, time.time(), args, kwargs))
+        expires += time.time()
+        super().__setitem__(key, (value, expires, args, kwargs))
 
     def __getitem__(self, key, *args, **kwargs):
         if not self.enabled:
             raise Exception
-        value, expires, created, orig_args, orig_kwargs = super().__getitem__(key)
-        if time.time() - expires < created and orig_args == args and orig_kwargs == kwargs:
+        value, expires, orig_args, orig_kwargs = super().__getitem__(key)
+        if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
             return value
         raise KeyError
 
