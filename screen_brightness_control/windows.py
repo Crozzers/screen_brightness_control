@@ -1,9 +1,9 @@
 import wmi
 import threading
 import pythoncom
-import ctypes
 import win32api
 import time
+import ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
@@ -17,6 +17,122 @@ def _wmi_init():
     instance = wmi.WMI(namespace='wmi')
     return instance
 
+def get_display_info():
+    try:
+        info = __cache__.get('windows__monitors_info_raw')
+    except Exception:
+        info = []
+        try:
+            # collect all monitor UIDs (derived from DeviceID)
+            monitor_uids = {}
+            for i in win32api.EnumDisplayMonitors():
+                tmp = win32api.GetMonitorInfo(i[0])
+                # iterate up to 4 display adapters
+                for j in range(5):
+                    try:
+                        # i have no idea what this 3rd parameter does but the code doesn't work without it
+                        device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
+                        monitor_uids[device.DeviceID.split('#')[2]] = device
+                        break
+                    except Exception:
+                        continue
+
+            # this separation of monitors is to fix issue #6
+            # https://github.com/Crozzers/screen_brightness_control/issues/6
+            wmi = _wmi_init()
+            try:
+                laptop_displays = [i.InstanceName.replace('_0', '', 1).split('\\')[2] for i in wmi.WmiMonitorBrightness()]
+            except:
+                laptop_displays = []
+            monitors = []
+            extras = []
+            for m in wmi.WmiMonitorID():
+                name = m.InstanceName.replace('_0', '', 1).split('\\')[2]
+                if name in monitor_uids.keys():
+                    monitors.append(m)
+                else:
+                    extras.append(m)
+
+            # sort the monitors in the same order as win32api reports them
+            # because the first item in win32api's list is usually the primary display
+            monitors = sorted(
+                monitors,
+                key=lambda x: list(monitor_uids.keys()).index(x.InstanceName.replace('_0', '', 1).split('\\')[2])
+            )
+            monitors += extras
+
+            # get all available edid strings
+            try:
+                descriptors = {
+                    i.InstanceName: i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()
+                }
+            except Exception:
+                pass
+            laptop = 0
+            desktop = 0
+            for monitor in monitors:
+                name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
+                pydevice = monitor_uids[monitor.InstanceName.replace('_0', '', 1).split('\\')[2]]
+
+                try:
+                    serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
+                    manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
+                    manufacturer = manufacturer.lower().capitalize()
+                    try:
+                        man_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                    except Exception:
+                        man_id = None
+                except:
+                    serial = pydevice.DeviceID.split('#')[2]
+                    man_id = pydevice.DeviceID.split('#')[1][:3]
+                    model = pydevice.DeviceID.split('#')[1][3:]
+                    try:
+                        man_id, manufacturer = _monitor_brand_lookup(man_id)
+                    except Exception:
+                        manufacturer = None
+                try:
+                    edid = ''
+                    for char in descriptors[monitor.InstanceName][0]:
+                        char = str(hex(char)).replace('0x', '')
+                        if len(char) == 1:
+                            char = '0' + char
+                        edid += char
+                except:
+                    try:
+                        edid = ''
+                        print(descriptors.keys())
+                        print(pydevice.InstanceName)
+                        for char in descriptors[pydevice.InstanceName][0]:
+                            char = str(hex(char)).replace('0x', '')
+                            if len(char) == 1:
+                                char = '0' + char
+                            edid += char
+                    except:
+                        edid = None
+                if (serial, model) != (None, None):
+                    info.append(
+                        {
+                            'name': f'{manufacturer} {model}',
+                            'model': model,
+                            'serial': serial,
+                            'manufacturer': manufacturer,
+                            'manufacturer_id': man_id,
+                            'edid': edid
+                        }
+                    )
+                    if monitor.InstanceName.replace('_0', '', 1).split('\\')[2] in laptop_displays:
+                        info[-1]['index'] = laptop
+                        info[-1]['method'] = WMI
+                        laptop += 1
+                    else:
+                        info[-1]['index'] = desktop
+                        info[-1]['method'] = VCP
+                        desktop += 1
+        except Exception:
+            pass
+        __cache__.store('windows__monitors_info_raw', info)
+
+    return info
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -52,54 +168,7 @@ class WMI:
         try:
             info = __cache__.get('wmi_monitor_info')
         except Exception:
-            info = []
-            a = 0
-            try:
-                wmi = _wmi_init()
-                monitors = wmi.WmiMonitorBrightness()
-                try:
-                    descriptors = {
-                        i.InstanceName: i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()
-                    }
-                except Exception:
-                    pass
-                for m in monitors:
-                    instance = m.InstanceName.replace('_0', '', 1).split('\\')
-                    serial = instance[-1]
-                    model = instance[1]
-
-                    man_id = model[:3]
-                    try:
-                        man_id, manufacturer = _monitor_brand_lookup(model[:3])
-                    except Exception:
-                        manufacturer = None
-
-                    try:
-                        edid = ''
-                        for char in descriptors[m.InstanceName][0]:
-                            char = str(hex(char)).replace('0x', '')
-                            if len(char) == 1:
-                                char = '0' + char
-                            edid += char
-                    except Exception:
-                        edid = None
-
-                    info.append(
-                        {
-                            'name': f'{manufacturer} {model}',
-                            'model': model,
-                            'model_name': None,
-                            'serial': serial,
-                            'manufacturer': manufacturer,
-                            'manufacturer_id': man_id ,
-                            'index': a,
-                            'method': WMI,
-                            'edid': edid
-                        }
-                    )
-                    a += 1
-            except Exception:
-                pass
+            info = [i for i in get_display_info() if i['method'] == WMI]
             __cache__.store('wmi_monitor_info', info)
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
@@ -320,120 +389,7 @@ class VCP:
         try:
             info = __cache__.get('vcp_monitor_info')
         except Exception:
-            info = []
-            try:
-                # collect all monitor UIDs (derived from DeviceID)
-                monitor_uids = {}
-                for i in win32api.EnumDisplayMonitors():
-                    tmp = win32api.GetMonitorInfo(i[0])
-                    device = None
-                    # iterate up to 4 display adapters
-                    for j in range(5):
-                        try:
-                            # i have no idea what this 3rd parameter does but the code doesn't work without it
-                            device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
-                            break
-                        except Exception:
-                            pass
-                    if device is not None:
-                        monitor_uids[device.DeviceID.split('#')[2]] = device
-
-                # this separation of monitors is to fix issue #6
-                # https://github.com/Crozzers/screen_brightness_control/issues/6
-                wmi = _wmi_init()
-                try:
-                    blacklist = [i.InstanceName.replace('_0', '', 1) for i in wmi.WmiMonitorBrightness()]
-                except Exception:
-                    blacklist = []
-                monitors = []
-                extras = []
-                for m in wmi.WmiMonitorID():
-                    name = m.InstanceName.replace('_0', '', 1).split('\\')[2]
-                    if name in monitor_uids.keys():
-                        monitors.append(m)
-                    else:
-                        extras.append(m)
-
-                # sort the monitors in the same order as win32api reports them
-                # because the first item in win32api's list is usually the primary display
-                monitors = sorted(
-                    monitors,
-                    key=lambda x: list(monitor_uids.keys()).index(x.InstanceName.replace('_0', '', 1).split('\\')[2])
-                )
-                monitors += extras
-
-                # get all available edid strings
-                try:
-                    descriptors = {
-                        i.InstanceName: i.WmiGetMonitorRawEEdidV1Block(0) for i in wmi.WmiMonitorDescriptorMethods()
-                    }
-                except Exception:
-                    pass
-                a = 0
-                for monitor in monitors:
-                    valid = False
-                    name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
-                    monitor_alt = None
-                    try:
-                        serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
-                        manufacturer, model = bytes(monitor.UserFriendlyName).decode().replace('\x00', '').split(' ')
-                        manufacturer = manufacturer.lower().capitalize()
-                        try:
-                            man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                        except Exception:
-                            man_id = None
-                        try:
-                            edid = ''
-                            for char in descriptors[monitor.InstanceName][0]:
-                                char = str(hex(char)).replace('0x', '')
-                                if len(char) == 1:
-                                    char = '0' + char
-                                edid += char
-                        except Exception:
-                            edid = None
-                        valid = True
-                    except Exception:
-                        try:
-                            # if there's an error scraping the WMI data, try scraping more basic data instead
-                            monitor_alt = monitor_uids[monitor.InstanceName.replace('_0', '', 1).split('\\')[2]]
-                            dev_id = monitor_alt.DeviceID.split('#')
-                            serial = dev_id[2]  # not an actual serial but the Windows UID
-                            man_id = dev_id[1][:3]
-                            model = dev_id[1][3:]
-                            try:
-                                man_id, manufacturer = _monitor_brand_lookup(man_id)
-                            except Exception:
-                                manufacturer = None
-                            try:
-                                edid = ''
-                                for char in descriptors[monitor_alt.InstanceName][0]:
-                                    char = str(hex(char)).replace('0x', '')
-                                    if len(char) == 1:
-                                        char = '0' + char
-                                    edid += char
-                            except Exception:
-                                edid = None
-                            valid = True
-                        except Exception:
-                            pass
-                    if valid:
-                        if monitor.InstanceName.replace('_0', '', 1) not in blacklist:
-                            info.append(
-                                {
-                                    'name': f'{manufacturer} {model}',
-                                    'model': model,
-                                    'model_name': None,
-                                    'serial': serial,
-                                    'manufacturer': manufacturer,
-                                    'manufacturer_id': man_id,
-                                    'index': a,
-                                    'method': VCP,
-                                    'edid': edid
-                                }
-                            )
-                        a += 1
-            except Exception:
-                pass
+            info = [i for i in get_display_info() if i['method'] == VCP]
             __cache__.store('vcp_monitor_info', info)
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
@@ -547,13 +503,13 @@ class VCP:
                         time.sleep(0.02)
                         v = None
                 del(cur_out)
-            if v is not None and count in indexes:
+            if v is not None:
                 if count in indexes:
                     try:
                         __cache__.store('vcp_' + all_monitors[count]['serial'] + '_brightness', v, expires=0.1)
                     except IndexError:
                         pass
-                values.append(v)
+                    values.append(v)
             count += 1
 
         if values == []:
@@ -651,24 +607,25 @@ def list_monitors_info(method=None, allow_duplicates=False):
         ```
     '''
     try:
-        return __cache__.get('windows_monitors_info', method=method, allow_duplicates=allow_duplicates)
+        return __cache__.get(f'windows_monitors_info_{method}_{allow_duplicates}')
     except Exception:
-        methods = [WMI, VCP]
+        info = get_display_info()
+
         if method is not None:
-            methods = [i for i in methods if i.__name__.lower() == method.lower()]
-            if methods == []:
+            method = method.lower()
+            if method not in ('wmi', 'vcp'):
                 raise ValueError('method kwarg must be \'wmi\' or \'vcp\'')
 
-        info = []
-        edids = []
-        for m in methods:
-            # to make sure each display (with unique edid) is only reported once
-            for i in m.get_display_info():
-                if allow_duplicates or i['serial'] not in edids:
-                    edids.append(i['serial'])
-                    info.append(i)
-        __cache__.store('windows_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
-        return info
+        info_final = []
+        serials = []
+        # to make sure each display (with unique edid) is only reported once
+        for i in info:
+            if allow_duplicates or i['serial'] not in serials:
+                if method is None or method == i['method']:
+                    serials.append(i['serial'])
+                    info_final.append(i)
+        __cache__.store(f'windows_monitors_info_{method}_{allow_duplicates}', info_final)
+        return info_final
 
 
 def list_monitors(method=None):
