@@ -200,9 +200,6 @@ class Monitor():
         '''the 3 letter manufacturing code corresponding to the manufacturer name'''
         self.model = info['model']
         '''the general model of the display'''
-        if platform.system() == 'Windows':
-            self.model_name = info['model']
-            '''(Windows Only) Deprecated, always equal to the model. Will be removed soon'''
         self.index = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
         self.edid = info['edid']
@@ -294,9 +291,6 @@ class Monitor():
             'index': self.index,
             'edid': self.edid
         }
-        if platform.system() == 'Windows':
-            info['model_name'] = info['model']
-            # deprecated, will be removed in v0.8.0. Only here for compatibility
         return info
 
     def is_active(self):
@@ -367,10 +361,7 @@ def list_monitors_info(**kwargs):
     try:
         return __cache__.get('monitors_info', **kwargs)
     except Exception:
-        if platform.system() == 'Windows':
-            info = windows.list_monitors_info(**kwargs)
-        elif platform.system() == 'Linux':
-            info = linux.list_monitors_info(**kwargs)
+        info = method.list_monitors_info(**kwargs)
         __cache__.store('monitors_info', info, **kwargs)
         return info
 
@@ -563,28 +554,20 @@ def set_brightness(value, force=False, verbose_error=False, **kwargs):
     else:
         value = int(float(str(value)))
 
-    value = max(0, min(100, value))
+    value = min(100, value)
 
-    # decide upon the OS relevant method to run
-    method = None
-    if platform.system() == 'Windows':
-        method = windows.set_brightness
-    elif platform.system() == 'Linux':
+    if platform.system() == 'Linux':
         if not force:
             value = max(1, value)
-        method = linux.set_brightness
-    elif platform.system() == 'Darwin':
-        error = 'MAC is not supported'
     else:
-        error = f'{platform.system()} is not supported'
+        value = max(0, value)
 
-    if method is not None:
-        try:
-            return method(value, **kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
+    try:
+        return method.set_brightness(value, **kwargs)
+    except Exception as e:
+        if verbose_error:
+            raise ScreenBrightnessError from e
+        error = e
 
     # if the function has not returned by now it failed
     raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
@@ -713,33 +696,30 @@ def get_brightness(verbose_error=False, **kwargs):
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    method = None
-    if platform.system() == 'Windows':
-        method = windows.get_brightness
-    elif platform.system() == 'Linux':
-        method = linux.get_brightness
-    elif platform.system() == 'Darwin':
-        error = 'MAC is not supported'
-    else:
-        error = f'{platform.system()} is not supported'
-
-    if method is not None:
-        try:
-            return method(**kwargs)
-        except Exception as e:
-            if verbose_error:
-                raise ScreenBrightnessError from e
-            error = e
+    try:
+        return method.get_brightness(**kwargs)
+    except Exception as e:
+        if verbose_error:
+            raise ScreenBrightnessError from e
+        error = e
 
     # if the function has not returned by now it failed
     raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
 
 
 __cache__ = __Cache()
-if platform.system() == 'Windows':
+plat = platform.system()
+if plat == 'Windows':
     from . import windows
-elif platform.system() == 'Linux':
+    method = windows
+elif plat == 'Linux':
     from . import linux
+    method = linux
+elif plat == 'Darwin':
+    raise NotImplementedError('MAC is not yet supported')
+else:
+    raise NotImplementedError(f'{plat} is not yet supported')
+del(plat)
 
 __version__ = '0.8.0-dev'
 __author__ = 'Crozzers'

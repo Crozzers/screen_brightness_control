@@ -54,7 +54,7 @@ class _EDID:
 
             edid = sbx.linux.list_monitors_info()[0]['edid']
             name, serial = sbc.linux._EDID.parse_edid(edid)
-            if name!=None:
+            if name is not None:
                 print('Success!')
                 print('Name:', name)
                 print('Serial:', serial)
@@ -68,6 +68,7 @@ class _EDID:
                 i = st.index('\\x')
                 st = st.replace(st[i:i + 4], '')
             return st.replace('\\n', '')[2:-1]
+
         if ' ' in edid:
             edid = edid.replace(' ', '')
         edid = bytes.fromhex(edid)
@@ -103,7 +104,7 @@ class Light:
 
         Args:
             display (str or int): [*Optional*] the monitor to return information about.
-                                Can be index, name, path, model, index or edid
+                Can be index, name, path, model, index or edid
 
         Returns:
             list: list of dictionaries if no monitor is specified
