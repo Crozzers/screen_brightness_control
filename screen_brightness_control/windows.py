@@ -641,7 +641,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         # to make sure each display (with unique edid) is only reported once
         for i in info:
             if allow_duplicates or i['serial'] not in serials:
-                if method is None or method == i['method']:
+                if method is None or method == i['method'].__name__.lower():
                     serials.append(i['serial'])
                     info_final.append(i)
         __cache__.store(f'windows_monitors_info_{method}_{allow_duplicates}', info_final)
