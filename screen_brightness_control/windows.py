@@ -17,9 +17,10 @@ def _wmi_init():
     instance = wmi.WMI(namespace='wmi')
     return instance
 
+
 def get_display_info():
     try:
-        info = __cache__.get('windows__monitors_info_raw')
+        info = __cache__.get('windows_monitors_info_raw')
     except Exception:
         info = []
         try:
@@ -41,9 +42,13 @@ def get_display_info():
             # https://github.com/Crozzers/screen_brightness_control/issues/6
             wmi = _wmi_init()
             try:
-                laptop_displays = [i.InstanceName.replace('_0', '', 1).split('\\')[2] for i in wmi.WmiMonitorBrightness()]
-            except:
                 laptop_displays = []
+                for i in wmi.WmiMonitorBrightnesS():
+                    laptop_displays.append(
+                        i.InstanceName.replace('_0', '', 1).split('\\')[2]
+                    )
+            except Exception:
+                pass
             monitors = []
             extras = []
             for m in wmi.WmiMonitorID():
@@ -82,7 +87,7 @@ def get_display_info():
                         man_id, manufacturer = _monitor_brand_lookup(manufacturer)
                     except Exception:
                         man_id = None
-                except:
+                except Exception:
                     serial = pydevice.DeviceID.split('#')[2]
                     man_id = pydevice.DeviceID.split('#')[1][:3]
                     model = pydevice.DeviceID.split('#')[1][3:]
@@ -97,7 +102,7 @@ def get_display_info():
                         if len(char) == 1:
                             char = '0' + char
                         edid += char
-                except:
+                except Exception:
                     try:
                         edid = ''
                         print(descriptors.keys())
@@ -107,7 +112,7 @@ def get_display_info():
                             if len(char) == 1:
                                 char = '0' + char
                             edid += char
-                    except:
+                    except Exception:
                         edid = None
                 if (serial, model) != (None, None):
                     info.append(
@@ -130,9 +135,10 @@ def get_display_info():
                         desktop += 1
         except Exception:
             pass
-        __cache__.store('windows__monitors_info_raw', info)
+        __cache__.store('windows_monitors_info_raw', info)
 
     return info
+
 
 class WMI:
     '''collection of screen brightness related methods using the WMI API'''
@@ -228,8 +234,11 @@ class WMI:
         '''
         brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
         if display is not None:
-            indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
-            brightness_method = [brightness_method[i] for i in indexes]
+            if type(display) == int:
+                brightness_method = [brightness_method[display]]
+            else:
+                indexes = [i['index'] for i in filter_monitors(display=display, method='wmi')]
+                brightness_method = [brightness_method[i] for i in indexes]
         for method in brightness_method:
             method.WmiSetBrightness(value, 0)
         return WMI.get_brightness(display=display) if not no_return else None
@@ -239,7 +248,8 @@ class WMI:
         Returns the current display brightness using the `wmi` API
 
         Args:
-            display (int): The index display you wish to get the brightness of OR the model of that display
+            display (int or str): The specific display you wish to get the brightness of
+                Can be index, name, model, serial or edid
 
         Returns:
             int: from 0 to 100 if only one display's brightness is requested
@@ -268,10 +278,13 @@ class WMI:
         '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display is not None:
-            displays = WMI.get_display_info(display)
-            if type(displays) == dict:
-                displays = [displays]
-            brightness_method = [brightness_method[i['index']] for i in displays]
+            if type(display) == int:
+                brightness_method = [brightness_method[display]]
+            else:
+                displays = WMI.get_display_info(display)
+                if type(displays) == dict:
+                    displays = [displays]
+                brightness_method = [brightness_method[i['index']] for i in displays]
 
         values = [i.CurrentBrightness for i in brightness_method]
         return values[0] if len(values) == 1 else values
@@ -449,7 +462,7 @@ class VCP:
 
         Args:
             display (int or str): the specific display you wish to query.
-                                Is passed to `filter_monitors` to match to a display
+                Is passed to `filter_monitors` to match to a display
 
         Returns:
             list: list of ints from 0 to 100 if multiple displays are detected and the `display` kwarg is not set
@@ -485,14 +498,16 @@ class VCP:
         # (determined by VCP.get_display_info)
         # yes, it does add an unnecessary function call but that's only if you're using this module low-level.
         # Top-level functions always end up specifying the display kwarg anyway
-        all_monitors = VCP.get_display_info()
-        indexes = [i['index'] for i in filter_monitors(display=display, haystack=all_monitors)]
+        if type(display) == int:
+            indexes = [display]
+        else:
+            indexes = [i['index'] for i in filter_monitors(display=display, haystack=VCP.get_display_info())]
 
         count = 0
         values = []
         for m in VCP.iter_physical_monitors():
             try:
-                v = __cache__.get('vcp_' + all_monitors[count]['serial'] + '_brightness')
+                v = __cache__.get(f'vcp_brightness_{count}')
             except Exception:
                 cur_out = DWORD()
                 for _ in range(10):
@@ -506,10 +521,12 @@ class VCP:
             if v is not None:
                 if count in indexes:
                     try:
-                        __cache__.store('vcp_' + all_monitors[count]['serial'] + '_brightness', v, expires=0.1)
+                        __cache__.store(f'vcp_brightness_{count}', v, expires=0.1)
                     except IndexError:
                         pass
                     values.append(v)
+                    if count >= max(indexes):
+                        break
             count += 1
 
         if values == []:
@@ -545,8 +562,11 @@ class VCP:
             sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             ```
         '''
-        # see VCP.set_brightness for the explanation for why we always gather this list
-        indexes = [i['index'] for i in filter_monitors(display=display, haystack=VCP.get_display_info())]
+        if type(display) == int:
+            indexes = [display]
+        else:
+            # see VCP.set_brightness for the explanation for why we always gather this list
+            indexes = [i['index'] for i in filter_monitors(display=display, haystack=VCP.get_display_info())]
 
         __cache__.expire(startswith='vcp_', endswith='_brightness')
 
@@ -664,7 +684,7 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
         for m in monitors:  # add the output of each brightness method to the output list
             try:
                 output.append(
-                    getattr(m['method'], meta_method + '_brightness')(*args, display=m['serial'], **kwargs)
+                    getattr(m['method'], meta_method + '_brightness')(*args, display=m['index'], **kwargs)
                 )
             except Exception as e:
                 output.append(None)
