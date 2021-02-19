@@ -6,7 +6,14 @@ import time
 import ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__, platform
+from typing import List, Union, Optional
+# a bunch of typing classes were deprecated in Python 3.9
+# in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
+if int(platform.python_version_tuple()[1]) < 9:
+    from typing import Iterable
+else:
+    from collections.abc import Iterable
 
 
 def _wmi_init():
@@ -18,7 +25,22 @@ def _wmi_init():
     return instance
 
 
-def get_display_info():
+def get_display_info() -> List[dict]:
+    '''
+    Gets information about all connected displays using WMI and win32api
+
+    Returns:
+        list: list of dictionaries
+
+    Example:
+        ```python
+        import screen_brightness_control as s
+
+        info = s.windows.get_display_info()
+        for display in info:
+            print(display['name'])
+        ```
+    '''
     try:
         info = __cache__.get('windows_monitors_info_raw')
     except Exception:
@@ -141,18 +163,21 @@ def get_display_info():
 
 
 class WMI:
-    '''collection of screen brightness related methods using the WMI API'''
-    def get_display_info(display=None):
+    '''
+    A collection of screen brightness related methods using the WMI API.
+    This class primarily works with laptop displays.
+    '''
+    @staticmethod
+    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns a dictionary of info about all detected monitors
+        Returns a list of dictionaries of info about all detected monitors
 
         Args:
             display (str or int): [*Optional*] the monitor to return info about.
-                                Pass in the serial number, name, model, edid or index
+                Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dicts if `display is None` or if `display` only matched one display
-            dict: if the `display is not None` and only matched one display
+            list: list of dicts
 
         Example:
             ```python
@@ -178,11 +203,10 @@ class WMI:
             __cache__.store('wmi_monitor_info', info)
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
-            if len(info) == 1:
-                info = info[0]
         return info
 
-    def get_display_names():
+    @staticmethod
+    def get_display_names() -> List[str]:
         '''
         Returns names of all displays that can be addressed by WMI
 
@@ -199,20 +223,26 @@ class WMI:
         '''
         return [i['name'] for i in WMI.get_display_info()]
 
-    def set_brightness(value, display=None, no_return=False):
+    @staticmethod
+    def set_brightness(
+        value: int,
+        display: Optional[Union[int, str]] = None,
+        no_return: bool = False
+    ) -> Union[List[int], None]:
         '''
         Sets the display brightness for Windows using WMI
 
         Args:
             value (int): The percentage to set the brightness to
-            display (int or str): the specific display you wish to query.
-                                Is passed to `filter_monitors` to match to a display
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if True, this function returns None
-                            Otherwise it returns the result of `WMI.get_brightness()`
+                Otherwise it returns the result of `WMI.get_brightness()`
 
         Returns:
-            int: from 0 to 100 if only one display's brightness is requested
-            list: list of integers if multiple displays are requested
+            list: list of integers (0 to 100)
             None: if `no_return` is set to `True`
 
         Raises:
@@ -243,17 +273,19 @@ class WMI:
             method.WmiSetBrightness(value, 0)
         return WMI.get_brightness(display=display) if not no_return else None
 
-    def get_brightness(display=None):
+    @staticmethod
+    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
         '''
-        Returns the current display brightness using the `wmi` API
+        Returns the current display brightness using WMI
 
         Args:
-            display (int or str): The specific display you wish to get the brightness of
-                Can be index, name, model, serial or edid
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
 
         Returns:
-            int: from 0 to 100 if only one display's brightness is requested
-            list: list of integers if multiple displays are requested
+            list: list of integers (0 to 100)
 
         Raises:
             LookupError: if the given display cannot be found
@@ -282,12 +314,10 @@ class WMI:
                 brightness_method = [brightness_method[display]]
             else:
                 displays = WMI.get_display_info(display)
-                if type(displays) == dict:
-                    displays = [displays]
                 brightness_method = [brightness_method[i['index']] for i in displays]
 
         values = [i.CurrentBrightness for i in brightness_method]
-        return values[0] if len(values) == 1 else values
+        return values
 
 
 class VCP:
@@ -299,11 +329,15 @@ class VCP:
         _fields_ = [('handle', HANDLE),
                     ('description', WCHAR * 128)]
 
-    def iter_physical_monitors():
+    @staticmethod
+    def iter_physical_monitors() -> Iterable[ctypes.wintypes.HANDLE]:
         '''
         A generator to iterate through all physical monitors
         and then close them again afterwards, yielding their handles.
         It is not recommended to use this function unless you are familiar with `ctypes` and `windll`
+
+        Returns:
+            generator: generator that yields `ctypes.wintypes.HANDLE` objects
 
         Raises:
             ctypes.WinError: upon failure to enumerate through the monitors
@@ -337,53 +371,17 @@ class VCP:
                     yield item.handle
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
 
-    def filter_displays(display, *args):
-        '''
-        Deprecated. Redirects to top-level `filter_monitors` function.
-        Searches through the information for all detected VCP displays
-        and attempts to return the info matching the value given.
-        Will attempt to match against index, name, model, edid and serial
-
-        Args:
-            display (str or int): what you are searching for.
-                                Can be serial number, name, model number, edid string or index of the display
-            args (tuple): [*Optional*] if `args` isn't empty the function searches through args[0].
-                        Otherwise it searches through the return of `VCP.get_display_info()`
-
-        Raises:
-            IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
-            LookupError: if the display, as a str, does not have a match
-
-        Returns:
-            dict
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            search = 'GL2450H'
-            match = sbc.windows.VCP.filter_displays(search)
-            print(match)
-            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
-            ```
-        '''
-        if len(args) == 1:
-            info = args[0]
-        else:
-            info = VCP.get_display_info()
-        return filter_monitors(display=display, haystack=info)
-
-    def get_display_info(display=None):
+    @staticmethod
+    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns a dictionary of info about all detected monitors or a selection of monitors
 
         Args:
             display (int or str): [*Optional*] the monitor to return info about.
-                                Pass in the serial number, name, model, edid or index
+                Pass in the serial number, name, model, edid or index
 
         Returns:
-            list: list of dicts if `display` == `None` or it only matched one display
-            dict: if the `display` != `None` and only matched one display
+            list: list of dicts
 
         Example:
             ```python
@@ -406,11 +404,10 @@ class VCP:
             __cache__.store('vcp_monitor_info', info)
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
-            if len(info) == 1:
-                info = info[0]
         return info
 
-    def get_monitor_caps(monitor):
+    @staticmethod
+    def get_monitor_caps(monitor: ctypes.wintypes.HANDLE) -> str:
         '''
         Fetches and returns the VCP capabilities string of a monitor.
         This function takes anywhere from 1-2 seconds to run
@@ -438,7 +435,8 @@ class VCP:
             return
         return caps_string.value.decode('ASCII')
 
-    def get_display_names():
+    @staticmethod
+    def get_display_names() -> List[str]:
         '''
         Return the names of each detected monitor
 
@@ -456,17 +454,19 @@ class VCP:
         '''
         return [i['name'] for i in VCP.get_display_info()]
 
-    def get_brightness(display=None):
+    @staticmethod
+    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query.
-                Is passed to `filter_monitors` to match to a display
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
 
         Returns:
-            list: list of ints from 0 to 100 if multiple displays are detected and the `display` kwarg is not set
-            int: from 0 to 100 if there is only one display detected or the `display` kwarg is set
+            list: list of ints (0 to 100)
 
         Examples:
             ```python
@@ -474,19 +474,16 @@ class VCP:
 
             # Get the brightness for all detected displays
             current_brightness = sbc.windows.VCP.get_brightness()
-            if type(current_brightness) is int:
-                print('There is only one detected display')
-            else:
-                print('There are', len(current_brightness), 'detected displays')
+            print('There are', len(current_brightness), 'detected displays')
 
             # Get the brightness for the primary display
-            primary_brightness = sbc.windows.VCP.get_brightness(display = 0)
+            primary_brightness = sbc.windows.VCP.get_brightness(display = 0)[0]
 
             # Get the brightness for a secondary display
-            secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)
+            secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)[0]
 
             # Get the brightness for a display with the model 'GL2450H'
-            benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')
+            benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')[0]
             ```
         '''
         # filter monitors even if display kwarg is not specified due to oddities surrounding issues #7 and #8
@@ -529,21 +526,27 @@ class VCP:
                         break
             count += 1
 
-        if values == []:
-            return None
-        return values[0] if len(values) == 1 else values
+        return values
 
-    def set_brightness(value, display=None, no_return=False):
+    @staticmethod
+    def set_brightness(
+        value: int,
+        display: Optional[Union[int, str]] = None,
+        no_return: bool = False
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int or str): the specific display you wish to query.
-                                Is passed to `filter_monitors` to match to a display
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if set to `True` this function will return `None`
 
         Returns:
-            The result of `VCP.get_brightness()` (with the same `display` kwarg) if `no_return` is not set
+            list: list of ints (0 to 100) (the result of `VCP.get_brightness`) if `no_return` is False
+            None: if `no_return` is True
 
         Examples:
             ```python
@@ -582,7 +585,7 @@ class VCP:
         return VCP.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None, allow_duplicates=False):
+def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
     '''
     Lists detailed information about all detected monitors
 
@@ -591,7 +594,10 @@ def list_monitors_info(method=None, allow_duplicates=False):
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
-        list: list of dictionaries upon success, empty list upon failure
+        list: list of dicts upon success, empty list upon failure
+
+    Raises:
+        ValueError: if the method kwarg is invalid
 
     Example:
         ```python
@@ -648,7 +654,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         return info_final
 
 
-def list_monitors(method=None):
+def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
     Returns a list of all addressable monitor names
 
@@ -669,7 +675,7 @@ def list_monitors(method=None):
     return [i['name'] for i in list_monitors_info(method=method)]
 
 
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
     '''
     Internal function, do not call. Either sets the brightness or gets it.
     Exists because set_brightness and get_brightness only have a couple differences
@@ -691,10 +697,15 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
                 errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
 
         # use `'no_return' not in kwargs` because dict membership only checks the keys
-        if output and not (all(i is None for i in output) and ('no_return' not in kwargs or not kwargs['no_return'])):
+        if (
+            output and not
+            (all(i in (None, []) for i in output) and ('no_return' not in kwargs or not kwargs['no_return']))
+        ):
             # flatten and return any output (taking into account the no_return parameter)
+            if 'no_return' in kwargs and kwargs['no_return']:
+                return None
             output = flatten_list(output)
-            return output[0] if len(output) == 1 else output
+            return output
 
     # if function hasn't already returned it has failed
     msg = '\n'
@@ -705,20 +716,25 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     raise Exception(msg)
 
 
-def set_brightness(value, display=None, method=None, **kwargs):
+def set_brightness(
+    value: int,
+    display: Optional[Union[int, str]] = None,
+    method: Optional[str] = None,
+    **kwargs
+) -> Union[List[int], None]:
     '''
     Sets the brightness of any connected monitors
 
     Args:
         value (int): Sets the brightness to this value as a percentage
-        display (int or str): the specific display you wish to adjust.
-                            Can be index, model, name or serial of the display
+        display (int or str): The specific display you wish to adjust.
+            Can be index, model, name or serial of the display
         method (str): the method to use ('wmi' or 'vcp')
         kwargs (dict): passed directly to the chosen brightness method
 
     Returns:
-        Whatever the called methods return (See `WMI.set_brightness` and `VCP.set_brightness` for details).
-        Typically it will list, int (0 to 100) or None
+        list: list of ints (0 to 100) (the result of `get_brightness`)
+        None: if `no_return` is True
 
     Raises:
         LookupError: if the chosen display (with method if applicable) is not found
@@ -748,20 +764,18 @@ def set_brightness(value, display=None, method=None, **kwargs):
     return __set_and_get_brightness(value, display=display, method=method, meta_method='set', **kwargs)
 
 
-def get_brightness(display=None, method=None, **kwargs):
+def get_brightness(display: Optional[Union[int, str]] = None, method: Optional[str] = None, **kwargs) -> List[int]:
     '''
     Returns the brightness of any connected monitors
 
     Args:
-        display (int or str): the specific display you wish to adjust.
-                            Can be index, model, name or serial of the display
+        display (int or str): The specific display you wish to adjust.
+            Can be index, model, name or serial of the display
         method (str): the method to use ('wmi' or 'vcp')
         kwargs (dict): passed directly to chosen brightness method
 
     Returns:
-        int: (0 to 100) if only one display is detected or the `display` kwarg is set
-        list: list of ints if multiple displays detected and the `display` kwarg isn't set
-            (invalid monitors return `None`)
+        list: list of ints (0 to 100)
 
     Raises:
         LookupError: if the chosen display (with method if applicable) is not found
@@ -781,13 +795,13 @@ def get_brightness(display=None, method=None, **kwargs):
             print('There are', len(current_brightness), 'detected displays')
 
         # get the brightness of the primary display
-        primary_brightness = sbc.windows.get_brightness(display = 0)
+        primary_brightness = sbc.windows.get_brightness(display=0)[0]
 
         # get the brightness of any displays using VCP
-        vcp_brightness = sbc.windows.get_brightness(method = 'vcp')
+        vcp_brightness = sbc.windows.get_brightness(method='vcp')
 
         # get the brightness of displays with the model name 'BenQ GL2450H'
-        benq_brightness = sbc.windows.get_brightness(display = 'BenQ GL2450H')
+        benq_brightness = sbc.windows.get_brightness(display='BenQ GL2450H')[0]
         ```
     '''
     # this function is called because set_brightness and get_brightness only differed by 1 line of code

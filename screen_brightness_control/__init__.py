@@ -1,6 +1,7 @@
 import platform
 import time
 import threading
+from typing import List, Tuple, Union, Optional, Any
 
 
 class __Cache(dict):
@@ -113,7 +114,7 @@ MONITOR_MANUFACTURER_CODES = {
 }
 
 
-def _monitor_brand_lookup(search):
+def _monitor_brand_lookup(search: str) -> Tuple[str, str]:
     '''internal function to search the monitor manufacturer codes dict'''
     keys = list(MONITOR_MANUFACTURER_CODES.keys())
     keys_lower = [i.lower() for i in keys]
@@ -151,13 +152,14 @@ class ScreenBrightnessError(Exception):
 
 class Monitor():
     '''A class to manage a single monitor and its relevant information'''
-    def __init__(self, display):
+    def __init__(self, display: Union[int, str]):
         '''
         Args:
-            display (int or str): the index/model name/serial/edid of the display you wish to control
+            display (int or str): the index/name/model name/serial/edid of the display you wish to control.
+                Is passed to `filter_monitors` to decide which display to use
 
         Raises:
-            LookupError: if the given display is a string but that string does not match any known displays
+            LookupError: if a matching display could not be found
             TypeError: if the given display type is not int or str
 
         Example:
@@ -188,34 +190,35 @@ class Monitor():
         else:
             info = filter_monitors(display, haystack=monitors_info)[0]
 
-        self.serial = info['serial']
+        self.serial: str = info['serial']
         '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
-        self.name = info['name']
+        self.name: str = info['name']
         '''the monitors manufacturer name plus its model'''
         self.method = info['method']
-        '''the method by which this monitor can be addressed'''
-        self.manufacturer = info['manufacturer']
+        '''the method by which this monitor can be addressed.
+        This will be a class from either the windows or linux sub-module'''
+        self.manufacturer: str = info['manufacturer']
         '''the name of the brand of the monitor'''
-        self.manufacturer_id = info['manufacturer_id']
+        self.manufacturer_id: str = info['manufacturer_id']
         '''the 3 letter manufacturing code corresponding to the manufacturer name'''
-        self.model = info['model']
+        self.model: str = info['model']
         '''the general model of the display'''
-        self.index = info['index']
+        self.index: int = info['index']
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
-        self.edid = info['edid']
+        self.edid: str = info['edid']
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
-    def set_brightness(self, *args, **kwargs):
+    def set_brightness(self, *args, **kwargs) -> Union[int, None]:
         '''
         Sets the brightness for this display
 
         Args:
             args (tuple): passed directly to this monitor's brightness method
             kwargs (dict): passed directly to this monitor's brightness method.
-                            The `display` kwarg is always overwritten
+                The `display` kwarg is always overwritten
 
         Returns:
             int: from 0 to 100
@@ -235,9 +238,9 @@ class Monitor():
             kwargs['display'] = self.serial
         else:
             kwargs['display'] = self.index
-        return self.method.set_brightness(*args, **kwargs)
+        return self.method.set_brightness(*args, **kwargs)[0]
 
-    def get_brightness(self, **kwargs):
+    def get_brightness(self, **kwargs) -> int:
         '''
         Returns the brightness of this display
 
@@ -262,9 +265,9 @@ class Monitor():
             kwargs['display'] = self.serial
         else:
             kwargs['display'] = self.index
-        return self.method.get_brightness(**kwargs)
+        return self.method.get_brightness(**kwargs)[0]
 
-    def get_info(self):
+    def get_info(self) -> dict:
         '''
         Returns all known information about this monitor instance
 
@@ -293,7 +296,7 @@ class Monitor():
         }
         return info
 
-    def is_active(self):
+    def is_active(self) -> bool:
         '''
         Attempts to retrieve the brightness for this display. If it works the display is deemed active
 
@@ -316,7 +319,7 @@ class Monitor():
             return False
 
 
-def list_monitors_info(**kwargs):
+def list_monitors_info(**kwargs) -> List[dict]:
     '''
     list detailed information about all monitors that are controllable by this library
 
@@ -366,9 +369,9 @@ def list_monitors_info(**kwargs):
         return info
 
 
-def list_monitors(**kwargs):
+def list_monitors(**kwargs) -> List[str]:
     '''
-    list all monitors that are controllable by this library
+    List the names of all detected monitors
 
     Args:
         kwargs (dict): passed directly to OS relevant monitor list function
@@ -386,17 +389,22 @@ def list_monitors(**kwargs):
     return [i['name'] for i in list_monitors_info(**kwargs)]
 
 
-def filter_monitors(display=None, haystack=None, method=None, include=[]):
+def filter_monitors(
+    display: Optional[Union[int, str]] = None,
+    haystack: Optional[list] = None,
+    method: Optional[str] = None,
+    include: List[str] = []
+) -> List[dict]:
     '''
     Searches through the information for all detected displays
     and attempts to return the info matching the value given.
     Will attempt to match against index, name, model, edid, method and serial
 
     Args:
-        display (str or int): what you are searching for.
-                        Can be serial number, name, model number, edid string or index of the display
+        display (str or int): the display you are searching for.
+            Can be serial, name, model number, edid string or index of the display
         haystack (list): the information to filter from.
-                        If this isn't set it defaults to the return of `list_monitors_info`
+            If this isn't set it defaults to the return of `list_monitors_info`
         method (str): the method the monitors use
         include (list): extra fields of information to sort by
 
@@ -405,7 +413,7 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
         LookupError: if the display, as a str, does not have a match
 
     Returns:
-        list
+        list: list of dicts
 
     Example:
         ```python
@@ -470,7 +478,7 @@ def filter_monitors(display=None, haystack=None, method=None, include=[]):
     return monitors
 
 
-def flatten_list(thick_list):
+def flatten_list(thick_list: List[Any]) -> List[Any]:
     '''
     Internal function I use to flatten lists, because I do that often
 
@@ -490,27 +498,34 @@ def flatten_list(thick_list):
     '''
     flat_list = []
     for item in thick_list:
-        if type(item) is list:
+        if type(item) == list:
             flat_list += flatten_list(item)
         else:
             flat_list.append(item)
     return flat_list
 
 
-def set_brightness(value, force=False, verbose_error=False, **kwargs):
+def set_brightness(
+    value: Union[int, str],
+    force: bool = False,
+    verbose_error: bool = False,
+    **kwargs
+) -> Union[List[int], int, None]:
     '''
     Sets the screen brightness
 
     Args:
         value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
         force (bool): [Linux Only] if False the brightness will never be set lower than 1.
-                    This is because on most displays a brightness of 0 will turn off the backlight.
-                    If True, this check is bypassed
+            This is because on most displays a brightness of 0 will turn off the backlight.
+            If True, this check is bypassed
         verbose_error (bool): boolean value controls the amount of detail error messages will contain
         kwargs (dict): passed to the OS relevant brightness method
 
     Returns:
-        Returns the result of `get_brightness()`
+        list: list of ints (0 to 100)
+        int: if only one display is affected
+        None: if the `no_return` kwarg is specified
 
     Example:
         ```
@@ -563,7 +578,8 @@ def set_brightness(value, force=False, verbose_error=False, **kwargs):
         value = max(0, value)
 
     try:
-        return method.set_brightness(value, **kwargs)
+        out = method.set_brightness(value, **kwargs)
+        return out[0] if (type(out) == list and len(out) == 1) else out
     except Exception as e:
         if verbose_error:
             raise ScreenBrightnessError from e
@@ -573,7 +589,14 @@ def set_brightness(value, force=False, verbose_error=False, **kwargs):
     raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
 
 
-def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs):
+def fade_brightness(
+    finish: Union[int, str],
+    start: Optional[Union[int, str]] = None,
+    interval: float = 0.01,
+    increment: int = 1,
+    blocking: bool = True,
+    **kwargs
+) -> Union[List[threading.Thread], List[int], int]:
     '''
     A function to somewhat gently fade the screen brightness from `start` to `finish`
 
@@ -587,7 +610,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
 
     Returns:
-        list: list of `threading.Thread` objects if blocking == False,
+        list: list of `threading.Thread` objects if `blocking == False`,
             otherwise it returns the result of `get_brightness()`
 
     Example:
@@ -670,7 +693,7 @@ def fade_brightness(finish, start=None, interval=0.01, increment=1, blocking=Tru
         return get_brightness(**kwargs)
 
 
-def get_brightness(verbose_error=False, **kwargs):
+def get_brightness(verbose_error: bool = False, **kwargs) -> Union[List[int], int]:
     '''
     Returns the current display brightness
 
@@ -697,7 +720,8 @@ def get_brightness(verbose_error=False, **kwargs):
         ```
     '''
     try:
-        return method.get_brightness(**kwargs)
+        out = method.get_brightness(**kwargs)
+        return out[0] if (type(out) == list and len(out) == 1) else out
     except Exception as e:
         if verbose_error:
             raise ScreenBrightnessError from e

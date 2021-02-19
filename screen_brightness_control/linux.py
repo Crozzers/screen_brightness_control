@@ -2,6 +2,7 @@ import subprocess
 import os
 import struct
 from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
+from typing import List, Tuple, Union, Optional
 
 
 class _EDID:
@@ -37,16 +38,18 @@ class _EDID:
         "B"     # checksum (1 byte)
     )
 
-    def parse_edid(edid):
+    @staticmethod
+    def parse_edid(edid: str) -> Tuple[Union[str, None], str]:
         '''
-        Takes an EDID string (as string hex, formatted as: '00ffffff00').
-        Attempts to extract the monitor's name and serial number from it
+        Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
+        attempts to extract the monitor's name and serial number from it
 
         Args:
             edid (str): the edid string
 
         Returns:
-            tuple
+            tuple: First item can be None or str.
+                Second item is always str
 
         Example:
             ```python
@@ -93,22 +96,18 @@ class Light:
     executable = 'light'
     '''the light executable to be called'''
 
-    def __filter_monitors(display, *args):
-        '''internal function, do not call'''
-        monitors = Light.get_display_info() if len(args) == 0 else args[0]
-        return filter_monitors(display=display, haystack=monitors, include=['path', 'light_path'])
-
-    def get_display_info(display=None):
+    @staticmethod
+    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns information about detected displays as reported by Light
 
         Args:
-            display (str or int): [*Optional*] the monitor to return information about.
-                Can be index, name, path, model, index or edid
+            display (str or int): [*Optional*] The monitor to return info about.
+                Pass in the serial number, name, model, interface, edid or index.
+                This is passed to `filter_monitors`
 
         Returns:
-            list: list of dictionaries if no monitor is specified
-            dict: if a monitor is specified
+            list: list of dicts
 
         Example:
             ```python
@@ -119,10 +118,10 @@ class Light:
             # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
 
             # get info about the primary monitor
-            primary_info = sbc.linux.Light.get_display_info(0)
+            primary_info = sbc.linux.Light.get_display_info(0)[0]
 
             # get info about a monitor called 'edp-backlight'
-            edp_info = sbc.linux.Light.get_display_info('edp-backlight')
+            edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
         try:
@@ -177,12 +176,11 @@ class Light:
             __cache__.store('light_monitors_info', displays)
 
         if display is not None:
-            displays = Light.__filter_monitors(display, displays)
-            if len(displays) == 1:
-                displays = displays[0]
+            displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
         return displays
 
-    def get_display_names():
+    @staticmethod
+    def get_display_names() -> List[str]:
         '''
         Returns the names of each display, as reported by light
 
@@ -199,17 +197,26 @@ class Light:
         '''
         return [i['name'] for i in Light.get_display_info()]
 
-    def set_brightness(value, display=None, no_return=False):
+    @staticmethod
+    def set_brightness(
+        value: int,
+        display: Optional[Union[int, str]] = None,
+        no_return: bool = False
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the light executable
 
         Args:
             value (int): Sets the brightness to this value
-            display (int or str): The index, name, edid, model, serial or path of the display you wish to change
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial, path or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if True, this function returns None
 
         Returns:
-            The result of `Light.get_brightness()` or `None` (see `no_return` kwarg)
+            list: list of ints (0 to 100) (the result of `Light.get_brightness`)
+            None: if the `no_return` kwarg is True
 
         Example:
             ```python
@@ -227,21 +234,27 @@ class Light:
         '''
         info = Light.get_display_info()
         if display is not None:
-            info = Light.__filter_monitors(display, info)
+            if type(display) == int:
+                info = [info[display]]
+            else:
+                info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
         for i in info:
             subprocess.call(f'{Light.executable} -S {value} -s {i["light_path"]}'.split(" "))
         return Light.get_brightness(display=display) if not no_return else None
 
-    def get_brightness(display=None):
+    @staticmethod
+    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Sets the brightness for a display using the light executable
 
         Args:
-            display (int or str): The index, name, edid, model, serial or path of the display you wish to query
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial, path or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
 
         Returns:
-            int: from 0 to 100 if only one display is detected
-            list: list of integers if multiple displays are detected
+            list: list of ints (0 to 100)
 
         Example:
             ```python
@@ -251,15 +264,15 @@ class Light:
             current_brightness = sbc.linux.Light.get_brightness()
 
             # get the brightness of the primary display
-            primary_brightness = sbc.linux.Light.get_brightness(display = 0)
+            primary_brightness = sbc.linux.Light.get_brightness(display = 0)[0]
 
             # get the brightness of the display called 'edp-backlight'
-            edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')
+            edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')[0]
             ```
         '''
         info = Light.get_display_info()
         if display is not None:
-            info = Light.__filter_monitors(display, info)
+            info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
         results = []
         for i in info:
             results.append(
@@ -269,7 +282,7 @@ class Light:
                 ).stdout.decode()
             )
         results = [int(round(float(str(i)), 0)) for i in results]
-        return results[0] if len(results) == 1 else results
+        return results
 
 
 class XBacklight:
@@ -278,13 +291,14 @@ class XBacklight:
     executable = 'xbacklight'
     '''the xbacklight executable to be called'''
 
-    def set_brightness(value, no_return=False, **kwargs):
+    @staticmethod
+    def set_brightness(value: int, no_return: bool = False, **kwargs) -> Union[int, None]:
         '''
         Sets the screen brightness to a supplied value
 
         Args:
             no_return (bool): if True, this function returns None
-                            Returns the result of `XBacklight.get_brightness()` otherwise
+                Returns the result of `XBacklight.get_brightness()` otherwise
 
         Returns:
             int: from 0 to 100
@@ -301,7 +315,8 @@ class XBacklight:
         subprocess.call([XBacklight.executable, '-set', str(value)])
         return XBacklight.get_brightness() if not no_return else None
 
-    def get_brightness(**kwargs):
+    @staticmethod
+    def get_brightness(**kwargs) -> int:
         '''
         Returns the screen brightness as reported by xbacklight
 
@@ -328,22 +343,18 @@ class XRandr:
     executable = 'xrandr'
     '''the xrandr executable to be called'''
 
-    def __filter_monitors(display, *args):
-        '''internal function, do not call'''
-        monitors = XRandr.get_display_info() if len(args) == 0 else args[0]
-        return filter_monitors(display=display, haystack=monitors, include=['interface'])
-
-    def get_display_info(display=None):
+    @staticmethod
+    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns a dictionary of info about all detected monitors as reported by xrandr
+        Returns info about all detected monitors as reported by xrandr
 
         Args:
-            display (str or int): [*Optional*] the monitor to return info about.
-                                Pass in the serial number, name, model, interface, edid or index
+            display (str or int): [*Optional*] The monitor to return info about.
+                Pass in the serial number, name, model, interface, edid or index.
+                This is passed to `filter_monitors`
 
         Returns:
-            list: list of dicts if `display` is unspecified or has multiple matches
-            dict: if a `display` is specified and only one match is found
+            list: list of dicts
 
         Example:
             ```python
@@ -356,10 +367,10 @@ class XRandr:
                     print(key, ':', value)
 
             # get information about the first XRandr addressable monitor
-            primary_info = sbc.linux.XRandr.get_display_info(0)
+            primary_info = sbc.linux.XRandr.get_display_info(0)[0]
 
             # get information about a monitor with a specific name
-            benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')
+            benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
         try:
@@ -415,12 +426,11 @@ class XRandr:
 
             __cache__.store('xrandr_monitors_info', data)
         if display is not None:
-            ret = XRandr.__filter_monitors(display, ret)
-            if len(ret) == 1:
-                ret = ret[0]
+            ret = filter_monitors(display=display, haystack=ret, include=['interface'])
         return ret
 
-    def get_display_interfaces():
+    @staticmethod
+    def get_display_interfaces() -> List[str]:
         '''
         Returns the interfaces of each display, as reported by xrandr
 
@@ -438,7 +448,8 @@ class XRandr:
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
-    def get_display_names():
+    @staticmethod
+    def get_display_names() -> List[str]:
         '''
         Returns the names of each display, as reported by xrandr
 
@@ -455,16 +466,19 @@ class XRandr:
         '''
         return [i['name'] for i in XRandr.get_display_info()]
 
-    def get_brightness(display=None):
+    @staticmethod
+    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Returns the brightness for a display using the xrandr executable
 
         Args:
-            display (int): The index of the display you wish to query
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial, interface or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
 
         Returns:
-            int: an integer from 0 to 100 if only one display is detected
-            list: list of integers (from 0 to 100) if there are multiple displays connected
+            list: list of integers (from 0 to 100)
 
         Example:
             ```python
@@ -474,28 +488,40 @@ class XRandr:
             current_brightness = sbc.linux.XRandr.get_brightness()
 
             # get the current brightness for the primary display
-            primary_brightness = sbc.linux.XRandr.get_brightness(display=0)
+            primary_brightness = sbc.linux.XRandr.get_brightness(display=0)[0]
             ```
         '''
         monitors = XRandr.get_display_info()
         if display is not None:
-            monitors = XRandr.__filter_monitors(display, monitors)
+            if type(display) == int:
+                monitors = [monitors[display]]
+            else:
+                monitors = filter_monitors(display=display, haystack=monitors, include=['interface'])
         brightness = [i['brightness'] for i in monitors]
 
-        return brightness[0] if len(brightness) == 1 else brightness
+        return brightness
 
-    def set_brightness(value, display=None, no_return=False):
+    @staticmethod
+    def set_brightness(
+        value: int,
+        display: Optional[Union[int, str]] = None,
+        no_return: bool = False
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the xrandr executable
 
         Args:
             value (int): Sets the brightness to this value
-            display (int): The index of the display you wish to change
+            display (int): The specific display you wish to query.
+                Can be index, name, model, serial, interface or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if True, this function returns None
-                            Returns the result of `XRandr.get_brightness()` otherwise
+                Returns the result of `XRandr.get_brightness()` otherwise
 
         Returns:
-            The result of `XRandr.get_brightness()` or `None` (see `no_return` kwarg)
+            list: list of ints (0 to 100) (the result of `XRandr.get_brightness`)
+            None: if the `no_return` kwarg is True
 
         Example:
             ```python
@@ -511,7 +537,13 @@ class XRandr:
         value = str(float(value) / 100)
         interfaces = XRandr.get_display_interfaces()
         if display is not None:
-            interfaces = [i['interface'] for i in XRandr.__filter_monitors(display)]
+            interfaces = [
+                i['interace'] for i in filter_monitors(
+                    display=display,
+                    haystack=XRandr.get_display_info(),
+                    include=['interface']
+                )
+            ]
         for interface in interfaces:
             subprocess.run([XRandr.executable, '--output', interface, '--brightness', value])
         return XRandr.get_brightness(display=display) if not no_return else None
@@ -526,25 +558,21 @@ class DDCUtil:
     '''how long ddcutil should sleep between each DDC request (lower is shorter).
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
 
-    def __filter_monitors(display, *args):
-        '''internal function, do not call'''
-        monitors = DDCUtil.get_display_info() if len(args) == 0 else args[0]
-        return filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
-
-    def get_display_info(display=None):
+    @staticmethod
+    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command 'ddcutil detect' and parsing the output.
 
         Args:
-            display (int or str): [*Optional*] the monitor to return info about.
-                                Pass in the serial number, name, model, edid, i2c bus or index
+            display (int or str): [*Optional*] The monitor to return info about.
+                Pass in the serial number, name, model, i2c bus, edid or index.
+                This is passed to `filter_monitors`
 
         Returns:
-            list: list of dicts if `display` is unspecified or has multiple matches
-            dict: if a `display` is specified and only one match is found
+            list: list of dicts
 
-        Usage
+        Example:
             ```python
             import screen_brightness_control as sbc
 
@@ -555,10 +583,10 @@ class DDCUtil:
                     print(key, ':', value)
 
             # get information about the first DDCUtil addressable monitor
-            primary_info = sbc.linux.DDCUtil.get_display_info(0)
+            primary_info = sbc.linux.DDCUtil.get_display_info(0)[0]
 
             # get information about a monitor with a specific name
-            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')
+            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
         try:
@@ -635,12 +663,11 @@ class DDCUtil:
             __cache__.store('ddcutil_monitors_info', ret)
 
         if display is not None:
-            ret = DDCUtil.__filter_monitors(display, data)
-            if len(ret) == 1:
-                ret = ret[0]
+            ret = filter_monitors(display=display, haystack=data, include=['i2c_bus'])
         return ret
 
-    def get_display_names():
+    @staticmethod
+    def get_display_names() -> List[str]:
         '''
         Returns the names of each display, as reported by ddcutil
 
@@ -657,16 +684,19 @@ class DDCUtil:
         '''
         return [i['name'] for i in DDCUtil.get_display_info()]
 
-    def get_brightness(display=None):
+    @staticmethod
+    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Returns the brightness for a display using the ddcutil executable
 
         Args:
-            display (int or str): the display you wish to query. Can be index, name, model, serial or i2c bus
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial, i2c bus or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
 
         Returns:
-            int: int (0 to 100) if only one display is detected or the `display` kwarg is specified
-            list: list of ints (0 to 100) if multiple displays detected and `display` kwarg is unspecified
+            list: list of ints (0 to 100)
 
         Example:
             ```python
@@ -676,12 +706,12 @@ class DDCUtil:
             current_brightness = sbc.linux.DDCUtil.get_brightness()
 
             # get the current brightness for the primary display
-            primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)
+            primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)[0]
             ```
         '''
         monitors = DDCUtil.get_display_info()
         if display is not None:
-            monitors = DDCUtil.__filter_monitors(display, monitors)
+            monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
         res = []
         for m in monitors:
             try:
@@ -702,22 +732,29 @@ class DDCUtil:
                 res.append(int(out))
             except Exception:
                 pass
-        if len(res) == 1:
-            res = res[0]
         return res
 
-    def set_brightness(value, display=None, no_return=False):
+    @staticmethod
+    def set_brightness(
+        value: int,
+        display: Optional[Union[int, str]] = None,
+        no_return: bool = False
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the ddcutil executable
 
         Args:
             value (int): Sets the brightness to this value
-            display (int or str): The display you wish to change. Can be index, name, model, serial or i2c bus
+            display (int or str): The specific display you wish to query.
+                Can be index, name, model, serial, i2c bus or edid string.
+                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
+                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if True, this function returns None.
-                            Returns the result of `DDCUtil.get_brightness()` otherwise
+                Returns the result of `DDCUtil.get_brightness()` otherwise
 
         Returns:
-            The result of `DDCUtil.get_brightness()` or `None` (see `no_return` kwarg)
+            list: list of ints (0 to 100)
+            None: if `no_return` is True
 
         Example:
             ```python
@@ -732,7 +769,7 @@ class DDCUtil:
         '''
         monitors = DDCUtil.get_display_info()
         if display is not None:
-            monitors = DDCUtil.__filter_monitors(display, monitors)
+            monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
 
         __cache__.expire(startswith='ddcutil_', endswith='_brightness')
         for m in monitors:
@@ -751,7 +788,7 @@ class DDCUtil:
         return DDCUtil.get_brightness(display=display) if not no_return else None
 
 
-def list_monitors_info(method=None, allow_duplicates=False):
+def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
     '''
     Lists detailed information about all detected monitors
 
@@ -760,7 +797,7 @@ def list_monitors_info(method=None, allow_duplicates=False):
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
-        list: list of dictionaries upon success, empty list upon failure
+        list: list of dicts
 
     Raises:
         ValueError: if the method kwarg is invalid
@@ -816,9 +853,9 @@ def list_monitors_info(method=None, allow_duplicates=False):
         return info
 
 
-def list_monitors(method=None):
+def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
-    Returns a list of all addressable monitor names
+    Returns the names of all detected monitors
 
     Args:
         method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
@@ -838,7 +875,7 @@ def list_monitors(method=None):
     return flatten_list(displays)
 
 
-def get_brightness_from_sysfiles(display=None):
+def get_brightness_from_sysfiles(display: int = None) -> int:
     '''
     Returns the current display brightness by reading files from `/sys/class/backlight`
 
@@ -893,7 +930,7 @@ def get_brightness_from_sysfiles(display=None):
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
 
 
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs):
+def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
     '''
     Internal function, do not call. Either sets the brightness or gets it.
     Exists because set_brightness and get_brightness only have a couple differences
@@ -918,8 +955,10 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
         # use `'no_return' not in kwargs` because dict membership only checks the keys
         if output and not (all(i is None for i in output) and ('no_return' not in kwargs or not kwargs['no_return'])):
             # flatten and return any valid output (taking into account the no_return parameter)
+            if 'no_return' in kwargs and kwargs['no_return']:
+                return None
             output = flatten_list(output)
-            return output[0] if len(output) == 1 else output
+            return output
         else:
             try:
                 return getattr(XBacklight, meta_method + '_brightness')(*args, **kwargs)
@@ -941,18 +980,27 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     raise Exception(msg)
 
 
-def set_brightness(value, display=None, method=None, **kwargs):
+def set_brightness(
+    value: int,
+    display: Optional[Union[int, str]] = None,
+    method: Optional[str] = None,
+    **kwargs
+) -> Union[List[int], int, None]:
     '''
     Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
     Args:
         value (int): Sets the brightness to this value
+        display (int or str): The specific display you wish to adjust.
+            Can be index, model, name or serial of the display.
+            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)
         method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
         kwargs (dict): passed directly to the chosen brightness method
 
     Returns:
-        int: int between 0 and 100 if only one display is detected (or `XBacklight` is used)
-        list: list of ints of multiple displays detected (invalid monitors return `None`)
+        list: list of ints (0 to 100)
+        int: int (0 to 100) if the method is 'XBacklight'
+        None: if `no_return` is True
 
     Raises:
         ValueError: if you pass in an invalid value for `method`
@@ -980,17 +1028,24 @@ def set_brightness(value, display=None, method=None, **kwargs):
         return __set_and_get_brightness(value, display=display, method=method, meta_method='set', **kwargs)
 
 
-def get_brightness(display=None, method=None, **kwargs):
+def get_brightness(
+    display: Optional[Union[int, str]] = None,
+    method: Optional[str] = None,
+    **kwargs
+) -> Union[List[int], int]:
     '''
     Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
     Args:
+        display (int or str): The specific display you wish to adjust.
+            Can be index, model, name or serial of the display.
+            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)
         method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
         kwargs (dict): passed directly to chosen brightness method
 
     Returns:
-        int: int between 0 and 100 if only one display is detected (or `XBacklight` is used)
-        list: list of ints of multiple displays detected (invalid monitors return `None`)
+        list: list of ints (0 to 100)
+        int: int (0 to 100) if the method is 'XBacklight'
 
     Raises:
         ValueError: if you pass in an invalid value for `method`
@@ -1006,13 +1061,13 @@ def get_brightness(display=None, method=None, **kwargs):
         current_brightness = sbc.linux.get_brightness()
 
         # get the brightness of the primary display
-        primary_brightness = sbc.linux.get_brightness(display=0)
+        primary_brightness = sbc.linux.get_brightness(display=0)[0]
 
         # get the brightness via the XRandr method
         xrandr_brightness = sbc.linux.get_brightness(method='xrandr')
 
         # get the brightness of the secondary display using Light
-        light_brightness = sbc.get_brightness(display=1, method='light')
+        light_brightness = sbc.get_brightness(display=1, method='light')[0]
         ```
     '''
     if method is not None and method.lower() == 'xbacklight':

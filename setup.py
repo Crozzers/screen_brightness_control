@@ -1,6 +1,7 @@
 from setuptools import setup
 
-setup(name='screen_brightness_control',
+setup(
+    name='screen_brightness_control',
     version='0.8.0-dev',
     url='https://github.com/Crozzers/screen_brightness_control',
     project_urls={
@@ -23,5 +24,4 @@ setup(name='screen_brightness_control',
         'Programming Language :: Python :: 3 :: Only'
     ],
     python_requires='>=3.6'
-    )
-    
+)
