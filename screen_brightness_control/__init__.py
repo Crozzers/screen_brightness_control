@@ -213,7 +213,7 @@ class Monitor():
 
     def set_brightness(self, *args, **kwargs) -> Union[int, None]:
         '''
-        Sets the brightness for this display
+        Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
             args (tuple): passed directly to this monitor's brightness method
@@ -238,11 +238,14 @@ class Monitor():
             kwargs['display'] = self.serial
         else:
             kwargs['display'] = self.index
-        return self.method.set_brightness(*args, **kwargs)[0]
+        b = self.method.set_brightness(*args, **kwargs)
+        if b is not None:
+            return b[0]
+        return b
 
     def get_brightness(self, **kwargs) -> int:
         '''
-        Returns the brightness of this display
+        Returns the brightness of this display. See `get_brightness` for the full docs
 
         Args:
             kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
@@ -266,6 +269,45 @@ class Monitor():
         else:
             kwargs['display'] = self.index
         return self.method.get_brightness(**kwargs)[0]
+
+    def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
+        '''
+        Fades the brightness for this display. See `fade_brightness` for the full docs
+
+        Args:
+            args (tuple): passed directly to `fade_brightness`
+            kwargs (dict): passed directly to `fade_brightness`.
+                The `display` kwarg is always overwritten.
+                The `method` kwarg may also be overwritten
+
+        Returns:
+            threading.Thread: if the the blocking kwarg is False
+            int: if the blocking kwarg is True
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # fade the brightness of the primary monitor to 50%
+            primary = sbc.Monitor(0)
+            primary.fade_brightness(50)
+            ```
+        '''
+        if self.edid is not None:
+            kwargs['display'] = self.edid
+        elif self.serial is not None:
+            kwargs['display'] = self.serial
+        elif self.name is not None:
+            kwargs['display'] = self.name
+        else:
+            kwargs['display'] = self.index
+            kwargs['method'] = self.method.__name__.lower()
+        b = fade_brightness(*args, **kwargs)
+        # fade_brightness will call the top-level get_brightness
+        # function, which will return list OR int
+        if type(b) == list:
+            return b[0]
+        return b
 
     def get_info(self) -> dict:
         '''
@@ -603,11 +645,12 @@ def fade_brightness(
     Args:
         finish (int or str): the brightness level to end up on
         start (int or str): where the brightness should fade from.
-                            If not specified the function starts from the current screen brightness
+            If not specified the function starts from the current screen brightness
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
-        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs)
+        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs).
+            Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
 
     Returns:
         list: list of `threading.Thread` objects if `blocking == False`,
@@ -650,7 +693,15 @@ def fade_brightness(
         del(kwargs['verbose_error'])
 
     try:
-        available_monitors = filter_monitors(**kwargs)
+        # sift through kwargs and find args that are compatible with filter_monitors
+        # this __code__.co_varnames is kinda hacky but since filter_monitors
+        # doesn't have any special *args or **kwargs it should be fine
+        kw = {}
+        for key, value in kwargs.items():
+            if key in filter_monitors.__code__.co_varnames[:filter_monitors.__code__.co_argcount]:
+                kw[key] = value
+        available_monitors = filter_monitors(**kw)
+        del(kw)
     except (IndexError, LookupError) as e:
         raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
     except ValueError as e:

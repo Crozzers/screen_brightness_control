@@ -6,7 +6,7 @@ import time
 import ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__, platform
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__, platform
 from typing import List, Union, Optional
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)

@@ -1,7 +1,7 @@
 import subprocess
 import os
 import struct
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, Monitor, __cache__
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__
 from typing import List, Tuple, Union, Optional
 
 
@@ -272,7 +272,10 @@ class Light:
         '''
         info = Light.get_display_info()
         if display is not None:
-            info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
+            if type(display) == int:
+                info = [info[display]]
+            else:
+                info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
         results = []
         for i in info:
             results.append(
@@ -537,13 +540,16 @@ class XRandr:
         value = str(float(value) / 100)
         interfaces = XRandr.get_display_interfaces()
         if display is not None:
-            interfaces = [
-                i['interace'] for i in filter_monitors(
-                    display=display,
-                    haystack=XRandr.get_display_info(),
-                    include=['interface']
-                )
-            ]
+            if type(display) == int:
+                interfaces = [interfaces[display]['interface']]
+            else:
+                interfaces = [
+                    i['interace'] for i in filter_monitors(
+                        display=display,
+                        haystack=XRandr.get_display_info(),
+                        include=['interface']
+                    )
+                ]
         for interface in interfaces:
             subprocess.run([XRandr.executable, '--output', interface, '--brightness', value])
         return XRandr.get_brightness(display=display) if not no_return else None
@@ -711,7 +717,10 @@ class DDCUtil:
         '''
         monitors = DDCUtil.get_display_info()
         if display is not None:
-            monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
+            if type(display) == int:
+                monitors = [monitors[display]]
+            else:
+                monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
         res = []
         for m in monitors:
             try:
@@ -769,7 +778,10 @@ class DDCUtil:
         '''
         monitors = DDCUtil.get_display_info()
         if display is not None:
-            monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
+            if type(display) == int:
+                monitors = [monitors[display]]
+            else:
+                monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
 
         __cache__.expire(startswith='ddcutil_', endswith='_brightness')
         for m in monitors:
@@ -944,9 +956,8 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
         output = []
         for m in monitors:  # add the output of each brightness method to the output list
             try:
-                identifier = m['index'] if m['edid'] is None else m['edid']
                 output.append(
-                    getattr(m['method'], meta_method + '_brightness')(*args, display=identifier, **kwargs)
+                    getattr(m['method'], meta_method + '_brightness')(*args, display=m['index'], **kwargs)
                 )
             except Exception as e:
                 output.append(None)
