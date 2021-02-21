@@ -218,17 +218,24 @@ print(monitor.Level)
 <h1>Documentation</h1>
 <ul id="index">
 <li><h3><a>Version</a></h3>
-<ul><!--VERSION START-->
-<li><code><a href="docs/0.7.2/index.html">Latest</a></code></li>
-<li><code><a href="docs/0.7.2/index.html">0.7.2</a></code></li>
-<li><code><a href="docs/0.7.1/index.html">0.7.1</a></code></li>
-<li><code><a href="docs/0.7.0/index.html">0.7.0</a></code></li>
-<li><code><a href="docs/0.6.2/index.html">0.6.2</a></code></li>
-<li><code><a href="docs/0.6.1/index.html">0.6.1</a></code></li>
-<li><code><a href="docs/0.6.0/index.html">0.6.0</a></code></li>
-<li><code><a href="docs/0.5.1/index.html">0.5.1</a></code></li>
 
-</ul></li></ul><!--VERSION END-->
+<ul id="docver_links_nojquery">
+<li><a href="./docver_links_redir.html">Change documentation version</a></li>
+</ul>
+<ul class="two-column" id="docver_links"><!--VERSION START-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $("#docver_links").load("./docver_links_redir.html",
+        function(resp_txt, txt_status, xmlhttp_req){
+            if (txt_status=="success"){
+                document.getElementById("docver_links_nojquery").innerHTML = "";
+            }
+            if (txt_status=="error"){
+                document.getElementById("docver_links").setAttribute("class", "");
+            }
+    });
+</script>
+</ul></li></ul>
 
 <h1>Meta</h1>
 <ul id="index">
