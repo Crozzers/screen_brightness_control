@@ -1,6 +1,12 @@
 import argparse
 import platform
+import time
 import screen_brightness_control as SBC
+
+def get_monitors(args):
+    filtered = SBC.filter_monitors(display=args.display, method=args.method)
+    for monitor in filtered:
+        yield SBC.Monitor(monitor)
 
 if __name__ == '__main__':
     if platform.system() == 'Darwin':
@@ -27,26 +33,62 @@ if __name__ == '__main__':
             if type(args.display) is str and args.display.isdigit():
                 args.display = int(args.display)
 
-        if args.get:
+        if (args.get, args.set) != (False, None):
             try:
-                monitors = [SBC.Monitor(i) for i in SBC.filter_monitors(display=args.display, method=args.method)]
-                for monitor in monitors:
+                if args.get:
+                    arrow = ':'
+                else:
+                    arrow = ' ->'
+                for monitor in get_monitors(args):
                     name = monitor.name
                     if args.verbose:
                         name += f' ({monitor.serial}) [{monitor.method.__name__}]'
                     try:
-                        brightness = monitor.get_brightness()
-                        if brightness is None:
+                        if args.get:
+                            ret_val = monitor.get_brightness()
+                        else:
+                            ret_val = monitor.set_brightness(args.set)
+
+                        if ret_val is None:
                             raise Exception
-                        print(f'{name}: {brightness}%')
-                    except Exception:
-                        print(f'{name}: Failed')
+                        print(f'{name}{arrow} {ret_val}%')
+                    except Exception as e:
+                        if args.verbose:
+                            print(f'{name}{arrow} Failed: {e}')
+                        else:
+                            print(f'{name}{arrow} Failed')
             except Exception:
-                print(SBC.get_brightness(display=args.display, method=args.method))
-        elif args.set is not None:
-            SBC.set_brightness(args.set, display=args.display, method=args.method, verbose_error=args.verbose)
+                kw = {'display': args.display, 'method': args.method, 'verbose_error': args.verbose}
+                if args.get:
+                    print(SBC.get_brightness(**kw))
+                else:
+                    print(SBC.set_brightness(args.set, **kw))
         elif args.fade is not None:
-            SBC.fade_brightness(args.fade, display=args.display, method=args.method, verbose_error=args.verbose)
+            try:
+                monitors = list(get_monitors(args))
+                for monitor in monitors:
+                    monitor.initial_brightness = monitor.get_brightness()
+                    monitor.fade_thread = monitor.fade_brightness(
+                        args.fade,
+                        blocking=False,
+                        start=monitor.initial_brightness
+                    )
+
+                while True:
+                    done = []
+                    for monitor in monitors:
+                        if not monitor.fade_thread.is_alive():
+                            name = monitor.name
+                            if args.verbose:
+                                name += f' ({monitor.serial}) [{monitor.method.__name__}]'
+                            print(f'{name}: {monitor.initial_brightness}% -> {monitor.get_brightness()}%')
+                            done.append(monitor)
+                    monitors = [i for i in monitors if i not in done]
+                    if monitors == []:
+                        break
+                    time.sleep(0.1)
+            except Exception:
+                print(SBC.fade_brightness(args.fade, display=args.display, method=args.method, verbose_error=args.verbose))
         elif args.version:
             print(SBC.__version__)
         elif args.list:
