@@ -48,24 +48,36 @@ def get_display_info() -> List[dict]:
         try:
             # collect all monitor UIDs (derived from DeviceID)
             monitor_uids = {}
+            last_good = 0
             for i in win32api.EnumDisplayMonitors():
                 tmp = win32api.GetMonitorInfo(i[0])
-                # iterate up to 4 display adapters
-                for j in range(5):
-                    try:
-                        # i have no idea what this 3rd parameter does but the code doesn't work without it
-                        device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
-                        monitor_uids[device.DeviceID.split('#')[2]] = device
-                        break
-                    except Exception:
-                        continue
+                try:
+                    # If a user has all displays plugged into display adapter 4 then
+                    # this statement would be tried for each adapter (0-4) per monitor
+                    # meaning 4 tries per monitor, 12 tries total.
+                    # By trying the "last good" adapter first, only the first display will
+                    # be tried 4 times. All the others will be tried once
+                    device = win32api.EnumDisplayDevices(tmp['Device'], last_good, 1)
+                    monitor_uids[device.DeviceID.split('#')[2]] = device
+                except Exception:
+                    # iterate up to 4 display adapters
+                    for j in range(5):
+                        try:
+                            # last_good is tried just above here. No point trying it again
+                            if j != last_good:
+                                # i have no idea what this 3rd parameter does but the code doesn't work without it
+                                device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
+                                monitor_uids[device.DeviceID.split('#')[2]] = device
+                                last_good = j
+                                break
+                        except Exception:
+                            continue
 
-            # this separation of monitors is to fix issue #6
-            # https://github.com/Crozzers/screen_brightness_control/issues/6
+            # gather list of laptop displays to check against later
             wmi = _wmi_init()
             try:
                 laptop_displays = []
-                for i in wmi.WmiMonitorBrightnesS():
+                for i in wmi.WmiMonitorBrightness():
                     laptop_displays.append(
                         i.InstanceName.replace('_0', '', 1).split('\\')[2]
                     )
@@ -73,9 +85,10 @@ def get_display_info() -> List[dict]:
                 pass
             monitors = []
             extras = []
+            uid_keys = list(monitor_uids.keys())
             for m in wmi.WmiMonitorID():
                 name = m.InstanceName.replace('_0', '', 1).split('\\')[2]
-                if name in monitor_uids.keys():
+                if name in uid_keys:
                     monitors.append(m)
                 else:
                     extras.append(m)
@@ -84,8 +97,9 @@ def get_display_info() -> List[dict]:
             # because the first item in win32api's list is usually the primary display
             monitors = sorted(
                 monitors,
-                key=lambda x: list(monitor_uids.keys()).index(x.InstanceName.replace('_0', '', 1).split('\\')[2])
+                key=lambda x: uid_keys.index(x.InstanceName.replace('_0', '', 1).split('\\')[2])
             )
+
             monitors += extras
 
             # get all available edid strings
@@ -98,8 +112,9 @@ def get_display_info() -> List[dict]:
             laptop = 0
             desktop = 0
             for monitor in monitors:
-                name, model, serial, manufacturer, man_id, edid = None, None, None, None, None, None
-                pydevice = monitor_uids[monitor.InstanceName.replace('_0', '', 1).split('\\')[2]]
+                model, serial, manufacturer, man_id, edid = None, None, None, None, None
+                instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
+                pydevice = monitor_uids[instance_name]
 
                 try:
                     serial = bytes(monitor.SerialNumberID).decode().replace('\x00', '')
@@ -110,32 +125,31 @@ def get_display_info() -> List[dict]:
                     except Exception:
                         man_id = None
                 except Exception:
-                    serial = pydevice.DeviceID.split('#')[2]
-                    man_id = pydevice.DeviceID.split('#')[1][:3]
-                    model = pydevice.DeviceID.split('#')[1][3:]
+                    devid = pydevice.DeviceID.split('#')
+                    serial = devid[2]
+                    man_id = devid[1][:3]
+                    model = devid[3:]
+                    del(devid)
                     try:
                         man_id, manufacturer = _monitor_brand_lookup(man_id)
                     except Exception:
                         manufacturer = None
                 try:
-                    edid = ''
-                    for char in descriptors[monitor.InstanceName][0]:
-                        char = str(hex(char)).replace('0x', '')
-                        if len(char) == 1:
-                            char = '0' + char
-                        edid += char
-                except Exception:
                     try:
+                        chars = descriptors[monitor.InstanceName][0]
+                    except Exception:
+                        chars = descriptors[pydevice.InstanceName][0]
+                    finally:
                         edid = ''
-                        print(descriptors.keys())
-                        print(pydevice.InstanceName)
-                        for char in descriptors[pydevice.InstanceName][0]:
+                        for char in chars:
                             char = str(hex(char)).replace('0x', '')
                             if len(char) == 1:
                                 char = '0' + char
                             edid += char
-                    except Exception:
-                        edid = None
+                        del(chars)
+                except Exception:
+                    edid = None
+
                 if (serial, model) != (None, None):
                     info.append(
                         {
@@ -147,7 +161,7 @@ def get_display_info() -> List[dict]:
                             'edid': edid
                         }
                     )
-                    if monitor.InstanceName.replace('_0', '', 1).split('\\')[2] in laptop_displays:
+                    if instance_name in laptop_displays:
                         info[-1]['index'] = laptop
                         info[-1]['method'] = WMI
                         laptop += 1
@@ -228,7 +242,7 @@ class WMI:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-    ) -> Union[List[int], None]:
+        ) -> Union[List[int], None]:
         '''
         Sets the display brightness for Windows using WMI
 
@@ -533,7 +547,7 @@ class VCP:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-    ) -> Union[List[int], None]:
+        ) -> Union[List[int], None]:
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
@@ -682,7 +696,10 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     '''
     errors = []
     try:  # filter known list of monitors according to kwargs
-        monitors = filter_monitors(display=display, method=method)
+        if type(display) == int:
+            monitors = [list_monitors_info(method=method)[display]]
+        else:
+            monitors = filter_monitors(display=display, method=method)
     except Exception as e:
         errors.append(['', type(e).__name__, e])
     else:
@@ -721,7 +738,7 @@ def set_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
     '''
     Sets the brightness of any connected monitors
 

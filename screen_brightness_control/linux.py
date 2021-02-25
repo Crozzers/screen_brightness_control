@@ -202,7 +202,7 @@ class Light:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-    ) -> Union[List[int], None]:
+        ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the light executable
 
@@ -279,10 +279,11 @@ class Light:
         results = []
         for i in info:
             results.append(
-                subprocess.run(
-                    f'"{Light.executable}" -G -s {i["light_path"]}'.split(' '),
-                    stdout=subprocess.PIPE
-                ).stdout.decode()
+                subprocess.check_output(
+                    [
+                        Light.executable, '-G', '-s', i['light_path']
+                    ]
+                )
             )
         results = [int(round(float(str(i)), 0)) for i in results]
         return results
@@ -376,61 +377,65 @@ class XRandr:
             benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
+        def check_tmp(tmp):
+            if tmp != {}:
+                if tmp['serial'] is None or '\\x' not in tmp['serial']:
+                    if 'line' in tmp:
+                        del(tmp['line'])
+                    return True
+            return False
+
         try:
             data = __cache__.get('xrandr_monitors_info')
         except Exception:
-            out = [
-                i for i in subprocess.check_output([XRandr.executable, '--verbose']).decode().split('\n') if i != ''
-            ]
+            out = subprocess.check_output([XRandr.executable, '--verbose']).decode().split('\n')
             names = XRandr.get_display_interfaces()
             data = []
             tmp = {}
             count = 0
             for i in out:
-                if i.startswith(tuple(names)):
-                    data.append(tmp)
-                    tmp = {
-                        'interface': i.split(' ')[0],
-                        'line': i,
-                        'method': XRandr,
-                        'index': count,
-                        'model': None,
-                        'serial': None,
-                        'manufacturer': None,
-                        'manufacturer_id': None,
-                        'edid': None
-                    }
-                    count += 1
-                elif 'EDID:' in i:
-                    st = out[out.index(tmp['line']):]
-                    edid = [st[j].replace('\t', '').replace(' ', '') for j in range(st.index(i) + 1, st.index(i) + 9)]
-                    edid = ''.join(edid)
-                    tmp['edid'] = edid
-                    name, serial = _EDID.parse_edid(edid)
-                    tmp['name'] = name if name is not None else tmp['interface']
-                    if name is not None:
-                        tmp['manufacturer'] = name.split(' ')[0]
-                        try:
-                            tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
-                        except Exception:
-                            tmp['manufacturer_id'] = None
-                        tmp['model'] = name.split(' ')[1]
-                        tmp['serial'] = serial
-                elif 'Brightness:' in i:
-                    tmp['brightness'] = int(
-                        float(i.replace('Brightness:', '').replace(' ', '').replace('\t', '')) * 100
-                    )
-
-            data.append(tmp)
-            ret = []
-            for i in data:
-                if i != {} and (i['serial'] is None or '\\x' not in i['serial']):
-                    ret.append({k: v for k, v in i.items() if k != 'line'})
+                if i != '':
+                    if i.startswith(tuple(names)):
+                        if check_tmp(tmp):
+                            data.append(tmp)
+                        tmp = {
+                            'interface': i.split(' ')[0],
+                            'line': i,
+                            'method': XRandr,
+                            'index': count,
+                            'model': None,
+                            'serial': None,
+                            'manufacturer': None,
+                            'manufacturer_id': None,
+                            'edid': None
+                        }
+                        count += 1
+                    elif 'EDID:' in i:
+                        st = out[out.index(tmp['line']):]
+                        edid = [st[j].replace('\t', '').replace(' ', '') for j in range(st.index(i) + 1, st.index(i) + 9)]
+                        edid = ''.join(edid)
+                        tmp['edid'] = edid
+                        name, serial = _EDID.parse_edid(edid)
+                        tmp['name'] = name if name is not None else tmp['interface']
+                        if name is not None:
+                            tmp['manufacturer'] = name.split(' ')[0]
+                            try:
+                                tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
+                            except Exception:
+                                tmp['manufacturer_id'] = None
+                            tmp['model'] = name.split(' ')[1]
+                            tmp['serial'] = serial
+                    elif 'Brightness:' in i:
+                        tmp['brightness'] = int(
+                            float(i.replace('Brightness:', '').replace(' ', '').replace('\t', '')) * 100
+                        )
+            if check_tmp(tmp):
+                data.append(tmp)
 
             __cache__.store('xrandr_monitors_info', data)
         if display is not None:
-            ret = filter_monitors(display=display, haystack=ret, include=['interface'])
-        return ret
+            data = filter_monitors(display=display, haystack=data, include=['interface'])
+        return data
 
     @staticmethod
     def get_display_interfaces() -> List[str]:
@@ -509,7 +514,7 @@ class XRandr:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-    ) -> Union[List[int], None]:
+        ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the xrandr executable
 
@@ -595,11 +600,20 @@ class DDCUtil:
             benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
+        def check_tmp(tmp):
+            if tmp != {} and 'Invalid display' not in tmp['tmp']:
+                if 'tmp' in tmp:
+                    del(tmp['tmp'])
+                return True
+            return False
+
         try:
-            ret = __cache__.get('ddcutil_monitors_info')
+            data = __cache__.get('ddcutil_monitors_info')
         except Exception:
             out = []
-            # use -v to get EDID string but this means output cannot be decoded. Use str()[2:-1] workaround
+            # Use -v to get EDID string but this means output cannot be decoded.
+            # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
+            # Use str()[2:-1] workaround
             cmd_out = str(
                 subprocess.check_output(
                     [
@@ -619,7 +633,8 @@ class DDCUtil:
             for i in range(len(out)):
                 line = out[i]
                 if not line.startswith(('\t', ' ')):
-                    data.append(tmp)
+                    if check_tmp(tmp):
+                        data.append(tmp)
                     tmp = {
                         'tmp': line,
                         'method': DDCUtil,
@@ -661,16 +676,13 @@ class DDCUtil:
                             )
                         except Exception:
                             pass
-            data.append(tmp)
-            ret = []
-            for i in data:
-                if i != {} and 'Invalid display' not in i['tmp']:
-                    ret.append({k: v for k, v in i.items() if k != 'tmp'})
-            __cache__.store('ddcutil_monitors_info', ret)
+            if check_tmp(tmp):
+                data.append(tmp)
+            __cache__.store('ddcutil_monitors_info', data)
 
         if display is not None:
-            ret = filter_monitors(display=display, haystack=data, include=['i2c_bus'])
-        return ret
+            data = filter_monitors(display=display, haystack=data, include=['i2c_bus'])
+        return data
 
     @staticmethod
     def get_display_names() -> List[str]:
@@ -748,7 +760,7 @@ class DDCUtil:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-    ) -> Union[List[int], None]:
+        ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the ddcutil executable
 
@@ -849,18 +861,19 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     except Exception:
         methods = [XRandr, DDCUtil, Light]
         if method is not None:
-            methods = [i for i in methods if method.lower() == i.__name__.lower()]
-            if methods == []:
+            method = method.lower()
+            if method not in ('xrandr', 'ddcutil', 'light'):
                 raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' to get monitor information')
 
         info = []
         edids = []
         for m in methods:
-            # to make sure each display (with unique edid) is only reported once
-            for i in m.get_display_info():
-                if allow_duplicates or i['edid'] not in edids:
-                    edids.append(i['edid'])
-                    info.append(i)
+            if method is None or method == m.__name__.lower():
+                # to make sure each display (with unique edid) is only reported once
+                for i in m.get_display_info():
+                    if allow_duplicates or i['edid'] not in edids:
+                        edids.append(i['edid'])
+                        info.append(i)
         __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
@@ -949,7 +962,10 @@ def __set_and_get_brightness(*args, display=None, method=None, meta_method='get'
     '''
     errors = []
     try:  # filter known list of monitors according to kwargs
-        monitors = filter_monitors(display=display, method=method)
+        if type(display) == int:
+            monitors = [list_monitors_info(method=method)[display]]
+        else:
+            monitors = filter_monitors(display=display, method=method)
     except Exception as e:
         errors.append(['', type(e).__name__, e])
     else:
@@ -996,7 +1012,7 @@ def set_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-) -> Union[List[int], int, None]:
+    ) -> Union[List[int], int, None]:
     '''
     Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
@@ -1043,7 +1059,7 @@ def get_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-) -> Union[List[int], int]:
+    ) -> Union[List[int], int]:
     '''
     Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 

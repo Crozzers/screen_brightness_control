@@ -111,7 +111,7 @@ MONITOR_MANUFACTURER_CODES = {
     "ZCM": "Zenith",
     "UNK": "Unknown",
     "_YV": "Fujitsu",
-}
+    }
 
 
 def _monitor_brand_lookup(search: str) -> Tuple[str, str]:
@@ -436,7 +436,7 @@ def filter_monitors(
     haystack: Optional[list] = None,
     method: Optional[str] = None,
     include: List[str] = []
-) -> List[dict]:
+    ) -> List[dict]:
     '''
     Searches through the information for all detected displays
     and attempts to return the info matching the value given.
@@ -483,29 +483,30 @@ def filter_monitors(
     unique_identifiers = []
     monitors = []
     for monitor in monitors_with_duplicates:
-        valid = False
-        if type(display) is str:
-            # if the display kwarg matches any of the information given (edid, serial...), add it to the list
-            for field in ['edid', 'serial', 'name', 'model'] + include:
-                if monitor[field] is not None and display == monitor[field]:
-                    valid = True
-                    break
-        else:
-            valid = True
-
         # find a valid identifier for a monitor, excluding any which are equal to None
-        identifier = 'edid'
-        for identifier in ('edid', 'serial', 'name', 'model'):
+        added = False
+        for identifier in ['edid', 'serial', 'name', 'model'] + include:
             if monitor[identifier] is not None:
-                # if the monitor is valid and we haven't already added it
-                if valid and monitor[identifier] not in unique_identifiers:
-                    monitors.append(monitor)
-                    unique_identifiers.append(monitor[identifier])
+                # check we haven't already added the monitor
+                if monitor[identifier] not in unique_identifiers:
+                    # check if the display kwarg (if str) matches this monitor
+                    if type(display) != str or (type(display) == str and monitor[identifier] == display):
+                        # if valid and monitor[identifier] not in unique_identifiers:
+                        if not added:
+                            monitors.append(monitor)
+                            unique_identifiers.append(monitor[identifier])
+                            added = True
 
-                    # if the display kwarg is an integer and we are currently at that index
-                    if type(display) is int and len(monitors) - 1 == display:
-                        return [monitor]
-                break
+                        # if the display kwarg is an integer and we are currently at that index
+                        if type(display) is int and len(monitors) - 1 == display:
+                            return [monitor]
+                        if added:
+                            break
+                else:
+                    # if we have already added a monitor with the same identifier
+                    # then any info matching this monitor will match the other one
+                    # so exit the checking now
+                    break
 
     # if no monitors matched the query OR if display kwarg was an int
     # if the latter and we made it this far then the int was out of range
@@ -552,7 +553,7 @@ def set_brightness(
     force: bool = False,
     verbose_error: bool = False,
     **kwargs
-) -> Union[List[int], int, None]:
+    ) -> Union[List[int], int, None]:
     '''
     Sets the screen brightness
 
@@ -638,7 +639,7 @@ def fade_brightness(
     increment: int = 1,
     blocking: bool = True,
     **kwargs
-) -> Union[List[threading.Thread], List[int], int]:
+    ) -> Union[List[threading.Thread], List[int], int]:
     '''
     A function to somewhat gently fade the screen brightness from `start` to `finish`
 
