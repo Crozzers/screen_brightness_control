@@ -585,7 +585,7 @@ class VCP:
             # see VCP.set_brightness for the explanation for why we always gather this list
             indexes = [i['index'] for i in filter_monitors(display=display, haystack=VCP.get_display_info())]
 
-        __cache__.expire(startswith='vcp_', endswith='_brightness')
+        __cache__.expire(startswith='vcp_brightness_')
 
         count = 0
         for m in VCP.iter_physical_monitors():

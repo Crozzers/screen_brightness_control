@@ -549,7 +549,7 @@ class XRandr:
                 interfaces = [interfaces[display]['interface']]
             else:
                 interfaces = [
-                    i['interace'] for i in filter_monitors(
+                    i['interface'] for i in filter_monitors(
                         display=display,
                         haystack=XRandr.get_display_info(),
                         include=['interface']

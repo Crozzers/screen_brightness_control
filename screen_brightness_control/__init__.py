@@ -36,11 +36,13 @@ class __Cache(dict):
                 pass
         else:
             for i in list(self.keys()):
-                if (startswith, endswith) != (None, None) and i.startswith(startswith) and i.endswith(endswith):
+                cond1 = startswith is not None and i.startswith(startswith)
+                cond2 = endswith is not None and i.endswith(endswith)
+                if cond1 and cond2:
                     del(self[i])
-                elif startswith is not None and endswith is None and i.startswith(startswith):
+                elif cond1:
                     del(self[i])
-                elif startswith is None and endswith is not None and i.endswith(endswith):
+                elif cond2:
                     del(self[i])
                 else:
                     pass
@@ -114,7 +116,7 @@ MONITOR_MANUFACTURER_CODES = {
     }
 
 
-def _monitor_brand_lookup(search: str) -> Tuple[str, str]:
+def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     '''internal function to search the monitor manufacturer codes dict'''
     keys = list(MONITOR_MANUFACTURER_CODES.keys())
     keys_lower = [i.lower() for i in keys]
@@ -152,7 +154,7 @@ class ScreenBrightnessError(Exception):
 
 class Monitor():
     '''A class to manage a single monitor and its relevant information'''
-    def __init__(self, display: Union[int, str]):
+    def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
             display (int or str): the index/name/model name/serial/edid of the display you wish to control.
@@ -182,13 +184,13 @@ class Monitor():
             ```
         '''
         monitors_info = list_monitors_info(allow_duplicates=True)
-        if type(display) is dict:
+        if isinstance(display, dict):
             if display in monitors_info:
                 info = display
             else:
                 raise LookupError('could not match display info to known displays')
         else:
-            info = filter_monitors(display, haystack=monitors_info)[0]
+            info = filter_monitors(display=display, haystack=monitors_info)[0]
 
         self.serial: str = info['serial']
         '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
@@ -305,7 +307,7 @@ class Monitor():
         b = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
         # function, which will return list OR int
-        if type(b) == list:
+        if isinstance(b, list):
             return b[0]
         return b
 
@@ -451,8 +453,8 @@ def filter_monitors(
         include (list): extra fields of information to sort by
 
     Raises:
-        IndexError: if the display value is an int and an `IndexError` occurs when using it as a list index
-        LookupError: if the display, as a str, does not have a match
+        TypeError: if the display kwarg is not an int, str or None
+        LookupError: if the display, does not have a match
 
     Returns:
         list: list of dicts
@@ -549,7 +551,7 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
 
 
 def set_brightness(
-    value: Union[int, str],
+    value: Union[int, float, str],
     force: bool = False,
     verbose_error: bool = False,
     **kwargs
@@ -558,7 +560,7 @@ def set_brightness(
     Sets the screen brightness
 
     Args:
-        value (int or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
         force (bool): [Linux Only] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
@@ -594,19 +596,20 @@ def set_brightness(
         raise TypeError(f'value must be int, float or str, not {type(value)}')
 
     # convert values like '+5' and '-25' to integers and add/subtract them from the current brightness
-    if type(value) is str and value.startswith(('+', '-')):
+    if isinstance(value, str) and value.startswith(('+', '-')):
         if 'display' in kwargs.keys():
             current = get_brightness(display=kwargs['display'])
         else:
             current = get_brightness()
-            if type(current) is list:
-                # apply the offset to all displays by setting the brightness for each one individually
-                out = []
-                for i in range(len(current)):
-                    out.append(set_brightness(current[i] + int(float(str(value))), display=i, **kwargs))
-                # flatten the list output
-                out = flatten_list(out)
-                return out[0] if len(out) == 1 else out
+
+        if isinstance(current, list):
+            # apply the offset to all displays by setting the brightness for each one individually
+            out: list = []
+            for i in range(len(current)):
+                out.append(set_brightness(current[i] + int(float(str(value))), display=i, **kwargs))
+            # flatten the list output
+            out = flatten_list(out)
+            return out[0] if len(out) == 1 else out
 
         value = current + int(float(str(value)))
     else:
@@ -622,7 +625,7 @@ def set_brightness(
 
     try:
         out = method.set_brightness(value, **kwargs)
-        return out[0] if (type(out) == list and len(out) == 1) else out
+        return out[0] if (isinstance(out, list) and len(out) == 1) else out
     except Exception as e:
         if verbose_error:
             raise ScreenBrightnessError from e
@@ -707,21 +710,24 @@ def fade_brightness(
         raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
     except ValueError as e:
         if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
-            available_monitors = [None]
+            available_monitors = [method.XBacklight]
         else:
             raise e
 
     for i in available_monitors:
         try:
-            monitor = Monitor(i)
+            if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+                monitor = i
+            else:
+                monitor = Monitor(i)
             # same effect as monitor.is_active()
             current = monitor.get_brightness()
             st, fi = start, finish
             # convert strings like '+5' to an actual brightness value
-            if type(fi) == str:
+            if isinstance(fi, str):
                 if "+" in fi or "-" in fi:
                     fi = current + int(float(fi))
-            if type(st) == str:
+            if isinstance(st, str):
                 if "+" in st or "-" in st:
                     st = current + int(float(st))
 
