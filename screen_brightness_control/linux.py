@@ -202,7 +202,7 @@ class Light:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-        ) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the light executable
 
@@ -412,7 +412,9 @@ class XRandr:
                         count += 1
                     elif 'EDID:' in i:
                         st = out[out.index(tmp['line']):]
-                        edid = [st[j].replace('\t', '').replace(' ', '') for j in range(st.index(i) + 1, st.index(i) + 9)]
+                        edid = []
+                        for j in range(st.index(i) + 1, st.index(i) + 9):
+                            edid.append(st[j].replace('\t', '').replace(' ', ''))
                         edid = ''.join(edid)
                         tmp['edid'] = edid
                         name, serial = _EDID.parse_edid(edid)
@@ -420,7 +422,9 @@ class XRandr:
                         if name is not None:
                             tmp['manufacturer'] = name.split(' ')[0]
                             try:
-                                tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer'])
+                                tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(
+                                    tmp['manufacturer']
+                                )
                             except Exception:
                                 tmp['manufacturer_id'] = None
                             tmp['model'] = name.split(' ')[1]
@@ -514,7 +518,7 @@ class XRandr:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-        ) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the xrandr executable
 
@@ -760,7 +764,7 @@ class DDCUtil:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-        ) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for a display using the ddcutil executable
 
@@ -1012,7 +1016,7 @@ def set_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-    ) -> Union[List[int], int, None]:
+) -> Union[List[int], int, None]:
     '''
     Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
@@ -1059,7 +1063,7 @@ def get_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-    ) -> Union[List[int], int]:
+) -> Union[List[int], int]:
     '''
     Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 

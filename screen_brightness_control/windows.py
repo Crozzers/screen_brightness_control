@@ -242,7 +242,7 @@ class WMI:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-        ) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
         '''
         Sets the display brightness for Windows using WMI
 
@@ -547,7 +547,7 @@ class VCP:
         value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
-        ) -> Union[List[int], None]:
+    ) -> Union[List[int], None]:
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
@@ -738,7 +738,7 @@ def set_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     **kwargs
-    ) -> Union[List[int], None]:
+) -> Union[List[int], None]:
     '''
     Sets the brightness of any connected monitors
 

@@ -113,7 +113,7 @@ MONITOR_MANUFACTURER_CODES = {
     "ZCM": "Zenith",
     "UNK": "Unknown",
     "_YV": "Fujitsu",
-    }
+}
 
 
 def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
@@ -438,7 +438,7 @@ def filter_monitors(
     haystack: Optional[list] = None,
     method: Optional[str] = None,
     include: List[str] = []
-    ) -> List[dict]:
+) -> List[dict]:
     '''
     Searches through the information for all detected displays
     and attempts to return the info matching the value given.
@@ -555,7 +555,7 @@ def set_brightness(
     force: bool = False,
     verbose_error: bool = False,
     **kwargs
-    ) -> Union[List[int], int, None]:
+) -> Union[List[int], int, None]:
     '''
     Sets the screen brightness
 
@@ -642,7 +642,7 @@ def fade_brightness(
     increment: int = 1,
     blocking: bool = True,
     **kwargs
-    ) -> Union[List[threading.Thread], List[int], int]:
+) -> Union[List[threading.Thread], List[int], int]:
     '''
     A function to somewhat gently fade the screen brightness from `start` to `finish`
 
