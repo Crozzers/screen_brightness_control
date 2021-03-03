@@ -216,7 +216,10 @@ class Monitor():
             if display in monitors_info:
                 info = display
             else:
-                raise LookupError(&#39;could not match display info to known displays&#39;)
+                info = filter_monitors(
+                    display=self.get_identifier(display),
+                    haystack=monitors_info
+                )[0]
         else:
             info = filter_monitors(display=display, haystack=monitors_info)[0]
 
@@ -238,8 +241,36 @@ class Monitor():
         self.edid: str = info[&#39;edid&#39;]
         &#39;&#39;&#39;a unique string returned by the monitor that contains its DDC capabilities, serial and name&#39;&#39;&#39;
 
+        # this assigns any extra info that is returned to this class
+        # eg: the &#39;interface&#39; key in XRandr monitors on Linux
+        for key, value in info.items():
+            # exclude the &#39;brightness&#39; key because that will quickly become out of date
+            if value is not None and key != &#39;brightness&#39;:
+                if key not in vars(self).keys():
+                    setattr(self, key, value)
+
     def __getitem__(self, item: Any) -&gt; Any:
         return getattr(self, item)
+
+    def get_identifier(self, monitor: dict = None) -&gt; Tuple[str, Any]:
+        &#39;&#39;&#39;
+        Returns the piece of information used to identify this monitor.
+        Will iterate through the EDID, serial, name and index and return the first
+        value that is not equal to None
+
+        Args:
+            monitor (dict): extract an identifier from this dict instead of the monitor class
+
+        Returns:
+            tuple: a key, value pair
+        &#39;&#39;&#39;
+        if monitor is None:
+            monitor = self
+
+        for key in (&#39;edid&#39;, &#39;serial&#39;, &#39;name&#39;, &#39;index&#39;):
+            value = monitor[key]
+            if value is not None:
+                return key, value
 
     def set_brightness(self, *args, **kwargs) -&gt; Union[int, None]:
         &#39;&#39;&#39;
@@ -262,12 +293,7 @@ class Monitor():
             primary.set_brightness(50)
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        kwargs[&#39;display&#39;] = self.get_identifier()[1]
         b = self.method.set_brightness(*args, **kwargs)
         if b is not None:
             return b[0]
@@ -278,7 +304,8 @@ class Monitor():
         Returns the brightness of this display. See `get_brightness` for the full docs
 
         Args:
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+            kwargs (dict): passed directly to this monitor&#39;s brightness method
+                The `display` kwarg is always overwritten
 
         Returns:
             int: from 0 to 100
@@ -292,12 +319,7 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        kwargs[&#39;display&#39;] = self.get_identifier()[1]
         return self.method.get_brightness(**kwargs)[0]
 
     def fade_brightness(self, *args, **kwargs) -&gt; Union[threading.Thread, int]:
@@ -323,15 +345,14 @@ class Monitor():
             primary.fade_brightness(50)
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        elif self.name is not None:
-            kwargs[&#39;display&#39;] = self.name
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        iden_key, kwargs[&#39;display&#39;] = self.get_identifier()
+        if iden_key == &#39;index&#39;:
+            # the reason we override the method kwarg here is that
+            # the &#39;index&#39; is method specific and `fade_brightness`
+            # is a top-level function. `self.set_brightness` and `self.get_brightness`
+            # call directly to the method so they don&#39;t need this step
             kwargs[&#39;method&#39;] = self.method.__name__.lower()
+
         b = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
         # function, which will return list OR int
@@ -356,17 +377,7 @@ class Monitor():
             info = primary.get_info()
             ```
         &#39;&#39;&#39;
-        info = {
-            &#39;name&#39;: self.name,
-            &#39;model&#39;: self.model,
-            &#39;serial&#39;: self.serial,
-            &#39;manufacturer&#39;: self.manufacturer,
-            &#39;manufacturer_id&#39;: self.manufacturer_id,
-            &#39;method&#39;: self.method,
-            &#39;index&#39;: self.index,
-            &#39;edid&#39;: self.edid
-        }
-        return info
+        return vars(self)
 
     def is_active(self) -&gt; bool:
         &#39;&#39;&#39;
@@ -831,7 +842,7 @@ else:
     raise NotImplementedError(f&#39;{plat} is not yet supported&#39;)
 del(plat)
 
-__version__ = &#39;0.8.0-dev&#39;
+__version__ = &#39;0.8.0-pre1&#39;
 __author__ = &#39;Crozzers&#39;</code></pre>
 </details>
 </section>
@@ -1636,7 +1647,10 @@ print(benq_monitor['name'])
             if display in monitors_info:
                 info = display
             else:
-                raise LookupError(&#39;could not match display info to known displays&#39;)
+                info = filter_monitors(
+                    display=self.get_identifier(display),
+                    haystack=monitors_info
+                )[0]
         else:
             info = filter_monitors(display=display, haystack=monitors_info)[0]
 
@@ -1658,8 +1672,36 @@ print(benq_monitor['name'])
         self.edid: str = info[&#39;edid&#39;]
         &#39;&#39;&#39;a unique string returned by the monitor that contains its DDC capabilities, serial and name&#39;&#39;&#39;
 
+        # this assigns any extra info that is returned to this class
+        # eg: the &#39;interface&#39; key in XRandr monitors on Linux
+        for key, value in info.items():
+            # exclude the &#39;brightness&#39; key because that will quickly become out of date
+            if value is not None and key != &#39;brightness&#39;:
+                if key not in vars(self).keys():
+                    setattr(self, key, value)
+
     def __getitem__(self, item: Any) -&gt; Any:
         return getattr(self, item)
+
+    def get_identifier(self, monitor: dict = None) -&gt; Tuple[str, Any]:
+        &#39;&#39;&#39;
+        Returns the piece of information used to identify this monitor.
+        Will iterate through the EDID, serial, name and index and return the first
+        value that is not equal to None
+
+        Args:
+            monitor (dict): extract an identifier from this dict instead of the monitor class
+
+        Returns:
+            tuple: a key, value pair
+        &#39;&#39;&#39;
+        if monitor is None:
+            monitor = self
+
+        for key in (&#39;edid&#39;, &#39;serial&#39;, &#39;name&#39;, &#39;index&#39;):
+            value = monitor[key]
+            if value is not None:
+                return key, value
 
     def set_brightness(self, *args, **kwargs) -&gt; Union[int, None]:
         &#39;&#39;&#39;
@@ -1682,12 +1724,7 @@ print(benq_monitor['name'])
             primary.set_brightness(50)
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        kwargs[&#39;display&#39;] = self.get_identifier()[1]
         b = self.method.set_brightness(*args, **kwargs)
         if b is not None:
             return b[0]
@@ -1698,7 +1735,8 @@ print(benq_monitor['name'])
         Returns the brightness of this display. See `get_brightness` for the full docs
 
         Args:
-            kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+            kwargs (dict): passed directly to this monitor&#39;s brightness method
+                The `display` kwarg is always overwritten
 
         Returns:
             int: from 0 to 100
@@ -1712,12 +1750,7 @@ print(benq_monitor['name'])
             primary_brightness = primary.get_brightness()
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        kwargs[&#39;display&#39;] = self.get_identifier()[1]
         return self.method.get_brightness(**kwargs)[0]
 
     def fade_brightness(self, *args, **kwargs) -&gt; Union[threading.Thread, int]:
@@ -1743,15 +1776,14 @@ print(benq_monitor['name'])
             primary.fade_brightness(50)
             ```
         &#39;&#39;&#39;
-        if self.edid is not None:
-            kwargs[&#39;display&#39;] = self.edid
-        elif self.serial is not None:
-            kwargs[&#39;display&#39;] = self.serial
-        elif self.name is not None:
-            kwargs[&#39;display&#39;] = self.name
-        else:
-            kwargs[&#39;display&#39;] = self.index
+        iden_key, kwargs[&#39;display&#39;] = self.get_identifier()
+        if iden_key == &#39;index&#39;:
+            # the reason we override the method kwarg here is that
+            # the &#39;index&#39; is method specific and `fade_brightness`
+            # is a top-level function. `self.set_brightness` and `self.get_brightness`
+            # call directly to the method so they don&#39;t need this step
             kwargs[&#39;method&#39;] = self.method.__name__.lower()
+
         b = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
         # function, which will return list OR int
@@ -1776,17 +1808,7 @@ print(benq_monitor['name'])
             info = primary.get_info()
             ```
         &#39;&#39;&#39;
-        info = {
-            &#39;name&#39;: self.name,
-            &#39;model&#39;: self.model,
-            &#39;serial&#39;: self.serial,
-            &#39;manufacturer&#39;: self.manufacturer,
-            &#39;manufacturer_id&#39;: self.manufacturer_id,
-            &#39;method&#39;: self.method,
-            &#39;index&#39;: self.index,
-            &#39;edid&#39;: self.edid
-        }
-        return info
+        return vars(self)
 
     def is_active(self) -&gt; bool:
         &#39;&#39;&#39;
@@ -1903,15 +1925,14 @@ primary.fade_brightness(50)
         primary.fade_brightness(50)
         ```
     &#39;&#39;&#39;
-    if self.edid is not None:
-        kwargs[&#39;display&#39;] = self.edid
-    elif self.serial is not None:
-        kwargs[&#39;display&#39;] = self.serial
-    elif self.name is not None:
-        kwargs[&#39;display&#39;] = self.name
-    else:
-        kwargs[&#39;display&#39;] = self.index
+    iden_key, kwargs[&#39;display&#39;] = self.get_identifier()
+    if iden_key == &#39;index&#39;:
+        # the reason we override the method kwarg here is that
+        # the &#39;index&#39; is method specific and `fade_brightness`
+        # is a top-level function. `self.set_brightness` and `self.get_brightness`
+        # call directly to the method so they don&#39;t need this step
         kwargs[&#39;method&#39;] = self.method.__name__.lower()
+
     b = fade_brightness(*args, **kwargs)
     # fade_brightness will call the top-level get_brightness
     # function, which will return list OR int
@@ -1928,7 +1949,8 @@ primary.fade_brightness(50)
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
-<dd>passed directly to this monitor's brightness method (<code>display</code> kwarg is always overwritten)</dd>
+<dd>passed directly to this monitor's brightness method
+The <code>display</code> kwarg is always overwritten</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1951,7 +1973,8 @@ primary_brightness = primary.get_brightness()
     Returns the brightness of this display. See `get_brightness` for the full docs
 
     Args:
-        kwargs (dict): passed directly to this monitor&#39;s brightness method (`display` kwarg is always overwritten)
+        kwargs (dict): passed directly to this monitor&#39;s brightness method
+            The `display` kwarg is always overwritten
 
     Returns:
         int: from 0 to 100
@@ -1965,13 +1988,50 @@ primary_brightness = primary.get_brightness()
         primary_brightness = primary.get_brightness()
         ```
     &#39;&#39;&#39;
-    if self.edid is not None:
-        kwargs[&#39;display&#39;] = self.edid
-    elif self.serial is not None:
-        kwargs[&#39;display&#39;] = self.serial
-    else:
-        kwargs[&#39;display&#39;] = self.index
+    kwargs[&#39;display&#39;] = self.get_identifier()[1]
     return self.method.get_brightness(**kwargs)[0]</code></pre>
+</details>
+</dd>
+<dt id="screen_brightness_control.Monitor.get_identifier"><code class="name flex">
+<span>def <span class="ident">get_identifier</span></span>(<span>self, monitor: dict = None) ‑> Tuple[str, Any]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the piece of information used to identify this monitor.
+Will iterate through the EDID, serial, name and index and return the first
+value that is not equal to None</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>monitor</code></strong> :&ensp;<code>dict</code></dt>
+<dd>extract an identifier from this dict instead of the monitor class</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>a key, value pair</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_identifier(self, monitor: dict = None) -&gt; Tuple[str, Any]:
+    &#39;&#39;&#39;
+    Returns the piece of information used to identify this monitor.
+    Will iterate through the EDID, serial, name and index and return the first
+    value that is not equal to None
+
+    Args:
+        monitor (dict): extract an identifier from this dict instead of the monitor class
+
+    Returns:
+        tuple: a key, value pair
+    &#39;&#39;&#39;
+    if monitor is None:
+        monitor = self
+
+    for key in (&#39;edid&#39;, &#39;serial&#39;, &#39;name&#39;, &#39;index&#39;):
+        value = monitor[key]
+        if value is not None:
+            return key, value</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.Monitor.get_info"><code class="name flex">
@@ -2010,17 +2070,7 @@ info = primary.get_info()
         info = primary.get_info()
         ```
     &#39;&#39;&#39;
-    info = {
-        &#39;name&#39;: self.name,
-        &#39;model&#39;: self.model,
-        &#39;serial&#39;: self.serial,
-        &#39;manufacturer&#39;: self.manufacturer,
-        &#39;manufacturer_id&#39;: self.manufacturer_id,
-        &#39;method&#39;: self.method,
-        &#39;index&#39;: self.index,
-        &#39;edid&#39;: self.edid
-    }
-    return info</code></pre>
+    return vars(self)</code></pre>
 </details>
 </dd>
 <dt id="screen_brightness_control.Monitor.is_active"><code class="name flex">
@@ -2117,12 +2167,7 @@ primary.set_brightness(50)
         primary.set_brightness(50)
         ```
     &#39;&#39;&#39;
-    if self.edid is not None:
-        kwargs[&#39;display&#39;] = self.edid
-    elif self.serial is not None:
-        kwargs[&#39;display&#39;] = self.serial
-    else:
-        kwargs[&#39;display&#39;] = self.index
+    kwargs[&#39;display&#39;] = self.get_identifier()[1]
     b = self.method.set_brightness(*args, **kwargs)
     if b is not None:
         return b[0]
@@ -2207,6 +2252,7 @@ except sbc.ScreenBrightnessError as error:
 <li><code><a title="screen_brightness_control.Monitor.edid" href="#screen_brightness_control.Monitor.edid">edid</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.fade_brightness" href="#screen_brightness_control.Monitor.fade_brightness">fade_brightness</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.get_brightness" href="#screen_brightness_control.Monitor.get_brightness">get_brightness</a></code></li>
+<li><code><a title="screen_brightness_control.Monitor.get_identifier" href="#screen_brightness_control.Monitor.get_identifier">get_identifier</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.get_info" href="#screen_brightness_control.Monitor.get_info">get_info</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.index" href="#screen_brightness_control.Monitor.index">index</a></code></li>
 <li><code><a title="screen_brightness_control.Monitor.is_active" href="#screen_brightness_control.Monitor.is_active">is_active</a></code></li>
