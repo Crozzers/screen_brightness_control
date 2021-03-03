@@ -400,6 +400,7 @@ class XRandr:
                             data.append(tmp)
                         tmp = {
                             'interface': i.split(' ')[0],
+                            'name': i.split(' ')[0],
                             'line': i,
                             'method': XRandr,
                             'index': count,
@@ -547,20 +548,24 @@ class XRandr:
             ```
         '''
         value = str(float(value) / 100)
-        interfaces = XRandr.get_display_interfaces()
+        info = XRandr.get_display_info()
         if display is not None:
             if type(display) == int:
-                interfaces = [interfaces[display]['interface']]
+                info = [info[display]]
             else:
-                interfaces = [
-                    i['interface'] for i in filter_monitors(
-                        display=display,
-                        haystack=XRandr.get_display_info(),
-                        include=['interface']
-                    )
-                ]
-        for interface in interfaces:
-            subprocess.run([XRandr.executable, '--output', interface, '--brightness', value])
+                info = filter_monitors(
+                    display=display,
+                    haystack=info,
+                    include=['interface']
+                )
+
+        for i in info:
+            subprocess.run([XRandr.executable, '--output', i['interface'], '--brightness', value])
+
+        # The get_brightness method takes the brightness value from get_display_info
+        # The problem is that that display info is cached, meaning that the brightness
+        # value is also cached. We must expire it here.
+        __cache__.expire('xrandr_monitors_info')
         return XRandr.get_brightness(display=display) if not no_return else None
 
 

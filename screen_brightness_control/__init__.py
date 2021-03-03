@@ -210,8 +210,30 @@ class Monitor():
         self.edid: str = info['edid']
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
 
+        # this assigns any extra info that is returned to this class
+        # eg: the 'interface' key in XRandr monitors on Linux
+        for key, value in info.items():
+            # exclude the 'brightness' key because that will quickly become out of date
+            if value is not None and key != 'brightness':
+                if key not in vars(self).keys():
+                    setattr(self, key, value)
+
     def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
+
+    def get_identifier(self) -> Tuple[str, Any]:
+        '''
+        Returns the piece of information used to identify this monitor.
+        Will iterate through the EDID, serial, name and index and return the first
+        value that is not equal to None
+
+        Returns:
+            tuple: a key, value pair
+        '''
+        for key in ('edid', 'serial', 'name', 'index'):
+            value = getattr(self, key)
+            if value is not None:
+                return key, value
 
     def set_brightness(self, *args, **kwargs) -> Union[int, None]:
         '''
@@ -234,12 +256,7 @@ class Monitor():
             primary.set_brightness(50)
             ```
         '''
-        if self.edid is not None:
-            kwargs['display'] = self.edid
-        elif self.serial is not None:
-            kwargs['display'] = self.serial
-        else:
-            kwargs['display'] = self.index
+        kwargs['display'] = self.get_identifier()[1]
         b = self.method.set_brightness(*args, **kwargs)
         if b is not None:
             return b[0]
@@ -250,7 +267,8 @@ class Monitor():
         Returns the brightness of this display. See `get_brightness` for the full docs
 
         Args:
-            kwargs (dict): passed directly to this monitor's brightness method (`display` kwarg is always overwritten)
+            kwargs (dict): passed directly to this monitor's brightness method
+                The `display` kwarg is always overwritten
 
         Returns:
             int: from 0 to 100
@@ -264,12 +282,7 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         '''
-        if self.edid is not None:
-            kwargs['display'] = self.edid
-        elif self.serial is not None:
-            kwargs['display'] = self.serial
-        else:
-            kwargs['display'] = self.index
+        kwargs['display'] = self.get_identifier()[1]
         return self.method.get_brightness(**kwargs)[0]
 
     def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
@@ -295,15 +308,14 @@ class Monitor():
             primary.fade_brightness(50)
             ```
         '''
-        if self.edid is not None:
-            kwargs['display'] = self.edid
-        elif self.serial is not None:
-            kwargs['display'] = self.serial
-        elif self.name is not None:
-            kwargs['display'] = self.name
-        else:
-            kwargs['display'] = self.index
+        iden_key, kwargs['display'] = self.get_identifier()
+        if iden_key == 'index':
+            # the reason we override the method kwarg here is that
+            # the 'index' is method specific and `fade_brightness`
+            # is a top-level function. `self.set_brightness` and `self.get_brightness`
+            # call directly to the method so they don't need this step
             kwargs['method'] = self.method.__name__.lower()
+
         b = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
         # function, which will return list OR int
@@ -328,17 +340,7 @@ class Monitor():
             info = primary.get_info()
             ```
         '''
-        info = {
-            'name': self.name,
-            'model': self.model,
-            'serial': self.serial,
-            'manufacturer': self.manufacturer,
-            'manufacturer_id': self.manufacturer_id,
-            'method': self.method,
-            'index': self.index,
-            'edid': self.edid
-        }
-        return info
+        return vars(self)
 
     def is_active(self) -> bool:
         '''
