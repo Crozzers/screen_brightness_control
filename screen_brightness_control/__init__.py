@@ -188,7 +188,10 @@ class Monitor():
             if display in monitors_info:
                 info = display
             else:
-                raise LookupError('could not match display info to known displays')
+                info = filter_monitors(
+                    display=self.get_identifier(display),
+                    haystack=monitors_info
+                )[0]
         else:
             info = filter_monitors(display=display, haystack=monitors_info)[0]
 
@@ -221,17 +224,23 @@ class Monitor():
     def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
-    def get_identifier(self) -> Tuple[str, Any]:
+    def get_identifier(self, monitor: dict = None) -> Tuple[str, Any]:
         '''
         Returns the piece of information used to identify this monitor.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
+        Args:
+            monitor (dict): extract an identifier from this dict instead of the monitor class
+
         Returns:
             tuple: a key, value pair
         '''
+        if monitor is None:
+            monitor = self
+
         for key in ('edid', 'serial', 'name', 'index'):
-            value = getattr(self, key)
+            value = monitor[key]
             if value is not None:
                 return key, value
 
@@ -805,5 +814,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del(plat)
 
-__version__ = '0.8.0-dev'
+__version__ = '0.8.0-pre1'
 __author__ = 'Crozzers'
