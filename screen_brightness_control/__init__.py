@@ -244,17 +244,18 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, *args, **kwargs) -> Union[int, None]:
+    def set_brightness(self, value: int, no_return: bool = False) -> Union[int, None]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            args (tuple): passed directly to this monitor's brightness method
-            kwargs (dict): passed directly to this monitor's brightness method.
-                The `display` kwarg is always overwritten
+            value (int): the brightness value to set the display to (from 0 to 100)
+            no_return (bool): if true, this function returns `None`
+                Otherwise it returns the result of `Monitor.get_brightness`
 
         Returns:
             int: from 0 to 100
+            None: if `no_return==True`
 
         Example:
             ```python
@@ -265,8 +266,8 @@ class Monitor():
             primary.set_brightness(50)
             ```
         '''
-        kwargs['display'] = self.get_identifier()[1]
-        b = self.method.set_brightness(*args, **kwargs)
+        value = max(0, min(value, 100))
+        b = self.method.set_brightness(value, display=self.get_identifier()[1], no_return=no_return)
         if b is not None:
             return b[0]
         return b
