@@ -727,7 +727,14 @@ def fade_brightness(
 
     for i in available_monitors:
         try:
-            if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+            if (
+                platform.system() == 'Linux'
+                and (
+                    'method' in kwargs
+                    and kwargs['method'] is not None
+                    and kwargs['method'].lower() == 'xbacklight'
+                )
+            ):
                 monitor = i
             else:
                 monitor = Monitor(i)
@@ -747,10 +754,9 @@ def fade_brightness(
             fi = min(max(int(fi), 0), 100)
             st = min(max(int(st), 0), 100)
 
-            if finish != start:
-                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-                t1.start()
-                threads.append(t1)
+            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+            t1.start()
+            threads.append(t1)
         except Exception:
             pass
 
@@ -814,5 +820,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del(plat)
 
-__version__ = '0.8.1'
+__version__ = '0.8.2-dev'
 __author__ = 'Crozzers'
