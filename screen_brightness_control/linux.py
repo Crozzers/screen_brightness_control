@@ -879,10 +879,15 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         for m in methods:
             if method is None or method == m.__name__.lower():
                 # to make sure each display (with unique edid) is only reported once
-                for i in m.get_display_info():
-                    if allow_duplicates or i['edid'] not in edids:
-                        edids.append(i['edid'])
-                        info.append(i)
+                try:
+                    tmp = m.get_display_info()
+                except Exception:
+                    pass
+                else:
+                    for i in tmp:
+                        if allow_duplicates or i['edid'] not in edids:
+                            edids.append(i['edid'])
+                            info.append(i)
         __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
