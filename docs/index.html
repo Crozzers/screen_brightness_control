@@ -272,17 +272,18 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, *args, **kwargs) -&gt; Union[int, None]:
+    def set_brightness(self, value: int, no_return: bool = False) -&gt; Union[int, None]:
         &#39;&#39;&#39;
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            args (tuple): passed directly to this monitor&#39;s brightness method
-            kwargs (dict): passed directly to this monitor&#39;s brightness method.
-                The `display` kwarg is always overwritten
+            value (int): the brightness value to set the display to (from 0 to 100)
+            no_return (bool): if true, this function returns `None`
+                Otherwise it returns the result of `Monitor.get_brightness`
 
         Returns:
             int: from 0 to 100
+            None: if `no_return==True`
 
         Example:
             ```python
@@ -293,8 +294,8 @@ class Monitor():
             primary.set_brightness(50)
             ```
         &#39;&#39;&#39;
-        kwargs[&#39;display&#39;] = self.get_identifier()[1]
-        b = self.method.set_brightness(*args, **kwargs)
+        value = max(0, min(value, 100))
+        b = self.method.set_brightness(value, display=self.get_identifier()[1], no_return=no_return)
         if b is not None:
             return b[0]
         return b
@@ -755,7 +756,14 @@ def fade_brightness(
 
     for i in available_monitors:
         try:
-            if platform.system() == &#39;Linux&#39; and (&#39;method&#39; in kwargs and kwargs[&#39;method&#39;].lower() == &#39;xbacklight&#39;):
+            if (
+                platform.system() == &#39;Linux&#39;
+                and (
+                    &#39;method&#39; in kwargs
+                    and kwargs[&#39;method&#39;] is not None
+                    and kwargs[&#39;method&#39;].lower() == &#39;xbacklight&#39;
+                )
+            ):
                 monitor = i
             else:
                 monitor = Monitor(i)
@@ -775,10 +783,9 @@ def fade_brightness(
             fi = min(max(int(fi), 0), 100)
             st = min(max(int(st), 0), 100)
 
-            if finish != start:
-                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-                t1.start()
-                threads.append(t1)
+            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+            t1.start()
+            threads.append(t1)
         except Exception:
             pass
 
@@ -842,7 +849,7 @@ else:
     raise NotImplementedError(f&#39;{plat} is not yet supported&#39;)
 del(plat)
 
-__version__ = &#39;0.8.0-pre1&#39;
+__version__ = &#39;0.8.2&#39;
 __author__ = &#39;Crozzers&#39;</code></pre>
 </details>
 </section>
@@ -995,7 +1002,14 @@ sbc.fade_brightness(100, blocking=False)
 
     for i in available_monitors:
         try:
-            if platform.system() == &#39;Linux&#39; and (&#39;method&#39; in kwargs and kwargs[&#39;method&#39;].lower() == &#39;xbacklight&#39;):
+            if (
+                platform.system() == &#39;Linux&#39;
+                and (
+                    &#39;method&#39; in kwargs
+                    and kwargs[&#39;method&#39;] is not None
+                    and kwargs[&#39;method&#39;].lower() == &#39;xbacklight&#39;
+                )
+            ):
                 monitor = i
             else:
                 monitor = Monitor(i)
@@ -1015,10 +1029,9 @@ sbc.fade_brightness(100, blocking=False)
             fi = min(max(int(fi), 0), 100)
             st = min(max(int(st), 0), 100)
 
-            if finish != start:
-                t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-                t1.start()
-                threads.append(t1)
+            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+            t1.start()
+            threads.append(t1)
         except Exception:
             pass
 
@@ -1703,17 +1716,18 @@ print(benq_monitor['name'])
             if value is not None:
                 return key, value
 
-    def set_brightness(self, *args, **kwargs) -&gt; Union[int, None]:
+    def set_brightness(self, value: int, no_return: bool = False) -&gt; Union[int, None]:
         &#39;&#39;&#39;
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            args (tuple): passed directly to this monitor&#39;s brightness method
-            kwargs (dict): passed directly to this monitor&#39;s brightness method.
-                The `display` kwarg is always overwritten
+            value (int): the brightness value to set the display to (from 0 to 100)
+            no_return (bool): if true, this function returns `None`
+                Otherwise it returns the result of `Monitor.get_brightness`
 
         Returns:
             int: from 0 to 100
+            None: if `no_return==True`
 
         Example:
             ```python
@@ -1724,8 +1738,8 @@ print(benq_monitor['name'])
             primary.set_brightness(50)
             ```
         &#39;&#39;&#39;
-        kwargs[&#39;display&#39;] = self.get_identifier()[1]
-        b = self.method.set_brightness(*args, **kwargs)
+        value = max(0, min(value, 100))
+        b = self.method.set_brightness(value, display=self.get_identifier()[1], no_return=no_return)
         if b is not None:
             return b[0]
         return b
@@ -2118,22 +2132,24 @@ if primary.is_active():
 </details>
 </dd>
 <dt id="screen_brightness_control.Monitor.set_brightness"><code class="name flex">
-<span>def <span class="ident">set_brightness</span></span>(<span>self, *args, **kwargs) ‑> Union[int, NoneType]</span>
+<span>def <span class="ident">set_brightness</span></span>(<span>self, value: int, no_return: bool = False) ‑> Union[int, NoneType]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Sets the brightness for this display. See <code><a title="screen_brightness_control.set_brightness" href="#screen_brightness_control.set_brightness">set_brightness()</a></code> for the full docs</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>args</code></strong> :&ensp;<code>tuple</code></dt>
-<dd>passed directly to this monitor's brightness method</dd>
-<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code></dt>
-<dd>passed directly to this monitor's brightness method.
-The <code>display</code> kwarg is always overwritten</dd>
+<dt><strong><code>value</code></strong> :&ensp;<code>int</code></dt>
+<dd>the brightness value to set the display to (from 0 to 100)</dd>
+<dt><strong><code>no_return</code></strong> :&ensp;<code>bool</code></dt>
+<dd>if true, this function returns <code>None</code>
+Otherwise it returns the result of <code><a title="screen_brightness_control.Monitor.get_brightness" href="#screen_brightness_control.Monitor.get_brightness">Monitor.get_brightness()</a></code></dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>int</code></dt>
 <dd>from 0 to 100</dd>
+<dt><code>None</code></dt>
+<dd>if <code>no_return==True</code></dd>
 </dl>
 <h2 id="example">Example</h2>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -2146,17 +2162,18 @@ primary.set_brightness(50)
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_brightness(self, *args, **kwargs) -&gt; Union[int, None]:
+<pre><code class="python">def set_brightness(self, value: int, no_return: bool = False) -&gt; Union[int, None]:
     &#39;&#39;&#39;
     Sets the brightness for this display. See `set_brightness` for the full docs
 
     Args:
-        args (tuple): passed directly to this monitor&#39;s brightness method
-        kwargs (dict): passed directly to this monitor&#39;s brightness method.
-            The `display` kwarg is always overwritten
+        value (int): the brightness value to set the display to (from 0 to 100)
+        no_return (bool): if true, this function returns `None`
+            Otherwise it returns the result of `Monitor.get_brightness`
 
     Returns:
         int: from 0 to 100
+        None: if `no_return==True`
 
     Example:
         ```python
@@ -2167,8 +2184,8 @@ primary.set_brightness(50)
         primary.set_brightness(50)
         ```
     &#39;&#39;&#39;
-    kwargs[&#39;display&#39;] = self.get_identifier()[1]
-    b = self.method.set_brightness(*args, **kwargs)
+    value = max(0, min(value, 100))
+    b = self.method.set_brightness(value, display=self.get_identifier()[1], no_return=no_return)
     if b is not None:
         return b[0]
     return b</code></pre>
