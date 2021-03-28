@@ -81,21 +81,29 @@ Here is a quick outline of each program:</p>
 </tbody>
 </table>
 <p>Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
-<p>To install:
-* Arch
-    * <code>sudo pacman -S xorg-xrandr</code>
-    * <code>sudo pacman -S ddcutil</code>
-    * <code>sudo pacman -S light-git</code>
-    * <code>sudo pacman -S xorg-xbacklight</code>
-* Debian/Ubuntu
-    * <code>sudo apt install x11-xserver-utils</code>
-    * <code>sudo apt install ddcutil</code>
-    * <code>sudo apt install light</code>
-    * <code>sudo apt install xbacklight</code>
-* Fedora
-    * <code>sudo dnf install libXrandr</code>
-    * <code>sudo dnf install light</code>
-    * <code>sudo dnf install xbacklight</code></p>
+<p>To install:</p>
+<ul>
+<li>Arch<ul>
+<li><code>sudo pacman -S xorg-xrandr</code></li>
+<li><code>sudo pacman -S ddcutil</code></li>
+<li><code>sudo pacman -S light-git</code></li>
+<li><code>sudo pacman -S xorg-xbacklight</code></li>
+</ul>
+</li>
+<li>Debian/Ubuntu<ul>
+<li><code>sudo apt install x11-xserver-utils</code></li>
+<li><code>sudo apt install ddcutil</code></li>
+<li><code>sudo apt install light</code></li>
+<li><code>sudo apt install xbacklight</code></li>
+</ul>
+</li>
+<li>Fedora<ul>
+<li><code>sudo dnf install libXrandr</code></li>
+<li><code>sudo dnf install light</code></li>
+<li><code>sudo dnf install xbacklight</code></li>
+</ul>
+</li>
+</ul>
 <h1>Command Line Usage</h1>
 <p>You can call this module from your command line or use it as a python library (see the documentation section below).</p>
 <pre><code>python -m screen_brightness_control --help
