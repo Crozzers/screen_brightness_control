@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title"><code>screen_brightness_control </code><br /><code>v0.8.3</code></h1>
+<h1 class="title"><code>screen_brightness_control </code><br /><code>v0.8.4</code></h1>
 </header>
 
 <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  </p>
@@ -33,13 +33,53 @@ pip3 install .
 </code></pre>
 <h4>Note:</h4>
 <p>For running on Linux you will need to install one of these programs: xrandr, ddcutil, <a href="https://github.com/haikarainen/light">light</a> or xbacklight.<br />
-Here is a quick outline of each program:
-Program     | Is it Fast | Works with laptop displays | Works with external monitors | Multi-display support                 | Requires RandR support
-------------|------------|----------------------------|------------------------------|---------------------------------------|-----------------------
-ddcutil     | No         | No                         | Yes                          | Yes                                   | No
-xrandr      | Yes        | Yes                        | Yes                          | Yes                                   | Yes
-xbacklight  | Yes        | Yes                        | Yes                          | Yes but not individually controllable | Yes
-light       | Yes        | Yes                        | No                           | Yes                                   | No</p>
+Here is a quick outline of each program:</p>
+<table>
+<thead>
+<tr>
+<th>Program</th>
+<th>Is it Fast</th>
+<th>Works with laptop displays</th>
+<th>Works with external monitors</th>
+<th>Multi-display support</th>
+<th>Requires RandR support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ddcutil</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>xrandr</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>xbacklight</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes but not individually controllable</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>light</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
 <p>Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
 <p>To install:
 * Arch
