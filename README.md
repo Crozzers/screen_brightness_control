@@ -1,26 +1,47 @@
 # screen_brightness_control
-A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.
+A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  
 
 # Installation
 #### Pip:
-* Open a terminal and run `pip3 install screen-brightness-control`
+`pip3 install screen-brightness-control`
 
 #### GitHub:
-* Clone/download the repository by running `git clone https://github.com/Crozzers/screen_brightness_control`
-* Enter the folder it was cloned into with `cd screen_brightness_control`
-* Install using `pip3 install .`
+```
+git clone https://github.com/Crozzers/screen_brightness_control
+cd screen_brightness_control
+pip3 install .
+```
 
 #### Note:
-For running on Linux you will need to install one of these programs: `xrandr`, `ddcutil`, [light](https://github.com/haikarainen/light) or `xbacklight`.
-If you are using a desktop computer with proper monitors, install `ddcutil`. If you're using a laptop, try `xrandr` or `xbacklight`.
-If you're using a laptop with a display driver that doesn't support RandR, use `light`.
+For running on Linux you will need to install one of these programs: xrandr, ddcutil, [light](https://github.com/haikarainen/light) or xbacklight.  
+Here is a quick outline of each program:
+Program     | Is it Fast | Works with laptop displays | Works with external monitors | Multi-display support                 | Requires RandR support
+------------|------------|----------------------------|------------------------------|---------------------------------------|-----------------------
+ddcutil     | No         | No                         | Yes                          | Yes                                   | No
+xrandr      | Yes        | Yes                        | Yes                          | Yes                                   | Yes
+xbacklight  | Yes        | Yes                        | Yes                          | Yes but not individually controllable | Yes
+light       | Yes        | Yes                        | No                           | Yes                                   | No
 
-* Arch: `sudo pacman -S xorg-xrandr` or `sudo pacman -S ddcutil` or `sudo pacman -S light-git` or `sudo pacman -S xorg-xbacklight`
-* Debian/Ubuntu: `sudo apt install x11-xserver-utils` or `sudo apt install ddcutil` or `sudo apt install light` or `sudo apt install xbacklight`
-* Fedora: `sudo dnf install libXrandr` or `sudo dnf install light` or `sudo dnf install xbacklight`
+Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+
+To install:
+* Arch
+    * `sudo pacman -S xorg-xrandr`
+    * `sudo pacman -S ddcutil`
+    * `sudo pacman -S light-git`
+    * `sudo pacman -S xorg-xbacklight`
+* Debian/Ubuntu
+    * `sudo apt install x11-xserver-utils`
+    * `sudo apt install ddcutil`
+    * `sudo apt install light`
+    * `sudo apt install xbacklight`
+* Fedora
+    * `sudo dnf install libXrandr`
+    * `sudo dnf install light`
+    * `sudo dnf install xbacklight`
 
 
-# Usage
+# Command Line Usage
 You can call this module from your command line or use it as a python library (see the documentation section below).
 
 ```
@@ -28,44 +49,25 @@ python -m screen_brightness_control --help
 > usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-v]
 >
 > optional arguments:
->   -h, --help            show this help message and exit
->   -d DISPLAY, --display DISPLAY
->                         the display to be used
->   -s VALUE, --set VALUE 
->                         set the brightness to this value
->   -g, --get             get the current screen brightness
->   -f VALUE, --fade VALUE
->                         fade the brightness to this value
->   -m METHOD, --method METHOD
->                         specify which method to use
->   -l, --list            list all monitors
->   -v, --verbose         any error messages will be more detailed
->   -V, --version         print the current version
-python -m screen_brightness_control -g
-> 100
-python -m screen_brightness_control -s 50
+>   -h, --help                         show this help message and exit
+>   -d DISPLAY, --display DISPLAY      the display to be used
+>   -s VALUE, --set VALUE              set the brightness to this value
+>   -g, --get                          get the current screen brightness
+>   -f VALUE, --fade VALUE             fade the brightness to this value
+>   -m METHOD, --method METHOD         specify which method to use
+>   -l, --list                         list all monitors
+>   -v, --verbose                      some messages will be more detailed
+>   -V, --version                      print the current version
 ```
 
-# Documentation
+# Quick Start
 
-There is full documentation for this project hosted [here](https://crozzers.github.io/screen_brightness_control) but here are the basics
+You can read [the full documentation](https://crozzers.github.io/screen_brightness_control) for this project for more details but here are the basics.
 
-### ScreenBrightnessError(`Exception`) 
-A generic error class designed to make catching errors under one umbrella easy. Raised when the brightness cannot be set/retrieved.
-
-**Usage:**  
-```python
-import screen_brightness_control as sbc
-
-try:
-    sbc.set_brightness(50)
-except sbc.ScreenBrightnessError as error:
-    print(error)
-```
 
 ### get_brightness(`verbose_error=False, **kwargs`)
 **Summary:**  
-Returns the current screen brightness as a percentage by default. It may return a list of values if you have multiple, brightness adjustable monitors.  
+Returns the current screen brightness as a percentage. It may return a list of values if you have multiple, brightness adjustable monitors.  
 Raises `ScreenBrightnessError` upon failure
 
 **Arguments:**
