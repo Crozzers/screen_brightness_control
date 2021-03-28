@@ -821,5 +821,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del(plat)
 
-__version__ = '0.8.3'
+__version__ = '0.8.4'
 __author__ = 'Crozzers'

@@ -15,6 +15,7 @@ pip3 install .
 #### Note:
 For running on Linux you will need to install one of these programs: xrandr, ddcutil, [light](https://github.com/haikarainen/light) or xbacklight.  
 Here is a quick outline of each program:
+
 Program     | Is it Fast | Works with laptop displays | Works with external monitors | Multi-display support                 | Requires RandR support
 ------------|------------|----------------------------|------------------------------|---------------------------------------|-----------------------
 ddcutil     | No         | No                         | Yes                          | Yes                                   | No
