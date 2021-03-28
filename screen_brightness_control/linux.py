@@ -38,8 +38,8 @@ class _EDID:
         "B"     # checksum (1 byte)
     )
 
-    @staticmethod
-    def parse_edid(edid: str) -> Tuple[Union[str, None], str]:
+    @classmethod
+    def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
         '''
         Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
         attempts to extract the monitor's name and serial number from it
@@ -75,7 +75,7 @@ class _EDID:
         if ' ' in edid:
             edid = edid.replace(' ', '')
         edid = bytes.fromhex(edid)
-        data = struct.unpack(_EDID.EDID_FORMAT, edid)
+        data = struct.unpack(cls.EDID_FORMAT, edid)
         serial = filter_hex(data[18])
         # other info can be anywhere in this range, I don't know why
         name = None
@@ -96,8 +96,8 @@ class Light:
     executable = 'light'
     '''the light executable to be called'''
 
-    @staticmethod
-    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
+    @classmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns information about detected displays as reported by Light
 
@@ -127,7 +127,7 @@ class Light:
         try:
             displays = __cache__.get('light_monitors_info')
         except Exception:
-            res = subprocess.run([Light.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
+            res = subprocess.run([cls.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
             displays = []
             count = 0
             for r in res:
@@ -138,7 +138,7 @@ class Light:
                             'name': r,
                             'path': f'/sys/class/backlight/{r}',
                             'light_path': f'sysfs/backlight/{r}',
-                            'method': Light,
+                            'method': cls,
                             'index': count,
                             'model': None,
                             'serial': None,
@@ -179,8 +179,8 @@ class Light:
             displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
         return displays
 
-    @staticmethod
-    def get_display_names() -> List[str]:
+    @classmethod
+    def get_display_names(cls) -> List[str]:
         '''
         Returns the names of each display, as reported by light
 
@@ -195,11 +195,11 @@ class Light:
             # EG output: ['edp-backlight']
             ```
         '''
-        return [i['name'] for i in Light.get_display_info()]
+        return [i['name'] for i in cls.get_display_info()]
 
-    @staticmethod
+    @classmethod
     def set_brightness(
-        value: int,
+        cls, value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
@@ -232,18 +232,18 @@ class Light:
             sbc.linux.Light.set_brightness(75, display = 'edp-backlight')
             ```
         '''
-        info = Light.get_display_info()
+        info = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 info = [info[display]]
             else:
                 info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
         for i in info:
-            subprocess.call(f'{Light.executable} -S {value} -s {i["light_path"]}'.split(" "))
-        return Light.get_brightness(display=display) if not no_return else None
+            subprocess.call(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
+        return cls.get_brightness(display=display) if not no_return else None
 
-    @staticmethod
-    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
+    @classmethod
+    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Sets the brightness for a display using the light executable
 
@@ -270,7 +270,7 @@ class Light:
             edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')[0]
             ```
         '''
-        info = Light.get_display_info()
+        info = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 info = [info[display]]
@@ -281,7 +281,7 @@ class Light:
             results.append(
                 subprocess.check_output(
                     [
-                        Light.executable, '-G', '-s', i['light_path']
+                        cls.executable, '-G', '-s', i['light_path']
                     ]
                 )
             )
@@ -295,8 +295,8 @@ class XBacklight:
     executable = 'xbacklight'
     '''the xbacklight executable to be called'''
 
-    @staticmethod
-    def set_brightness(value: int, no_return: bool = False, **kwargs) -> Union[int, None]:
+    @classmethod
+    def set_brightness(cls, value: int, no_return: bool = False, **kwargs) -> Union[int, None]:
         '''
         Sets the screen brightness to a supplied value
 
@@ -316,11 +316,11 @@ class XBacklight:
             sbc.linux.XBacklight.set_brightness(100)
             ```
         '''
-        subprocess.call([XBacklight.executable, '-set', str(value)])
-        return XBacklight.get_brightness() if not no_return else None
+        subprocess.call([cls.executable, '-set', str(value)])
+        return cls.get_brightness() if not no_return else None
 
-    @staticmethod
-    def get_brightness(**kwargs) -> int:
+    @classmethod
+    def get_brightness(cls, **kwargs) -> int:
         '''
         Returns the screen brightness as reported by xbacklight
 
@@ -335,7 +335,7 @@ class XBacklight:
             ```
         '''
         res = subprocess.run(
-            [XBacklight.executable, '-get'],
+            [cls.executable, '-get'],
             stdout=subprocess.PIPE
         ).stdout.decode()
         return int(round(float(str(res)), 0))
@@ -347,8 +347,8 @@ class XRandr:
     executable = 'xrandr'
     '''the xrandr executable to be called'''
 
-    @staticmethod
-    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
+    @classmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns info about all detected monitors as reported by xrandr
 
@@ -388,8 +388,8 @@ class XRandr:
         try:
             data = __cache__.get('xrandr_monitors_info')
         except Exception:
-            out = subprocess.check_output([XRandr.executable, '--verbose']).decode().split('\n')
-            names = XRandr.get_display_interfaces()
+            out = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
+            names = cls.get_display_interfaces()
             data = []
             tmp = {}
             count = 0
@@ -402,7 +402,7 @@ class XRandr:
                             'interface': i.split(' ')[0],
                             'name': i.split(' ')[0],
                             'line': i,
-                            'method': XRandr,
+                            'method': cls,
                             'index': count,
                             'model': None,
                             'serial': None,
@@ -461,8 +461,8 @@ class XRandr:
         out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
-    @staticmethod
-    def get_display_names() -> List[str]:
+    @classmethod
+    def get_display_names(cls) -> List[str]:
         '''
         Returns the names of each display, as reported by xrandr
 
@@ -477,10 +477,10 @@ class XRandr:
             # EG output: ['BenQ GL2450HM', 'Dell U2211H']
             ```
         '''
-        return [i['name'] for i in XRandr.get_display_info()]
+        return [i['name'] for i in cls.get_display_info()]
 
-    @staticmethod
-    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
+    @classmethod
+    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Returns the brightness for a display using the xrandr executable
 
@@ -504,7 +504,7 @@ class XRandr:
             primary_brightness = sbc.linux.XRandr.get_brightness(display=0)[0]
             ```
         '''
-        monitors = XRandr.get_display_info()
+        monitors = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 monitors = [monitors[display]]
@@ -514,9 +514,9 @@ class XRandr:
 
         return brightness
 
-    @staticmethod
+    @classmethod
     def set_brightness(
-        value: int,
+        cls, value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
@@ -548,7 +548,7 @@ class XRandr:
             ```
         '''
         value = str(float(value) / 100)
-        info = XRandr.get_display_info()
+        info = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 info = [info[display]]
@@ -560,13 +560,13 @@ class XRandr:
                 )
 
         for i in info:
-            subprocess.run([XRandr.executable, '--output', i['interface'], '--brightness', value])
+            subprocess.run([cls.executable, '--output', i['interface'], '--brightness', value])
 
         # The get_brightness method takes the brightness value from get_display_info
         # The problem is that that display info is cached, meaning that the brightness
         # value is also cached. We must expire it here.
         __cache__.expire('xrandr_monitors_info')
-        return XRandr.get_brightness(display=display) if not no_return else None
+        return cls.get_brightness(display=display) if not no_return else None
 
 
 class DDCUtil:
@@ -578,8 +578,8 @@ class DDCUtil:
     '''how long ddcutil should sleep between each DDC request (lower is shorter).
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
 
-    @staticmethod
-    def get_display_info(display: Optional[Union[int, str]] = None) -> List[dict]:
+    @classmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns information about all DDC compatible monitors shown by DDCUtil
         Works by calling the command 'ddcutil detect' and parsing the output.
@@ -626,9 +626,9 @@ class DDCUtil:
             cmd_out = str(
                 subprocess.check_output(
                     [
-                        DDCUtil.executable,
+                        cls.executable,
                         'detect', '-v',
-                        f'--sleep-multiplier={DDCUtil.sleep_multiplier}'
+                        f'--sleep-multiplier={cls.sleep_multiplier}'
                     ], stderr=subprocess.DEVNULL
                 )
             )[2:-1].split('\\n')
@@ -646,7 +646,7 @@ class DDCUtil:
                         data.append(tmp)
                     tmp = {
                         'tmp': line,
-                        'method': DDCUtil,
+                        'method': cls,
                         'index': count,
                         'model': None,
                         'serial': None,
@@ -693,8 +693,8 @@ class DDCUtil:
             data = filter_monitors(display=display, haystack=data, include=['i2c_bus'])
         return data
 
-    @staticmethod
-    def get_display_names() -> List[str]:
+    @classmethod
+    def get_display_names(cls) -> List[str]:
         '''
         Returns the names of each display, as reported by ddcutil
 
@@ -709,10 +709,10 @@ class DDCUtil:
             # EG output: ['Dell U2211H', 'BenQ GL2450H']
             ```
         '''
-        return [i['name'] for i in DDCUtil.get_display_info()]
+        return [i['name'] for i in cls.get_display_info()]
 
-    @staticmethod
-    def get_brightness(display: Optional[Union[int, str]] = None) -> List[int]:
+    @classmethod
+    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
         '''
         Returns the brightness for a display using the ddcutil executable
 
@@ -736,7 +736,7 @@ class DDCUtil:
             primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)[0]
             ```
         '''
-        monitors = DDCUtil.get_display_info()
+        monitors = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 monitors = [monitors[display]]
@@ -751,10 +751,10 @@ class DDCUtil:
             except Exception:
                 out = subprocess.check_output(
                     [
-                        DDCUtil.executable,
+                        cls.executable,
                         'getvcp', '10', '-t',
                         '-b', str(m['bus_number']),
-                        f'--sleep-multiplier={DDCUtil.sleep_multiplier}'
+                        f'--sleep-multiplier={cls.sleep_multiplier}'
                     ]
                 ).decode().split(' ')[-2]
                 __cache__.store('ddcutil_' + m['edid'] + '_brightness', out, expires=0.5)
@@ -764,9 +764,9 @@ class DDCUtil:
                 pass
         return res
 
-    @staticmethod
+    @classmethod
     def set_brightness(
-        value: int,
+        cls, value: int,
         display: Optional[Union[int, str]] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
@@ -797,7 +797,7 @@ class DDCUtil:
             sbc.linux.DDCUtil.set_brightness(75, display=0)
             ```
         '''
-        monitors = DDCUtil.get_display_info()
+        monitors = cls.get_display_info()
         if display is not None:
             if type(display) == int:
                 monitors = [monitors[display]]
@@ -808,17 +808,17 @@ class DDCUtil:
         for m in monitors:
             subprocess.run(
                 [
-                    DDCUtil.executable,
+                    cls.executable,
                     'setvcp',
                     '10',
                     str(value),
                     '-b',
                     str(m['bus_number']),
-                    f'--sleep-multiplier={DDCUtil.sleep_multiplier}'
+                    f'--sleep-multiplier={cls.sleep_multiplier}'
                 ]
             )
 
-        return DDCUtil.get_brightness(display=display) if not no_return else None
+        return cls.get_brightness(display=display) if not no_return else None
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
