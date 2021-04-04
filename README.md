@@ -20,12 +20,13 @@ Program     | Is it Fast | Works with laptop displays | Works with external moni
 ------------|------------|----------------------------|------------------------------|---------------------------------------|-----------------------
 ddcutil     | No         | No                         | Yes                          | Yes                                   | No
 xrandr      | Yes        | Yes                        | Yes                          | Yes                                   | Yes
-xbacklight  | Yes        | Yes                        | Yes                          | Yes but not individually controllable | Yes
+xbacklight  | Yes        | Yes                        | No                           | Yes but not individually controllable | Yes
 light       | Yes        | Yes                        | No                           | Yes                                   | No
 
 Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
 To install:
+
 * Arch
     * `sudo pacman -S xorg-xrandr`
     * `sudo pacman -S ddcutil`
