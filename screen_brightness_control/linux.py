@@ -285,7 +285,7 @@ class Light:
                     ]
                 )
             )
-        results = [int(round(float(str(i)), 0)) for i in results]
+        results = [int(round(float(i.decode()), 0)) for i in results]
         return results
 
 
