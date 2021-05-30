@@ -159,7 +159,7 @@ sbc.fade_brightness(100, blocking=False)
 
 
 ## A Toast
-To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://github.com/Ved-programmer), [D.W](https://github.com/drojf) and [Melek REBAI](https://github.com/shadoWalker89) for contributing to this project
+To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://github.com/Ved-programmer), [Daniel Wong](https://github.com/drojf), [Melek REBAI](https://github.com/shadoWalker89) and [Mathias Johansson](https://github.com/Mathias9807) for contributing to this project
 
 ## License
 This software is licensed under the [MIT license](https://mit-license.org/)
