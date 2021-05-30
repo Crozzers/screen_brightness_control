@@ -44,10 +44,10 @@
             <ul id="docver_links_nojquery">
             <li><a href="docver_links_redir.html">Change documentation version</a></li>
             </ul>
-            <ul class="two-column" id="docver_links">
+            <ul class="two-column" id="memberlist">
             <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
             <script>
-                $("#docver_links").load("docver_links_inline.html",
+                $("#docver_links").load("docver_links_redir.html",
                     function(resp_txt, txt_status, xmlhttp_req){
                         if (txt_status=="success"){
                             document.getElementById("docver_links_nojquery").innerHTML = "";
