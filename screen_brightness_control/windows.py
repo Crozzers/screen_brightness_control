@@ -350,8 +350,8 @@ class VCP:
         and then close them again afterwards, yielding their handles.
         It is not recommended to use this function unless you are familiar with `ctypes` and `windll`
 
-        Returns:
-            generator: generator that yields `ctypes.wintypes.HANDLE` objects
+        Yields:
+            ctypes.wintypes.HANDLE
 
         Raises:
             ctypes.WinError: upon failure to enumerate through the monitors

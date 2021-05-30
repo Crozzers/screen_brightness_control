@@ -585,7 +585,7 @@ def set_brightness(
         None: if the `no_return` kwarg is specified
 
     Example:
-        ```
+        ```python
         import screen_brightness_control as sbc
 
         # set brightness to 50%
@@ -673,7 +673,7 @@ def fade_brightness(
             otherwise it returns the result of `get_brightness()`
 
     Example:
-        ```
+        ```python
         import screen_brightness_control as sbc
 
         # fade brightness from the current brightness to 50%
