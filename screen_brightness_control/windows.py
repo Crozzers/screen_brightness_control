@@ -284,8 +284,8 @@ class WMI:
             # set the primary display brightness to 75%
             sbc.windows.WMI.set_brightness(75, display = 0)
 
-            # set the brightness of a named monitor to 25%
-            sbc.windows.WMI.set_brightness(25, display = 'BenQ GL2450H')
+            # set the brightness of the secondary display to 25%
+            sbc.windows.WMI.set_brightness(25, display = 1)
             ```
         '''
         brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
@@ -324,8 +324,8 @@ class WMI:
             # get the primary display brightness
             primary_brightness = sbc.windows.WMI.get_brightness(display = 0)
 
-            # get the brightness of a named monitor
-            benq_brightness = sbc.windows.WMI.get_brightness(display = 'BenQ GL2450H')
+            # get the brightness of the secondary monitor
+            benq_brightness = sbc.windows.WMI.get_brightness(display = 1)
             ```
         '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
@@ -499,9 +499,6 @@ class VCP:
 
             # Get the brightness for a secondary display
             secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)[0]
-
-            # Get the brightness for a display with the model 'GL2450H'
-            benq_brightness = sbc.windows.VCP.get_brightness(display = 'GL2450H')[0]
             ```
         '''
         code = BYTE(0x10)
@@ -559,9 +556,6 @@ class VCP:
 
             # Set the brightness for a secondary display to 25%
             sbc.windows.VCP.set_brightness(25, display = 1)
-
-            # Set the brightness for a display with the model 'GL2450H' to 100%
-            sbc.windows.VCP.set_brightness(100, display = 'GL2450H')
             ```
         '''
         __cache__.expire(startswith='vcp_brightness_')

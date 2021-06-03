@@ -566,6 +566,8 @@ def __brightness(
         for monitor in filter_monitors(display=display, method=method):
             try:
                 if meta_method == 'get':
+                    # this bit will speed things up if there are multiple monitors
+                    # that use the same method
                     if monitor['method'] not in method_value_cache:
                         method_value_cache[monitor['method']] = getattr(
                             monitor['method'], f'{meta_method}_brightness'

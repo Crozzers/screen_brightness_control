@@ -215,7 +215,7 @@ class Light:
     @classmethod
     def set_brightness(
         cls, value: int,
-        display: Optional[Union[int, str]] = None,
+        display: Optional[int] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
         '''
@@ -223,10 +223,7 @@ class Light:
 
         Args:
             value (int): Sets the brightness to this value
-            display (int or str): The specific display you wish to query.
-                Can be index, name, model, serial, path or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
+            display (int): The specific display you wish to query.
             no_return (bool): if True, this function returns None
 
         Returns:
@@ -243,30 +240,25 @@ class Light:
             # set the primary display brightness to 75%
             sbc.linux.Light.set_brightness(75, display = 0)
 
-            # set the display called 'edp-backlight' to 25%
-            sbc.linux.Light.set_brightness(75, display = 'edp-backlight')
+            # set the secondary display brightness to 25%
+            sbc.linux.Light.set_brightness(75, display = 1)
             ```
         '''
         info = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                info = [info[display]]
-            else:
-                info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
+            info = [info[display]]
+
         for i in info:
             subprocess.call(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
         return cls.get_brightness(display=display) if not no_return else None
 
     @classmethod
-    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
         Sets the brightness for a display using the light executable
 
         Args:
-            display (int or str): The specific display you wish to query.
-                Can be index, name, model, serial, path or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
+            display (int): The specific display you wish to query.
 
         Returns:
             list: list of ints (0 to 100)
@@ -281,16 +273,14 @@ class Light:
             # get the brightness of the primary display
             primary_brightness = sbc.linux.Light.get_brightness(display = 0)[0]
 
-            # get the brightness of the display called 'edp-backlight'
-            edp_brightness = sbc.linux.Light.get_brightness(display = 'edp-backlight')[0]
+            # get the brightness of the secondary display
+            edp_brightness = sbc.linux.Light.get_brightness(display = 1)[0]
             ```
         '''
         info = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                info = [info[display]]
-            else:
-                info = filter_monitors(display=display, haystack=info, include=['path', 'light_path'])
+            info = [info[display]]
+
         results = []
         for i in info:
             results.append(
@@ -497,15 +487,12 @@ class XRandr:
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
-    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
         Returns the brightness for a display using the xrandr executable
 
         Args:
-            display (int or str): The specific display you wish to query.
-                Can be index, name, model, serial, interface or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
+            display (int): The specific display you wish to query.
 
         Returns:
             list: list of integers (from 0 to 100)
@@ -523,10 +510,7 @@ class XRandr:
         '''
         monitors = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                monitors = [monitors[display]]
-            else:
-                monitors = filter_monitors(display=display, haystack=monitors, include=['interface'])
+            monitors = [monitors[display]]
         brightness = [i['brightness'] for i in monitors]
 
         return brightness
@@ -534,7 +518,7 @@ class XRandr:
     @classmethod
     def set_brightness(
         cls, value: int,
-        display: Optional[Union[int, str]] = None,
+        display: Optional[int] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
         '''
@@ -543,9 +527,6 @@ class XRandr:
         Args:
             value (int): Sets the brightness to this value
             display (int): The specific display you wish to query.
-                Can be index, name, model, serial, interface or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
             no_return (bool): if True, this function returns None
                 Returns the result of `XRandr.get_brightness()` otherwise
 
@@ -567,14 +548,7 @@ class XRandr:
         value = str(float(value) / 100)
         info = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                info = [info[display]]
-            else:
-                info = filter_monitors(
-                    display=display,
-                    haystack=info,
-                    include=['interface']
-                )
+            info = [info[display]]
 
         for i in info:
             subprocess.run([cls.executable, '--output', i['interface'], '--brightness', value])
@@ -731,15 +705,12 @@ class DDCUtil:
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
-    def get_brightness(cls, display: Optional[Union[int, str]] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
         Returns the brightness for a display using the ddcutil executable
 
         Args:
-            display (int or str): The specific display you wish to query.
-                Can be index, name, model, serial, i2c bus or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
+            display (int): The specific display you wish to query.
 
         Returns:
             list: list of ints (0 to 100)
@@ -757,10 +728,8 @@ class DDCUtil:
         '''
         monitors = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                monitors = [monitors[display]]
-            else:
-                monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
+            monitors = [monitors[display]]
+
         res = []
         for m in monitors:
             try:
@@ -786,7 +755,7 @@ class DDCUtil:
     @classmethod
     def set_brightness(
         cls, value: int,
-        display: Optional[Union[int, str]] = None,
+        display: Optional[int] = None,
         no_return: bool = False
     ) -> Union[List[int], None]:
         '''
@@ -794,10 +763,7 @@ class DDCUtil:
 
         Args:
             value (int): Sets the brightness to this value
-            display (int or str): The specific display you wish to query.
-                Can be index, name, model, serial, i2c bus or edid string.
-                `int` is faster as it isn't passed to `filter_monitors` to be matched against.
-                `str` is slower as it is passed to `filter_monitors` to match to a display.
+            display (int): The specific display you wish to query.
             no_return (bool): if True, this function returns None.
                 Returns the result of `DDCUtil.get_brightness()` otherwise
 
@@ -818,21 +784,14 @@ class DDCUtil:
         '''
         monitors = cls.get_display_info()
         if display is not None:
-            if type(display) == int:
-                monitors = [monitors[display]]
-            else:
-                monitors = filter_monitors(display=display, haystack=monitors, include=['i2c_bus'])
+            monitors = [monitors[display]]
 
         __cache__.expire(startswith='ddcutil_', endswith='_brightness')
         for m in monitors:
             subprocess.run(
                 [
-                    cls.executable,
-                    'setvcp',
-                    '10',
-                    str(value),
-                    '-b',
-                    str(m['bus_number']),
+                    cls.executable, 'setvcp', '10', str(value),
+                    '-b', str(m['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}'
                 ]
             )
