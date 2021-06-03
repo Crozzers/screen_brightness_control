@@ -3,6 +3,19 @@ import os
 import struct
 from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__
 from typing import List, Tuple, Union, Optional
+import warnings
+
+
+def warn_deprecated(name, alternative=None):
+    '''Temporary function to warn you that things have been deprecated
+    and will be removed in the next update.'''
+    if alternative is None:
+        alternative = name
+
+    msg = f'screen_brightness_control.linux.{name} is deprecated.'
+    if alternative:
+        msg += f' Use screen_brightness_control.{alternative} instead'
+    warnings.warn(msg, DeprecationWarning)
 
 
 class _EDID:
@@ -182,6 +195,7 @@ class Light:
     @classmethod
     def get_display_names(cls) -> List[str]:
         '''
+        DEPRECATED.
         Returns the names of each display, as reported by light
 
         Returns:
@@ -195,6 +209,7 @@ class Light:
             # EG output: ['edp-backlight']
             ```
         '''
+        warn_deprecated('Light.get_display_names', 'list_monitors(method="light")')
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
@@ -454,7 +469,7 @@ class XRandr:
             ```python
             import screen_brightness_control as sbc
 
-            names = sbc.linux.XRandr.get_display_names()
+            names = sbc.linux.XRandr.get_display_interfaces()
             # EG output: ['eDP-1', 'HDMI1', 'HDMI2']
             ```
         '''
@@ -464,6 +479,7 @@ class XRandr:
     @classmethod
     def get_display_names(cls) -> List[str]:
         '''
+        DEPRECATED.
         Returns the names of each display, as reported by xrandr
 
         Returns:
@@ -477,6 +493,7 @@ class XRandr:
             # EG output: ['BenQ GL2450HM', 'Dell U2211H']
             ```
         '''
+        warn_deprecated('XRandr.get_display_names', 'list_monitors(method="xrandr")')
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
@@ -696,6 +713,7 @@ class DDCUtil:
     @classmethod
     def get_display_names(cls) -> List[str]:
         '''
+        DEPRECATED.
         Returns the names of each display, as reported by ddcutil
 
         Returns:
@@ -709,6 +727,7 @@ class DDCUtil:
             # EG output: ['Dell U2211H', 'BenQ GL2450H']
             ```
         '''
+        warn_deprecated('DDCUtil.get_display_names', 'list_monitors(method="ddcutil")')
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
@@ -894,6 +913,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
+    DEPRECATED.
     Returns the names of all detected monitors
 
     Args:
@@ -910,12 +930,14 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
         # EG output: ['BenQ GL2450HM', 'Dell U2211H', 'edp-backlight']
         ```
     '''
+    warn_deprecated('list_monitors')
     displays = [i['name'] for i in list_monitors_info(method=method)]
     return flatten_list(displays)
 
 
 def get_brightness_from_sysfiles(display: int = None) -> int:
     '''
+    DEPRECATED.
     Returns the current display brightness by reading files from `/sys/class/backlight`
 
     Args:
@@ -936,6 +958,7 @@ def get_brightness_from_sysfiles(display: int = None) -> int:
         # Eg Output: 100
         ```
     '''
+    warn_deprecated('get_brightness_from_sysfiles', False)
     backlight_dir = '/sys/class/backlight/'
     error = []
     # if function has not returned yet try reading the brightness file
@@ -971,9 +994,11 @@ def get_brightness_from_sysfiles(display: int = None) -> int:
 
 def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
     '''
+    DEPRECATED.
     Internal function, do not call. Either sets the brightness or gets it.
     Exists because set_brightness and get_brightness only have a couple differences
     '''
+    warn_deprecated('__set_and_get_brightness', '__brightness')
     errors = []
     try:  # filter known list of monitors according to kwargs
         if type(display) == int:
@@ -1028,6 +1053,7 @@ def set_brightness(
     **kwargs
 ) -> Union[List[int], int, None]:
     '''
+    DEPRECATED.
     Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
     Args:
@@ -1063,6 +1089,7 @@ def set_brightness(
         sbc.linux.set_brightness(25, method='xrandr')
         ```
     '''
+    warn_deprecated('set_brightness')
     if method is not None and method.lower() == 'xbacklight':
         return XBacklight.set_brightness(value, **kwargs)
     else:
@@ -1075,6 +1102,7 @@ def get_brightness(
     **kwargs
 ) -> Union[List[int], int]:
     '''
+    DEPRECATED.
     Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
 
     Args:
@@ -1111,6 +1139,7 @@ def get_brightness(
         light_brightness = sbc.get_brightness(display=1, method='light')[0]
         ```
     '''
+    warn_deprecated('get_brightness')
     if method is not None and method.lower() == 'xbacklight':
         return XBacklight.get_brightness(**kwargs)
     else:

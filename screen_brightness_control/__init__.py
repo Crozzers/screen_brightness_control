@@ -10,11 +10,7 @@ class __Cache(dict):
         self.enabled = True
         super().__init__()
 
-    def __setitem__(self, key, value, *args, expires=1, **kwargs):
-        expires += time.time()
-        super().__setitem__(key, (value, expires, args, kwargs))
-
-    def __getitem__(self, key, *args, **kwargs):
+    def get(self, key, *args, **kwargs):
         if not self.enabled:
             raise Exception
         value, expires, orig_args, orig_kwargs = super().__getitem__(key)
@@ -22,11 +18,9 @@ class __Cache(dict):
             return value
         raise KeyError
 
-    def get(self, *args, **kwargs):
-        return self.__getitem__(*args, **kwargs)
-
-    def store(self, *args, **kwargs):
-        return self.__setitem__(*args, **kwargs)
+    def store(self, key, value, *args, expires=1, **kwargs):
+        expires += time.time()
+        super().__setitem__(key, (value, expires, args, kwargs))
 
     def expire(self, key=None, startswith=None, endswith=None):
         if key is not None:
@@ -195,22 +189,22 @@ class Monitor():
         else:
             info = filter_monitors(display=display, haystack=monitors_info)[0]
 
-        self.serial: str = info['serial']
+        self.serial: str = info.pop('serial')
         '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
-        self.name: str = info['name']
+        self.name: str = info.pop('name')
         '''the monitors manufacturer name plus its model'''
-        self.method = info['method']
+        self.method = info.pop('method')
         '''the method by which this monitor can be addressed.
         This will be a class from either the windows or linux sub-module'''
-        self.manufacturer: str = info['manufacturer']
+        self.manufacturer: str = info.pop('manufacturer')
         '''the name of the brand of the monitor'''
-        self.manufacturer_id: str = info['manufacturer_id']
+        self.manufacturer_id: str = info.pop('manufacturer_id')
         '''the 3 letter manufacturing code corresponding to the manufacturer name'''
-        self.model: str = info['model']
+        self.model: str = info.pop('model')
         '''the general model of the display'''
-        self.index: int = info['index']
+        self.index: int = info.pop('index')
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
-        self.edid: str = info['edid']
+        self.edid: str = info.pop('edid')
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
 
         # this assigns any extra info that is returned to this class
@@ -218,8 +212,7 @@ class Monitor():
         for key, value in info.items():
             # exclude the 'brightness' key because that will quickly become out of date
             if value is not None and key != 'brightness':
-                if key not in vars(self).keys():
-                    setattr(self, key, value)
+                setattr(self, key, value)
 
     def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
@@ -562,89 +555,56 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
     return flat_list
 
 
-def set_brightness(
-    value: Union[int, float, str],
-    force: bool = False,
-    verbose_error: bool = False,
-    **kwargs
-) -> Union[List[int], int, None]:
-    '''
-    Sets the screen brightness
+def __brightness(
+    *args, display=None, method=None, meta_method='get', no_return=False, **kwargs
+):
+    '''Internal function used to get/set brightness'''
+    output = []
+    errors = []
+    if method is None or method != 'xbacklight':
+        method_value_cache = {}
+        for monitor in filter_monitors(display=display, method=method):
+            try:
+                if meta_method == 'get':
+                    if monitor['method'] not in method_value_cache:
+                        method_value_cache[monitor['method']] = getattr(
+                            monitor['method'], f'{meta_method}_brightness'
+                        )(**kwargs)
+                    output.append(method_value_cache[monitor['method']][monitor['index']])
+                else:
+                    output.append(
+                        getattr(monitor['method'], f'{meta_method}_brightness')(
+                            *args, display=monitor['index'], **kwargs
+                        )[0]
+                    )
+            except Exception as e:
+                output.append(None)
+                errors.append((monitor, e))
 
-    Args:
-        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        force (bool): [Linux Only] if False the brightness will never be set lower than 1.
-            This is because on most displays a brightness of 0 will turn off the backlight.
-            If True, this check is bypassed
-        verbose_error (bool): boolean value controls the amount of detail error messages will contain
-        kwargs (dict): passed to the OS relevant brightness method
+    if output and not set(output) == {None}:
+        # if all of the outputs are None then all of the monitors failed
+        return output if not no_return else None
+    elif platform.system() == 'Linux':
+        # if we are on linux then we should also try the other methods
+        if method and method.lower() == 'xbacklight':
+            try:
+                return getattr(linux.XBacklight, f'{meta_method}_brightness')(*args)
+            except Exception as e:
+                errors.append('XBacklight', e)
 
-    Returns:
-        list: list of ints (0 to 100)
-        int: if only one display is affected
-        None: if the `no_return` kwarg is specified
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # set brightness to 50%
-        sbc.set_brightness(50)
-
-        # set brightness to 0%
-        sbc.set_brightness(0, force=True)
-
-        # increase brightness by 25%
-        sbc.set_brightness('+25')
-
-        # decrease brightness by 30%
-        sbc.set_brightness('-30')
-
-        # set the brightness of display 0 to 50%
-        sbc.set_brightness(50, display=0)
-        ```
-    '''
-    if type(value) not in (int, float, str):
-        raise TypeError(f'value must be int, float or str, not {type(value)}')
-
-    # convert values like '+5' and '-25' to integers and add/subtract them from the current brightness
-    if isinstance(value, str) and value.startswith(('+', '-')):
-        if 'display' in kwargs.keys():
-            current = get_brightness(display=kwargs['display'])
-        else:
-            current = get_brightness()
-
-        if isinstance(current, list):
-            # apply the offset to all displays by setting the brightness for each one individually
-            out: list = []
-            for i in range(len(current)):
-                out.append(set_brightness(current[i] + int(float(str(value))), display=i, **kwargs))
-            # flatten the list output
-            out = flatten_list(out)
-            return out[0] if len(out) == 1 else out
-
-        value = current + int(float(str(value)))
+    # if the function hasn't returned then it has failed
+    msg = '\n'
+    if errors:
+        for monitor, exception in errors:
+            if type(monitor) == str:
+                msg += f'\t{monitor}'
+            else:
+                msg += f'\t{monitor["name"]} ({monitor["serial"]})'
+            msg += f' -> {type(exception).__name__}: {exception}'
     else:
-        value = int(float(str(value)))
+        msg += '\tno valid output was recieved from brightness methods'
 
-    value = min(100, value)
-
-    if platform.system() == 'Linux':
-        if not force:
-            value = max(1, value)
-    else:
-        value = max(0, value)
-
-    try:
-        out = method.set_brightness(value, **kwargs)
-        return out[0] if (isinstance(out, list) and len(out) == 1) else out
-    except Exception as e:
-        if verbose_error:
-            raise ScreenBrightnessError from e
-        error = e
-
-    # if the function has not returned by now it failed
-    raise ScreenBrightnessError(f'Cannot set screen brightness: {error}')
+    raise ScreenBrightnessError(msg)
 
 
 def fade_brightness(
@@ -769,13 +729,112 @@ def fade_brightness(
         return get_brightness(**kwargs)
 
 
-def get_brightness(verbose_error: bool = False, **kwargs) -> Union[List[int], int]:
+def set_brightness(
+    value: Union[int, float, str],
+    display: Optional[Union[str, int]] = None,
+    method: Optional[str] = None,
+    force: bool = False,
+    verbose_error: bool = False,
+    no_return: bool = False
+) -> Union[List[int], int, None]:
+    '''
+    Sets the screen brightness
+
+    Args:
+        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        display (int or str): the specific display to adjust
+        method (str): the way in which displays will be accessed.
+            On Windows this can be 'wmi' or 'vcp'.
+            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
+        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+            This is because on most displays a brightness of 0 will turn off the backlight.
+            If True, this check is bypassed
+        verbose_error (bool): boolean value controls the amount of detail error messages will contain
+        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
+            If True, this function returns None
+
+    Returns:
+        list: list of ints (0 to 100)
+        int: if only one display is affected
+        None: if the `no_return` kwarg is specified
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # set brightness to 50%
+        sbc.set_brightness(50)
+
+        # set brightness to 0%
+        sbc.set_brightness(0, force=True)
+
+        # increase brightness by 25%
+        sbc.set_brightness('+25')
+
+        # decrease brightness by 30%
+        sbc.set_brightness('-30')
+
+        # set the brightness of display 0 to 50%
+        sbc.set_brightness(50, display=0)
+        ```
+    '''
+    if type(value) == str and ('+' in value or '-' in value):
+        value = int(float(value))
+        current = get_brightness(method=method, verbose_error=verbose_error)
+        if type(current) == list:
+            # if there are multiple monitors then set the brightness value for
+            # each individually
+            output = []
+            for i, c in enumerate(current):
+                output.append(
+                    set_brightness(
+                        c + value, display=i, method=method,
+                        no_return=no_return, verbose_error=verbose_error
+                    )
+                )
+            output = flatten_list(output)
+            return output[0] if len(output) == 1 else output
+        else:
+            # if there is only one monitor then just add the offset to the
+            # current brightness and continue
+            value += current
+    else:
+        value = int(float(str(value)))
+
+    # make sure value is within bounds
+    value = max(min(100, value), 0)
+
+    try:
+        return __brightness(value, display=display, method=method, meta_method='set', no_return=no_return)
+    except Exception as e:
+        if verbose_error:
+            # make sure that the error raised is a ScreenBrightnessError
+            if isinstance(e, ScreenBrightnessError):
+                raise e
+            else:
+                raise ScreenBrightnessError from e
+
+        # assign variable here to avoid it being cleaned up
+        error = e
+
+    # if the function has not already returned, it has failed
+    raise ScreenBrightnessError(f'Failed to set brightness: {error}')
+
+
+def get_brightness(
+    display: Optional[Union[int, str]] = None,
+    method: Optional[str] = None,
+    verbose_error: bool = False, **kwargs
+) -> Union[List[int], int]:
     '''
     Returns the current display brightness
 
     Args:
+        display (str or int): the specific display to query
+        method (str): the way in which displays will be accessed.
+            On Windows this can be 'wmi' or 'vcp'.
+            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
         verbose_error (bool): controls the level of detail in the error messages
-        kwargs (dict): is passed directly to the OS relevant brightness method
 
     Returns:
         int: an integer from 0 to 100 if only one display is detected
@@ -796,15 +855,21 @@ def get_brightness(verbose_error: bool = False, **kwargs) -> Union[List[int], in
         ```
     '''
     try:
-        out = method.get_brightness(**kwargs)
+        out = __brightness(display=display, method=method, meta_method='get')
         return out[0] if (type(out) == list and len(out) == 1) else out
     except Exception as e:
         if verbose_error:
-            raise ScreenBrightnessError from e
+            # make sure that the error raised is a ScreenBrightnessError
+            if isinstance(e, ScreenBrightnessError):
+                raise e
+            else:
+                raise ScreenBrightnessError from e
+
+        # assign variable here to avoid it being cleaned up
         error = e
 
-    # if the function has not returned by now it failed
-    raise ScreenBrightnessError(f'Cannot get screen brightness: {error}')
+    # if the function has not already returned, it has failed
+    raise ScreenBrightnessError(f'Failed to get brightness: {error}')
 
 
 __cache__ = __Cache()
@@ -821,5 +886,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del(plat)
 
-__version__ = '0.8.6'
+__version__ = '0.9.0-dev'
 __author__ = 'Crozzers'
