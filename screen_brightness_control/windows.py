@@ -339,11 +339,14 @@ class VCP:
                     ('description', WCHAR * 128)]
 
     @classmethod
-    def iter_physical_monitors(cls) -> Generator[ctypes.wintypes.HANDLE]:
+    def iter_physical_monitors(cls, start: int = 0) -> Generator[ctypes.wintypes.HANDLE]:
         '''
         A generator to iterate through all physical monitors
         and then close them again afterwards, yielding their handles.
         It is not recommended to use this function unless you are familiar with `ctypes` and `windll`
+
+        Args:
+            start (int): skip the first X handles
 
         Yields:
             ctypes.wintypes.HANDLE
@@ -367,19 +370,26 @@ class VCP:
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
             raise WinError('EnumDisplayMonitors failed')
 
+        index = 0
+
         for monitor in monitors:
             # Get physical monitor count
             count = DWORD()
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
                 raise WinError()
             if count.value > 0:
+                if start and index + count.value < start:
+                    index += count.value
+                    continue
                 # Get physical monitor handles
                 physical_array = (cls._PHYSICAL_MONITOR * count.value)()
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
                     raise WinError()
                 for item in physical_array:
-                    yield item.handle
+                    if not (start and index != start):
+                        yield item.handle
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
+                    index += 1
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -494,11 +504,26 @@ class VCP:
             secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)[0]
             ```
         '''
+        if display is not None:
+            # attempt to retrieve cached value for speed reasons
+            try:
+                return __cache__.get(f'vcp_brightness_{display}')
+            except Exception:
+                pass
+
         code = BYTE(0x10)
         values = []
-        for index, monitor in enumerate(cls.iter_physical_monitors()):
+        for index, monitor in enumerate(
+            cls.iter_physical_monitors(start=display),
+            start=display if display is not None else 0
+        ):
             try:
-                current = __cache__.get(f'vcp_brightness_{index}')
+                # Only try cache if display isn't specified
+                # (we already tried specified ones earlier)
+                if display is None:
+                    current = __cache__.get(f'vcp_brightness_{index}')
+                else:
+                    raise Exception
             except Exception:
                 cur_out = DWORD()
                 handle = HANDLE(monitor)
@@ -518,6 +543,7 @@ class VCP:
                 # if we have just got the display we wanted then exit here
                 # no point iterating through all the other ones
                 break
+
         return values
 
     @classmethod
