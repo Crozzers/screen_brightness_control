@@ -253,19 +253,13 @@ class WMI:
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
-    def set_brightness(
-        cls, value: int,
-        display: Optional[int] = None,
-        no_return: bool = False
-    ) -> Union[List[int], None]:
+    def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the display brightness for Windows using WMI
 
         Args:
             value (int): The percentage to set the brightness to
             display (int): The specific display you wish to query.
-            no_return (bool): if True, this function returns None
-                Otherwise it returns the result of `WMI.get_brightness()`
 
         Returns:
             list: list of integers (0 to 100)
@@ -294,7 +288,6 @@ class WMI:
 
         for method in brightness_method:
             method.WmiSetBrightness(value, 0)
-        return cls.get_brightness(display=display) if not no_return else None
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
@@ -528,21 +521,12 @@ class VCP:
         return values
 
     @classmethod
-    def set_brightness(
-        cls, value: int,
-        display: Optional[int] = None,
-        no_return: bool = False
-    ) -> Union[List[int], None]:
+    def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
             display (int): The specific display you wish to query.
-            no_return (bool): if set to `True` this function will return `None`
-
-        Returns:
-            list: list of ints (0 to 100) (the result of `VCP.get_brightness`) if `no_return` is False
-            None: if `no_return` is True
 
         Examples:
             ```python
@@ -569,8 +553,6 @@ class VCP:
                         break
                     else:
                         time.sleep(0.02)
-
-        return cls.get_brightness(display=display) if not no_return else None
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:

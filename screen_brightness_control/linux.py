@@ -213,22 +213,13 @@ class Light:
         return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
-    def set_brightness(
-        cls, value: int,
-        display: Optional[int] = None,
-        no_return: bool = False
-    ) -> Union[List[int], None]:
+    def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the light executable
 
         Args:
             value (int): Sets the brightness to this value
             display (int): The specific display you wish to query.
-            no_return (bool): if True, this function returns None
-
-        Returns:
-            list: list of ints (0 to 100) (the result of `Light.get_brightness`)
-            None: if the `no_return` kwarg is True
 
         Example:
             ```python
@@ -250,7 +241,6 @@ class Light:
 
         for i in info:
             subprocess.call(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
-        return cls.get_brightness(display=display) if not no_return else None
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
@@ -301,17 +291,12 @@ class XBacklight:
     '''the xbacklight executable to be called'''
 
     @classmethod
-    def set_brightness(cls, value: int, no_return: bool = False, **kwargs) -> Union[int, None]:
+    def set_brightness(cls, value: int, **kwargs):
         '''
         Sets the screen brightness to a supplied value
 
         Args:
-            no_return (bool): if True, this function returns None
-                Returns the result of `XBacklight.get_brightness()` otherwise
-
-        Returns:
-            int: from 0 to 100
-            None: if `no_return` is set to `True`
+            value (int): the value to set the brightnes to
 
         Example:
             ```python
@@ -322,7 +307,6 @@ class XBacklight:
             ```
         '''
         subprocess.call([cls.executable, '-set', str(value)])
-        return cls.get_brightness() if not no_return else None
 
     @classmethod
     def get_brightness(cls, **kwargs) -> int:
@@ -516,23 +500,13 @@ class XRandr:
         return brightness
 
     @classmethod
-    def set_brightness(
-        cls, value: int,
-        display: Optional[int] = None,
-        no_return: bool = False
-    ) -> Union[List[int], None]:
+    def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the xrandr executable
 
         Args:
             value (int): Sets the brightness to this value
             display (int): The specific display you wish to query.
-            no_return (bool): if True, this function returns None
-                Returns the result of `XRandr.get_brightness()` otherwise
-
-        Returns:
-            list: list of ints (0 to 100) (the result of `XRandr.get_brightness`)
-            None: if the `no_return` kwarg is True
 
         Example:
             ```python
@@ -753,23 +727,13 @@ class DDCUtil:
         return res
 
     @classmethod
-    def set_brightness(
-        cls, value: int,
-        display: Optional[int] = None,
-        no_return: bool = False
-    ) -> Union[List[int], None]:
+    def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the ddcutil executable
 
         Args:
             value (int): Sets the brightness to this value
             display (int): The specific display you wish to query.
-            no_return (bool): if True, this function returns None.
-                Returns the result of `DDCUtil.get_brightness()` otherwise
-
-        Returns:
-            list: list of ints (0 to 100)
-            None: if `no_return` is True
 
         Example:
             ```python
@@ -795,8 +759,6 @@ class DDCUtil:
                     f'--sleep-multiplier={cls.sleep_multiplier}'
                 ]
             )
-
-        return cls.get_brightness(display=display) if not no_return else None
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
