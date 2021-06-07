@@ -2,6 +2,8 @@ import platform
 import time
 import threading
 from typing import List, Tuple, Union, Optional, Any
+from functools import lru_cache
+import traceback
 
 
 class __Cache(dict):
@@ -110,20 +112,22 @@ MONITOR_MANUFACTURER_CODES = {
 }
 
 
+@lru_cache
 def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     '''internal function to search the monitor manufacturer codes dict'''
     keys = list(MONITOR_MANUFACTURER_CODES.keys())
     keys_lower = [i.lower() for i in keys]
     values = list(MONITOR_MANUFACTURER_CODES.values())
-    values_lower = [i.lower() for i in values]
     search_lower = search.lower()
 
     if search_lower in keys_lower:
         index = keys_lower.index(search_lower)
-    elif search_lower in values_lower:
-        index = values_lower.index(search_lower)
     else:
-        return None
+        values_lower = [i.lower() for i in values]
+        if search_lower in values_lower:
+            index = values_lower.index(search_lower)
+        else:
+            return None
     return keys[index], values[index]
 
 
@@ -260,10 +264,10 @@ class Monitor():
             ```
         '''
         value = max(0, min(value, 100))
-        b = self.method.set_brightness(value, display=self.get_identifier()[1], no_return=no_return)
-        if b is not None:
-            return b[0]
-        return b
+        self.method.set_brightness(value, display=self.index)
+        if no_return:
+            return
+        return self.get_brightness()
 
     def get_brightness(self, **kwargs) -> int:
         '''
@@ -285,7 +289,7 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         '''
-        kwargs['display'] = self.get_identifier()[1]
+        kwargs['display'] = self.index
         return self.method.get_brightness(**kwargs)[0]
 
     def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
@@ -311,13 +315,12 @@ class Monitor():
             primary.fade_brightness(50)
             ```
         '''
-        iden_key, kwargs['display'] = self.get_identifier()
-        if iden_key == 'index':
-            # the reason we override the method kwarg here is that
-            # the 'index' is method specific and `fade_brightness`
-            # is a top-level function. `self.set_brightness` and `self.get_brightness`
-            # call directly to the method so they don't need this step
-            kwargs['method'] = self.method.__name__.lower()
+        kwargs['display'] = self.index
+        # the reason we override the method kwarg here is that
+        # the 'index' is method specific and `fade_brightness`
+        # is a top-level function. `self.set_brightness` and `self.get_brightness`
+        # call directly to the method so they don't need this step
+        kwargs['method'] = self.method.__name__.lower()
 
         b = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
@@ -556,53 +559,63 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
 
 
 def __brightness(
-    *args, display=None, method=None, meta_method='get', no_return=False, **kwargs
+    *args, display=None, method=None, meta_method='get', no_return=False,
+    verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
     output = []
     errors = []
-    if method is None or method != 'xbacklight':
-        method_value_cache = {}
-        for monitor in filter_monitors(display=display, method=method):
+
+    try:
+        monitors = filter_monitors(display=display, method=method)
+    except LookupError as e:
+        errors.append((
+            'filter_monitors', 'LookupError',
+            traceback.format_exc() if verbose_error else e
+        ))
+    else:
+        # a cache that only is active for multiple monitors. It's faster that way
+        brightness_value_cache = {} if len(monitors) > 1 else False
+        for monitor in monitors:
             try:
-                if meta_method == 'get':
-                    # this bit will speed things up if there are multiple monitors
-                    # that use the same method
-                    if monitor['method'] not in method_value_cache:
-                        method_value_cache[monitor['method']] = getattr(
-                            monitor['method'], f'{meta_method}_brightness'
-                        )(**kwargs)
-                    output.append(method_value_cache[monitor['method']][monitor['index']])
+                if meta_method == 'set':
+                    monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
+                if no_return:
+                    continue
+
+                if brightness_value_cache is False:
+                    output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))
                 else:
-                    output.append(
-                        getattr(monitor['method'], f'{meta_method}_brightness')(
-                            *args, display=monitor['index'], **kwargs
-                        )[0]
-                    )
+                    try:
+                        output.append(brightness_value_cache[monitor['method']][monitor['index']])
+                    except KeyError:
+                        brightness_value_cache[monitor['method']] = monitor['method'].get_brightness(**kwargs)
+                        output.append(brightness_value_cache[monitor['method']][monitor['index']])
             except Exception as e:
                 output.append(None)
-                errors.append((monitor, e))
+                errors.append((
+                    monitor, e.__class__.__name__,
+                    traceback.format_exc() if verbose_error else e
+                ))
+
+    output = flatten_list(output)
 
     if output and not set(output) == {None}:
         # if all of the outputs are None then all of the monitors failed
         return output if not no_return else None
-    elif platform.system() == 'Linux':
-        # if we are on linux then we should also try the other methods
-        if method and method.lower() == 'xbacklight':
-            try:
-                return getattr(linux.XBacklight, f'{meta_method}_brightness')(*args)
-            except Exception as e:
-                errors.append('XBacklight', e)
+    elif meta_method == 'set' and no_return:
+        return
 
     # if the function hasn't returned then it has failed
     msg = '\n'
     if errors:
-        for monitor, exception in errors:
+        for monitor, exc_name, exc in errors:
             if type(monitor) == str:
-                msg += f'\t{monitor}'
+                msg += f'\n\t{monitor}'
             else:
-                msg += f'\t{monitor["name"]} ({monitor["serial"]})'
-            msg += f' -> {type(exception).__name__}: {exception}'
+                msg += f'\n\t{monitor["name"]} ({monitor["serial"]})'
+            msg += f' -> {exc_name}: '
+            msg += str(exc).replace('\n', '\n\t\t')
     else:
         msg += '\tno valid output was recieved from brightness methods'
 
@@ -806,27 +819,17 @@ def set_brightness(
     # make sure value is within bounds
     value = max(min(100, value), 0)
 
-    try:
-        return __brightness(value, display=display, method=method, meta_method='set', no_return=no_return)
-    except Exception as e:
-        if verbose_error:
-            # make sure that the error raised is a ScreenBrightnessError
-            if isinstance(e, ScreenBrightnessError):
-                raise e
-            else:
-                raise ScreenBrightnessError from e
-
-        # assign variable here to avoid it being cleaned up
-        error = e
-
-    # if the function has not already returned, it has failed
-    raise ScreenBrightnessError(f'Failed to set brightness: {error}')
+    return __brightness(
+        value, display=display, method=method,
+        meta_method='set', no_return=no_return,
+        verbose_error=verbose_error
+    )
 
 
 def get_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
-    verbose_error: bool = False, **kwargs
+    verbose_error: bool = False
 ) -> Union[List[int], int]:
     '''
     Returns the current display brightness
@@ -856,22 +859,8 @@ def get_brightness(
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    try:
-        out = __brightness(display=display, method=method, meta_method='get')
-        return out[0] if (type(out) == list and len(out) == 1) else out
-    except Exception as e:
-        if verbose_error:
-            # make sure that the error raised is a ScreenBrightnessError
-            if isinstance(e, ScreenBrightnessError):
-                raise e
-            else:
-                raise ScreenBrightnessError from e
-
-        # assign variable here to avoid it being cleaned up
-        error = e
-
-    # if the function has not already returned, it has failed
-    raise ScreenBrightnessError(f'Failed to get brightness: {error}')
+    out = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    return out[0] if (type(out) == list and len(out) == 1) else out
 
 
 __cache__ = __Cache()
