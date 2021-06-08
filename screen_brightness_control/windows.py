@@ -507,7 +507,7 @@ class VCP:
         if display is not None:
             # attempt to retrieve cached value for speed reasons
             try:
-                return __cache__.get(f'vcp_brightness_{display}')
+                return [__cache__.get(f'vcp_brightness_{display}')]
             except Exception:
                 pass
 

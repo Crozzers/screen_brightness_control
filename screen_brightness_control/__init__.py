@@ -21,8 +21,9 @@ class __Cache(dict):
         raise KeyError
 
     def store(self, key, value, *args, expires=1, **kwargs):
-        expires += time.time()
-        super().__setitem__(key, (value, expires, args, kwargs))
+        if self.enabled:
+            expires += time.time()
+            super().__setitem__(key, (value, expires, args, kwargs))
 
     def expire(self, key=None, startswith=None, endswith=None):
         if key is not None:
@@ -193,6 +194,9 @@ class Monitor():
         else:
             info = filter_monitors(display=display, haystack=monitors_info)[0]
 
+        # make a copy so that we don't alter the dict in-place
+        info = info.copy()
+
         self.serial: str = info.pop('serial')
         '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
         self.name: str = info.pop('name')
@@ -263,6 +267,9 @@ class Monitor():
             primary.set_brightness(50)
             ```
         '''
+        # refresh display info, in case another display has been unplugged or something
+        # which would change the index of this display
+        self.get_info()
         value = max(0, min(value, 100))
         self.method.set_brightness(value, display=self.index)
         if no_return:
@@ -289,6 +296,9 @@ class Monitor():
             primary_brightness = primary.get_brightness()
             ```
         '''
+        # refresh display info, in case another display has been unplugged or something
+        # which would change the index of this display
+        self.get_info()
         kwargs['display'] = self.index
         return self.method.get_brightness(**kwargs)[0]
 
@@ -315,6 +325,9 @@ class Monitor():
             primary.fade_brightness(50)
             ```
         '''
+        # refresh display info, in case another display has been unplugged or something
+        # which would change the index of this display
+        self.get_info()
         kwargs['display'] = self.index
         # the reason we override the method kwarg here is that
         # the 'index' is method specific and `fade_brightness`
@@ -346,6 +359,16 @@ class Monitor():
             info = primary.get_info()
             ```
         '''
+        identifier = self.get_identifier()
+
+        if identifier is not None:
+            # refresh the info we have on this monitor
+            info = filter_monitors(display=identifier[1], method=self.method.__name__)[0]
+            for key, value in info.items():
+                # exclude the 'brightness' key because that will quickly become out of date
+                if value is not None and key != 'brightness':
+                    setattr(self, key, value)
+
         return vars(self)
 
     def is_active(self) -> bool:
@@ -496,7 +519,7 @@ def filter_monitors(
         # find a valid identifier for a monitor, excluding any which are equal to None
         added = False
         for identifier in ['edid', 'serial', 'name', 'model'] + include:
-            if monitor[identifier] is not None:
+            if monitor.get(identifier, None) is not None:
                 # check we haven't already added the monitor
                 if monitor[identifier] not in unique_identifiers:
                     # check if the display kwarg (if str) matches this monitor
