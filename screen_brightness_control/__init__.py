@@ -21,9 +21,7 @@ class __Cache(dict):
         raise KeyError
 
     def store(self, key, value, *args, expires=1, **kwargs):
-        if self.enabled:
-            expires += time.time()
-            super().__setitem__(key, (value, expires, args, kwargs))
+        super().__setitem__(key, (value, expires + time.time(), args, kwargs))
 
     def expire(self, key=None, startswith=None, endswith=None):
         if key is not None:
@@ -116,17 +114,17 @@ MONITOR_MANUFACTURER_CODES = {
 @lru_cache
 def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     '''internal function to search the monitor manufacturer codes dict'''
-    keys = list(MONITOR_MANUFACTURER_CODES.keys())
-    keys_lower = [i.lower() for i in keys]
-    values = list(MONITOR_MANUFACTURER_CODES.values())
-    search_lower = search.lower()
+    keys = tuple(MONITOR_MANUFACTURER_CODES.keys())
+    keys_lower = tuple(map(str.lower, keys))
+    values = tuple(MONITOR_MANUFACTURER_CODES.values())
+    search = search.lower()
 
-    if search_lower in keys_lower:
-        index = keys_lower.index(search_lower)
+    if search in keys_lower:
+        index = keys_lower.index(search)
     else:
-        values_lower = [i.lower() for i in values]
-        if search_lower in values_lower:
-            index = values_lower.index(search_lower)
+        values_lower = tuple(map(str.lower, values))
+        if search in values_lower:
+            index = values_lower.index(search)
         else:
             return None
     return keys[index], values[index]
@@ -707,15 +705,12 @@ def fade_brightness(
         del(kwargs['verbose_error'])
 
     try:
-        # sift through kwargs and find args that are compatible with filter_monitors
-        # this __code__.co_varnames is kinda hacky but since filter_monitors
-        # doesn't have any special *args or **kwargs it should be fine
-        kw = {}
-        for key, value in kwargs.items():
-            if key in filter_monitors.__code__.co_varnames[:filter_monitors.__code__.co_argcount]:
-                kw[key] = value
-        available_monitors = filter_monitors(**kw)
-        del(kw)
+        # make sure only compatible kwargs are passed to filter_monitors
+        available_monitors = filter_monitors(
+            **{k: v for k, v in kwargs.items() if k in (
+                'display', 'haystack', 'method', 'include'
+            )}
+        )
     except (IndexError, LookupError) as e:
         raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
     except ValueError as e:
