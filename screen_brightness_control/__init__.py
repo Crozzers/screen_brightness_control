@@ -1,9 +1,10 @@
 import platform
-import time
+import struct
 import threading
-from typing import List, Tuple, Union, Optional, Any
-from functools import lru_cache
+import time
 import traceback
+from functools import lru_cache
+from typing import Any, List, Optional, Tuple, Union
 
 
 class __Cache(dict):
@@ -41,6 +42,93 @@ class __Cache(dict):
                     del(self[i])
                 else:
                     pass
+
+
+class EDID:
+    '''
+    Simple structure and method to extract monitor serial and name from an EDID string.
+
+    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
+    '''
+    EDID_FORMAT = (
+        ">"     # big-endian
+        "8s"    # constant header (8 bytes)
+        "H"     # manufacturer id (2 bytes)
+        "H"     # product id (2 bytes)
+        "I"     # serial number (4 bytes)
+        "B"     # manufactoring week (1 byte)
+        "B"     # manufactoring year (1 byte)
+        "B"     # edid version (1 byte)
+        "B"     # edid revision (1 byte)
+        "B"     # video input type (1 byte)
+        "B"     # horizontal size in cm (1 byte)
+        "B"     # vertical size in cm (1 byte)
+        "B"     # display gamma (1 byte)
+        "B"     # supported features (1 byte)
+        "10s"   # color characteristics (10 bytes)
+        "H"     # supported timings (2 bytes)
+        "B"     # reserved timing (1 byte)
+        "16s"   # EDID supported timings (16 bytes)
+        "18s"   # detailed timing block 1 (18 bytes)
+        "18s"   # detailed timing block 2 (18 bytes)
+        "18s"   # detailed timing block 3 (18 bytes)
+        "18s"   # detailed timing block 4 (18 bytes)
+        "B"     # extension flag (1 byte)
+        "B"     # checksum (1 byte)
+    )
+
+    @classmethod
+    def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
+        '''
+        Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
+        attempts to extract the monitor's name and serial number from it
+
+        Args:
+            edid (str): the edid string
+
+        Returns:
+            tuple: First item can be None or str. Second item is always str.
+                This represents the name and serial respectively.
+                If the name (first item) is None then this function likely
+                failed to extract the serial correctly.
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            edid = sbc.list_monitors_info()[0]['edid']
+            name, serial = sbc.EDID.parse_edid(edid)
+            if name is not None:
+                print('Success!')
+                print('Name:', name)
+                print('Serial:', serial)
+            else:
+                print('Unable to extract the data')
+            ```
+        '''
+        def filter_hex(st):
+            st = str(st)
+            while '\\x' in st:
+                i = st.index('\\x')
+                st = st.replace(st[i:i + 4], '')
+            return st.replace('\\n', '')[2:-1]
+
+        if ' ' in edid:
+            edid = edid.replace(' ', '')
+        edid = bytes.fromhex(edid)
+        data = struct.unpack(cls.EDID_FORMAT, edid)
+        serial = filter_hex(data[18])
+        # other info can be anywhere in this range, I don't know why
+        name = None
+        for i in data[19:22]:
+            try:
+                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
+                if st.index(' ') < len(st) - 1:
+                    name = filter_hex(i).split(' ')
+                    name = name[0].lower().capitalize() + ' ' + name[1]
+            except Exception:
+                pass
+        return name, serial.strip(' ')
 
 
 MONITOR_MANUFACTURER_CODES = {
@@ -233,7 +321,8 @@ class Monitor():
             monitor (dict): extract an identifier from this dict instead of the monitor class
 
         Returns:
-            tuple: a key, value pair
+            tuple: the name of the property returned and the value of said property.
+                EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
         '''
         if monitor is None:
             monitor = self
@@ -601,8 +690,8 @@ def __brightness(
             try:
                 if meta_method == 'set':
                     monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
-                if no_return:
-                    continue
+                    if no_return:
+                        continue
 
                 if brightness_value_cache is False:
                     output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))

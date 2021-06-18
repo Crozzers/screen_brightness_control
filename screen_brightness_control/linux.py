@@ -1,9 +1,11 @@
 import subprocess
 import os
-import struct
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__
-from typing import List, Tuple, Union, Optional
+from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__, EDID
+from typing import List, Union, Optional
 import warnings
+
+# edid class used to be defined here as _EDID
+_EDID = EDID
 
 
 def warn_deprecated(name, alternative=None):
@@ -16,91 +18,6 @@ def warn_deprecated(name, alternative=None):
     if alternative:
         msg += f' Use screen_brightness_control.{alternative} instead'
     warnings.warn(msg, DeprecationWarning)
-
-
-class _EDID:
-    '''
-    Simple structure and method to extract monitor serial and name from an EDID string.
-
-    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
-    '''
-    EDID_FORMAT = (
-        ">"     # big-endian
-        "8s"    # constant header (8 bytes)
-        "H"     # manufacturer id (2 bytes)
-        "H"     # product id (2 bytes)
-        "I"     # serial number (4 bytes)
-        "B"     # manufactoring week (1 byte)
-        "B"     # manufactoring year (1 byte)
-        "B"     # edid version (1 byte)
-        "B"     # edid revision (1 byte)
-        "B"     # video input type (1 byte)
-        "B"     # horizontal size in cm (1 byte)
-        "B"     # vertical size in cm (1 byte)
-        "B"     # display gamma (1 byte)
-        "B"     # supported features (1 byte)
-        "10s"   # color characteristics (10 bytes)
-        "H"     # supported timings (2 bytes)
-        "B"     # reserved timing (1 byte)
-        "16s"   # EDID supported timings (16 bytes)
-        "18s"   # detailed timing block 1 (18 bytes)
-        "18s"   # detailed timing block 2 (18 bytes)
-        "18s"   # detailed timing block 3 (18 bytes)
-        "18s"   # detailed timing block 4 (18 bytes)
-        "B"     # extension flag (1 byte)
-        "B"     # checksum (1 byte)
-    )
-
-    @classmethod
-    def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
-        '''
-        Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
-        attempts to extract the monitor's name and serial number from it
-
-        Args:
-            edid (str): the edid string
-
-        Returns:
-            tuple: First item can be None or str.
-                Second item is always str
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            edid = sbx.linux.list_monitors_info()[0]['edid']
-            name, serial = sbc.linux._EDID.parse_edid(edid)
-            if name is not None:
-                print('Success!')
-                print('Name:', name)
-                print('Serial:', serial)
-            else:
-                print('Unable to extract the data')
-            ```
-        '''
-        def filter_hex(st):
-            st = str(st)
-            while '\\x' in st:
-                i = st.index('\\x')
-                st = st.replace(st[i:i + 4], '')
-            return st.replace('\\n', '')[2:-1]
-
-        if ' ' in edid:
-            edid = edid.replace(' ', '')
-        edid = bytes.fromhex(edid)
-        data = struct.unpack(cls.EDID_FORMAT, edid)
-        serial = filter_hex(data[18])
-        # other info can be anywhere in this range, I don't know why
-        name = None
-        for i in data[19:22]:
-            try:
-                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
-                if st.index(' ') < len(st) - 1:
-                    name = filter_hex(i).split(' ')
-                    name = name[0].lower().capitalize() + ' ' + name[1]
-            except Exception:
-                pass
-        return name, serial
 
 
 class Light:
@@ -173,7 +90,7 @@ class Light:
                                     if len(i) == 4:
                                         edid += i[2:] + i[:2]
                             tmp['edid'] = edid
-                            name, serial = _EDID.parse_edid(edid)
+                            name, serial = EDID.parse_edid(edid)
                             if name is not None:
                                 tmp['serial'] = serial
                                 tmp['name'] = name
@@ -407,7 +324,7 @@ class XRandr:
                             edid.append(st[j].replace('\t', '').replace(' ', ''))
                         edid = ''.join(edid)
                         tmp['edid'] = edid
-                        name, serial = _EDID.parse_edid(edid)
+                        name, serial = EDID.parse_edid(edid)
                         tmp['name'] = name if name is not None else tmp['interface']
                         if name is not None:
                             tmp['manufacturer'] = name.split(' ')[0]
