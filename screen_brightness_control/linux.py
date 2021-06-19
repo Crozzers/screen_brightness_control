@@ -448,7 +448,6 @@ class XRandr:
         # The problem is that that display info is cached, meaning that the brightness
         # value is also cached. We must expire it here.
         __cache__.expire('xrandr_monitors_info')
-        return cls.get_brightness(display=display) if not no_return else None
 
 
 class DDCUtil:
