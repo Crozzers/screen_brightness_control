@@ -7,41 +7,317 @@ from functools import lru_cache
 from typing import Any, List, Optional, Tuple, Union
 
 
-class __Cache(dict):
-    '''class to cache data with a short shelf life'''
-    def __init__(self):
-        self.enabled = True
-        super().__init__()
+def get_brightness(
+    display: Optional[Union[int, str]] = None,
+    method: Optional[str] = None,
+    verbose_error: bool = False
+) -> Union[List[int], int]:
+    '''
+    Returns the current display brightness
 
-    def get(self, key, *args, **kwargs):
-        if not self.enabled:
-            raise Exception
-        value, expires, orig_args, orig_kwargs = super().__getitem__(key)
-        if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
-            return value
-        raise KeyError
+    Args:
+        display (str or int): the specific display to query
+        method (str): the way in which displays will be accessed.
+            On Windows this can be 'wmi' or 'vcp'.
+            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
+        verbose_error (bool): controls the level of detail in the error messages
 
-    def store(self, key, value, *args, expires=1, **kwargs):
-        super().__setitem__(key, (value, expires + time.time(), args, kwargs))
+    Returns:
+        int: an integer from 0 to 100 if only one display is detected
+        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
 
-    def expire(self, key=None, startswith=None, endswith=None):
-        if key is not None:
-            try:
-                del(self[key])
-            except Exception:
-                pass
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # get the current screen brightness (for all detected displays)
+        current_brightness = sbc.get_brightness()
+
+        # get the brightness of the primary display
+        primary_brightness = sbc.get_brightness(display=0)
+
+        # get the brightness of the secondary display (if connected)
+        secondary_brightness = sbc.get_brightness(display=1)
+        ```
+    '''
+    out = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    return out[0] if (type(out) == list and len(out) == 1) else out
+
+
+def set_brightness(
+    value: Union[int, float, str],
+    display: Optional[Union[str, int]] = None,
+    method: Optional[str] = None,
+    force: bool = False,
+    verbose_error: bool = False,
+    no_return: bool = False
+) -> Union[List[int], int, None]:
+    '''
+    Sets the screen brightness
+
+    Args:
+        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
+        display (int or str): the specific display to adjust
+        method (str): the way in which displays will be accessed.
+            On Windows this can be 'wmi' or 'vcp'.
+            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
+        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+            This is because on most displays a brightness of 0 will turn off the backlight.
+            If True, this check is bypassed
+        verbose_error (bool): boolean value controls the amount of detail error messages will contain
+        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
+            If True, this function returns None
+
+    Returns:
+        list: list of ints (0 to 100)
+        int: if only one display is affected
+        None: if the `no_return` kwarg is specified
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # set brightness to 50%
+        sbc.set_brightness(50)
+
+        # set brightness to 0%
+        sbc.set_brightness(0, force=True)
+
+        # increase brightness by 25%
+        sbc.set_brightness('+25')
+
+        # decrease brightness by 30%
+        sbc.set_brightness('-30')
+
+        # set the brightness of display 0 to 50%
+        sbc.set_brightness(50, display=0)
+        ```
+    '''
+    if type(value) == str and ('+' in value or '-' in value):
+        value = int(float(value))
+        current = get_brightness(method=method, verbose_error=verbose_error)
+        if type(current) == list:
+            # if there are multiple monitors then set the brightness value for
+            # each individually
+            output = []
+            for i, c in enumerate(current):
+                output.append(
+                    set_brightness(
+                        c + value, display=i, method=method,
+                        no_return=no_return, verbose_error=verbose_error
+                    )
+                )
+            output = flatten_list(output)
+            return output[0] if len(output) == 1 else output
         else:
-            for i in list(self.keys()):
-                cond1 = startswith is not None and i.startswith(startswith)
-                cond2 = endswith is not None and i.endswith(endswith)
-                if cond1 and cond2:
-                    del(self[i])
-                elif cond1:
-                    del(self[i])
-                elif cond2:
-                    del(self[i])
-                else:
-                    pass
+            # if there is only one monitor then just add the offset to the
+            # current brightness and continue
+            value += current
+    else:
+        value = int(float(str(value)))
+
+    # make sure value is within bounds
+    value = max(min(100, value), 0)
+
+    return __brightness(
+        value, display=display, method=method,
+        meta_method='set', no_return=no_return,
+        verbose_error=verbose_error
+    )
+
+
+def fade_brightness(
+    finish: Union[int, str],
+    start: Optional[Union[int, str]] = None,
+    interval: float = 0.01,
+    increment: int = 1,
+    blocking: bool = True,
+    **kwargs
+) -> Union[List[threading.Thread], List[int], int]:
+    '''
+    A function to somewhat gently fade the screen brightness from `start` to `finish`
+
+    Args:
+        finish (int or str): the brightness level to end up on
+        start (int or str): where the brightness should fade from.
+            If not specified the function starts from the current screen brightness
+        interval (float or int): the time delay between each step in brightness
+        increment (int): the amount to change the brightness by per step
+        blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
+        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs).
+            Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
+
+    Returns:
+        list: list of `threading.Thread` objects if `blocking == False`,
+            otherwise it returns the result of `get_brightness()`
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        # fade brightness from the current brightness to 50%
+        sbc.fade_brightness(50)
+
+        # fade the brightness from 25% to 75%
+        sbc.fade_brightness(75, start=25)
+
+        # fade the brightness from the current value to 100% in steps of 10%
+        sbc.fade_brightness(100, increment=10)
+
+        # fade the brightness from 100% to 90% with time intervals of 0.1 seconds
+        sbc.fade_brightness(90, start=100, interval=0.1)
+
+        # fade the brightness to 100% in a new thread
+        sbc.fade_brightness(100, blocking=False)
+        ```
+    '''
+    def fade(start, finish, increment, monitor):
+        for i in range(min(start, finish), max(start, finish), increment):
+            val = i
+            if start > finish:
+                val = start - (val - finish)
+            monitor.set_brightness(val, no_return=True)
+            time.sleep(interval)
+
+        if monitor.get_brightness() != finish:
+            monitor.set_brightness(finish, no_return=True)
+        return
+
+    threads = []
+    if 'verbose_error' in kwargs.keys():
+        del(kwargs['verbose_error'])
+
+    try:
+        # make sure only compatible kwargs are passed to filter_monitors
+        available_monitors = filter_monitors(
+            **{k: v for k, v in kwargs.items() if k in (
+                'display', 'haystack', 'method', 'include'
+            )}
+        )
+    except (IndexError, LookupError) as e:
+        raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
+    except ValueError as e:
+        if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+            available_monitors = [method.XBacklight]
+        else:
+            raise e
+
+    for i in available_monitors:
+        try:
+            if (
+                platform.system() == 'Linux'
+                and (
+                    'method' in kwargs
+                    and kwargs['method'] is not None
+                    and kwargs['method'].lower() == 'xbacklight'
+                )
+            ):
+                monitor = i
+            else:
+                monitor = Monitor(i)
+            # same effect as monitor.is_active()
+            current = monitor.get_brightness()
+            st, fi = start, finish
+            # convert strings like '+5' to an actual brightness value
+            if isinstance(fi, str):
+                if "+" in fi or "-" in fi:
+                    fi = current + int(float(fi))
+            if isinstance(st, str):
+                if "+" in st or "-" in st:
+                    st = current + int(float(st))
+
+            st = current if st is None else st
+            # make sure both values are within the correct range
+            fi = min(max(int(fi), 0), 100)
+            st = min(max(int(st), 0), 100)
+
+            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+            t1.start()
+            threads.append(t1)
+        except Exception:
+            pass
+
+    if not blocking:
+        return threads
+    else:
+        for t in threads:
+            t.join()
+        return get_brightness(**kwargs)
+
+
+def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
+    '''
+    list detailed information about all monitors that are controllable by this library
+
+    Args:
+        method (str): the method to use to list the available monitors.
+            On Windows this can be `'wmi'` or `'vcp'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
+        allow_duplicates (bool): whether to filter out duplicate displays or not
+
+    Returns:
+        list: list of dictionaries
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitors = sbc.list_monitors_info()
+        for monitor in monitors:
+            print('=======================')
+
+            # the manufacturer name plus the model
+            print('Name:', monitor['name'])
+
+            # the general model of the display
+            print('Model:', monitor['model'])
+
+            # a unique string assigned by Windows to this display
+            print('Serial:', monitor['serial'])
+
+            # the name of the brand of the monitor
+            print('Manufacturer:', monitor['manufacturer'])
+
+            # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
+            print('Manufacturer ID:', monitor['manufacturer_id'])
+
+            # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
+            print('Index:', monitor['index'])
+
+            # the method this monitor can be addressed by
+            print('Method:', monitor['method'])
+
+            # the EDID string associated with that monitor
+            print('EDID:', monitor['edid'])
+        ```
+    '''
+    try:
+        return __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
+    except Exception:
+        info = globals()['method'].list_monitors_info(method=method, allow_duplicates=allow_duplicates)
+        __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
+        return info
+
+
+def list_monitors(method: Optional[str] = None) -> List[str]:
+    '''
+    List the names of all detected monitors
+
+    Args:
+        method (str): the method to use to list the available monitors.
+            On Windows this can be `'wmi'` or `'vcp'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
+
+    Returns:
+        list: list of strings
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        monitor_names = sbc.list_monitors()
+        # eg: ['BenQ GL2450H', 'Dell U2211H']
+        ```
+    '''
+    return [i['name'] for i in list_monitors_info(method=method)]
 
 
 class EDID:
@@ -482,81 +758,6 @@ class Monitor():
             return False
 
 
-def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
-    '''
-    list detailed information about all monitors that are controllable by this library
-
-    Args:
-        method (str): the method to use to list the available monitors.
-            On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
-        allow_duplicates (bool): whether to filter out duplicate displays or not
-
-    Returns:
-        list: list of dictionaries
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-        monitors = sbc.list_monitors_info()
-        for monitor in monitors:
-            print('=======================')
-
-            # the manufacturer name plus the model
-            print('Name:', monitor['name'])
-
-            # the general model of the display
-            print('Model:', monitor['model'])
-
-            # a unique string assigned by Windows to this display
-            print('Serial:', monitor['serial'])
-
-            # the name of the brand of the monitor
-            print('Manufacturer:', monitor['manufacturer'])
-
-            # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Manufacturer ID:', monitor['manufacturer_id'])
-
-            # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Index:', monitor['index'])
-
-            # the method this monitor can be addressed by
-            print('Method:', monitor['method'])
-
-            # the EDID string associated with that monitor
-            print('EDID:', monitor['edid'])
-        ```
-    '''
-    try:
-        return __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
-    except Exception:
-        info = method.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
-        __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
-        return info
-
-
-def list_monitors(method: Optional[str] = None) -> List[str]:
-    '''
-    List the names of all detected monitors
-
-    Args:
-        method (str): the method to use to list the available monitors.
-            On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
-
-    Returns:
-        list: list of strings
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-        monitor_names = sbc.list_monitors()
-        # eg: ['BenQ GL2450H', 'Dell U2211H']
-        ```
-    '''
-    return [i['name'] for i in list_monitors_info(method=method)]
-
-
 def filter_monitors(
     display: Optional[Union[int, str]] = None,
     haystack: Optional[list] = None,
@@ -738,242 +939,41 @@ def __brightness(
     raise ScreenBrightnessError(msg)
 
 
-def fade_brightness(
-    finish: Union[int, str],
-    start: Optional[Union[int, str]] = None,
-    interval: float = 0.01,
-    increment: int = 1,
-    blocking: bool = True,
-    **kwargs
-) -> Union[List[threading.Thread], List[int], int]:
-    '''
-    A function to somewhat gently fade the screen brightness from `start` to `finish`
+class __Cache(dict):
+    '''class to cache data with a short shelf life'''
+    def __init__(self):
+        self.enabled = True
+        super().__init__()
 
-    Args:
-        finish (int or str): the brightness level to end up on
-        start (int or str): where the brightness should fade from.
-            If not specified the function starts from the current screen brightness
-        interval (float or int): the time delay between each step in brightness
-        increment (int): the amount to change the brightness by per step
-        blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
-        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs).
-            Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
+    def get(self, key, *args, **kwargs):
+        if not self.enabled:
+            raise Exception
+        value, expires, orig_args, orig_kwargs = super().__getitem__(key)
+        if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
+            return value
+        raise KeyError
 
-    Returns:
-        list: list of `threading.Thread` objects if `blocking == False`,
-            otherwise it returns the result of `get_brightness()`
+    def store(self, key, value, *args, expires=1, **kwargs):
+        super().__setitem__(key, (value, expires + time.time(), args, kwargs))
 
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # fade brightness from the current brightness to 50%
-        sbc.fade_brightness(50)
-
-        # fade the brightness from 25% to 75%
-        sbc.fade_brightness(75, start=25)
-
-        # fade the brightness from the current value to 100% in steps of 10%
-        sbc.fade_brightness(100, increment=10)
-
-        # fade the brightness from 100% to 90% with time intervals of 0.1 seconds
-        sbc.fade_brightness(90, start=100, interval=0.1)
-
-        # fade the brightness to 100% in a new thread
-        sbc.fade_brightness(100, blocking=False)
-        ```
-    '''
-    def fade(start, finish, increment, monitor):
-        for i in range(min(start, finish), max(start, finish), increment):
-            val = i
-            if start > finish:
-                val = start - (val - finish)
-            monitor.set_brightness(val, no_return=True)
-            time.sleep(interval)
-
-        if monitor.get_brightness() != finish:
-            monitor.set_brightness(finish, no_return=True)
-        return
-
-    threads = []
-    if 'verbose_error' in kwargs.keys():
-        del(kwargs['verbose_error'])
-
-    try:
-        # make sure only compatible kwargs are passed to filter_monitors
-        available_monitors = filter_monitors(
-            **{k: v for k, v in kwargs.items() if k in (
-                'display', 'haystack', 'method', 'include'
-            )}
-        )
-    except (IndexError, LookupError) as e:
-        raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
-    except ValueError as e:
-        if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
-            available_monitors = [method.XBacklight]
+    def expire(self, key=None, startswith=None, endswith=None):
+        if key is not None:
+            try:
+                del(self[key])
+            except Exception:
+                pass
         else:
-            raise e
-
-    for i in available_monitors:
-        try:
-            if (
-                platform.system() == 'Linux'
-                and (
-                    'method' in kwargs
-                    and kwargs['method'] is not None
-                    and kwargs['method'].lower() == 'xbacklight'
-                )
-            ):
-                monitor = i
-            else:
-                monitor = Monitor(i)
-            # same effect as monitor.is_active()
-            current = monitor.get_brightness()
-            st, fi = start, finish
-            # convert strings like '+5' to an actual brightness value
-            if isinstance(fi, str):
-                if "+" in fi or "-" in fi:
-                    fi = current + int(float(fi))
-            if isinstance(st, str):
-                if "+" in st or "-" in st:
-                    st = current + int(float(st))
-
-            st = current if st is None else st
-            # make sure both values are within the correct range
-            fi = min(max(int(fi), 0), 100)
-            st = min(max(int(st), 0), 100)
-
-            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-            t1.start()
-            threads.append(t1)
-        except Exception:
-            pass
-
-    if not blocking:
-        return threads
-    else:
-        for t in threads:
-            t.join()
-        return get_brightness(**kwargs)
-
-
-def set_brightness(
-    value: Union[int, float, str],
-    display: Optional[Union[str, int]] = None,
-    method: Optional[str] = None,
-    force: bool = False,
-    verbose_error: bool = False,
-    no_return: bool = False
-) -> Union[List[int], int, None]:
-    '''
-    Sets the screen brightness
-
-    Args:
-        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        display (int or str): the specific display to adjust
-        method (str): the way in which displays will be accessed.
-            On Windows this can be 'wmi' or 'vcp'.
-            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
-        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
-            This is because on most displays a brightness of 0 will turn off the backlight.
-            If True, this check is bypassed
-        verbose_error (bool): boolean value controls the amount of detail error messages will contain
-        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
-            If True, this function returns None
-
-    Returns:
-        list: list of ints (0 to 100)
-        int: if only one display is affected
-        None: if the `no_return` kwarg is specified
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # set brightness to 50%
-        sbc.set_brightness(50)
-
-        # set brightness to 0%
-        sbc.set_brightness(0, force=True)
-
-        # increase brightness by 25%
-        sbc.set_brightness('+25')
-
-        # decrease brightness by 30%
-        sbc.set_brightness('-30')
-
-        # set the brightness of display 0 to 50%
-        sbc.set_brightness(50, display=0)
-        ```
-    '''
-    if type(value) == str and ('+' in value or '-' in value):
-        value = int(float(value))
-        current = get_brightness(method=method, verbose_error=verbose_error)
-        if type(current) == list:
-            # if there are multiple monitors then set the brightness value for
-            # each individually
-            output = []
-            for i, c in enumerate(current):
-                output.append(
-                    set_brightness(
-                        c + value, display=i, method=method,
-                        no_return=no_return, verbose_error=verbose_error
-                    )
-                )
-            output = flatten_list(output)
-            return output[0] if len(output) == 1 else output
-        else:
-            # if there is only one monitor then just add the offset to the
-            # current brightness and continue
-            value += current
-    else:
-        value = int(float(str(value)))
-
-    # make sure value is within bounds
-    value = max(min(100, value), 0)
-
-    return __brightness(
-        value, display=display, method=method,
-        meta_method='set', no_return=no_return,
-        verbose_error=verbose_error
-    )
-
-
-def get_brightness(
-    display: Optional[Union[int, str]] = None,
-    method: Optional[str] = None,
-    verbose_error: bool = False
-) -> Union[List[int], int]:
-    '''
-    Returns the current display brightness
-
-    Args:
-        display (str or int): the specific display to query
-        method (str): the way in which displays will be accessed.
-            On Windows this can be 'wmi' or 'vcp'.
-            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
-        verbose_error (bool): controls the level of detail in the error messages
-
-    Returns:
-        int: an integer from 0 to 100 if only one display is detected
-        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # get the current screen brightness (for all detected displays)
-        current_brightness = sbc.get_brightness()
-
-        # get the brightness of the primary display
-        primary_brightness = sbc.get_brightness(display=0)
-
-        # get the brightness of the secondary display (if connected)
-        secondary_brightness = sbc.get_brightness(display=1)
-        ```
-    '''
-    out = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
-    return out[0] if (type(out) == list and len(out) == 1) else out
+            for i in list(self.keys()):
+                cond1 = startswith is not None and i.startswith(startswith)
+                cond2 = endswith is not None and i.endswith(endswith)
+                if cond1 and cond2:
+                    del(self[i])
+                elif cond1:
+                    del(self[i])
+                elif cond2:
+                    del(self[i])
+                else:
+                    pass
 
 
 __cache__ = __Cache()
