@@ -67,30 +67,33 @@ python -m screen_brightness_control --help
 You can read [the full documentation](https://crozzers.github.io/screen_brightness_control) for this project for more details but here are the basics.
 
 
-### get_brightness(`verbose_error=False, **kwargs`)
+### get_brightness(`display=None, method=None, verbose_error=False`)
 **Summary:**  
 Returns the current screen brightness as a percentage. It may return a list of values if you have multiple, brightness adjustable monitors.  
 Raises `ScreenBrightnessError` upon failure
 
 **Arguments:**
 
+* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
-* `kwargs` - passed to the OS relevant brightness method
 
 **Usage:**  
 ```python
 import screen_brightness_control as sbc
 
-#get the current screen brightness (for all detected displays)
+# get the current screen brightness (for all detected displays)
 all_screens_brightness = sbc.get_brightness()
-#get the brightness of the primary display
+# get the brightness of the primary display
 primary_display_brightness = sbc.get_brightness(display=0)
-#get the brightness of the secondary display (if connected)
+# get the brightness of the secondary display (if connected)
 secondary_display_brightness = sbc.get_brightness(display=1)
+# get the brightness for a named monitor
+benq_brightness = sbc.get_brightness(display='BenQ GL2450H')
 ```  
 
 
-### set_brightness(`value, force=False, verbose_error=False, **kwargs`)
+### set_brightness(`value, display=None, method=None, force=False, verbose_error=False, no_return=False`)
 **Summary:**  
 Sets the brightness to `value`. If `value` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
 Raises `ScreenBrightnessError` upon failure
@@ -98,9 +101,11 @@ Raises `ScreenBrightnessError` upon failure
 **Arguments:**
 
 * `value` - the level to set the brightness to. Can either be an integer or a string.
+* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
-* `kwargs` - passed to the OS relevant brightness method
+* `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is what the brightness was set to.
 
 **Usage:**  
 ```python
@@ -158,6 +163,22 @@ sbc.fade_brightness(100, blocking=False)
 ```
 
 
+### list_monitors(`method=None`)
+**Summary:**  
+Returns a list of the names of all detected monitors
+
+**Arguments:**
+
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
+
+**Usage:**  
+```python
+import screen_brightness_control as sbc
+monitor_names = sbc.list_monitors()
+# eg: ['BenQ GL2450H', 'Dell U2211H']
+```
+
+
 ## A Toast
 To GitHub users [lcharles](https://github.com/lcharles), [Ved Rathi](https://github.com/Ved-programmer), [Daniel Wong](https://github.com/drojf), [Melek REBAI](https://github.com/shadoWalker89) and [Mathias Johansson](https://github.com/Mathias9807) for contributing to this project
 
@@ -209,7 +230,7 @@ You can likely see this if you open your display settings and very slowly move t
 You can find out your brightness 'levels' by running the following python code:
 ```python
 import wmi
-monitor = wmi.WMI(namespace='wmi').MonitorBrightness[0]
+monitor = wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0]
 #the number of levels the monitor can be set to
 print(monitor.Levels)
 #the actual brightness values your monitor can be set to

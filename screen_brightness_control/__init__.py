@@ -76,6 +76,7 @@ class EDID:
         "B"     # extension flag (1 byte)
         "B"     # checksum (1 byte)
     )
+    '''The byte structure for EDID strings'''
 
     @classmethod
     def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
@@ -481,12 +482,15 @@ class Monitor():
             return False
 
 
-def list_monitors_info(**kwargs) -> List[dict]:
+def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
     '''
     list detailed information about all monitors that are controllable by this library
 
     Args:
-        kwargs (dict): passed directly to OS relevant monitor list function
+        method (str): the method to use to list the available monitors.
+            On Windows this can be `'wmi'` or `'vcp'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
+        allow_duplicates (bool): whether to filter out duplicate displays or not
 
     Returns:
         list: list of dictionaries
@@ -524,19 +528,21 @@ def list_monitors_info(**kwargs) -> List[dict]:
         ```
     '''
     try:
-        return __cache__.get('monitors_info', **kwargs)
+        return __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
     except Exception:
-        info = method.list_monitors_info(**kwargs)
-        __cache__.store('monitors_info', info, **kwargs)
+        info = method.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
+        __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
         return info
 
 
-def list_monitors(**kwargs) -> List[str]:
+def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
     List the names of all detected monitors
 
     Args:
-        kwargs (dict): passed directly to OS relevant monitor list function
+        method (str): the method to use to list the available monitors.
+            On Windows this can be `'wmi'` or `'vcp'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
 
     Returns:
         list: list of strings
@@ -548,7 +554,7 @@ def list_monitors(**kwargs) -> List[str]:
         # eg: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    return [i['name'] for i in list_monitors_info(**kwargs)]
+    return [i['name'] for i in list_monitors_info(method=method)]
 
 
 def filter_monitors(
