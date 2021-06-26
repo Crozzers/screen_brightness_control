@@ -23,7 +23,7 @@ def warn_deprecated(name, alternative=None):
 class Light:
     '''collection of screen brightness related methods using the light executable'''
 
-    executable = 'light'
+    executable: str = 'light'
     '''the light executable to be called'''
 
     @classmethod
@@ -204,7 +204,7 @@ class Light:
 class XBacklight:
     '''collection of screen brightness related methods using the xbacklight executable'''
 
-    executable = 'xbacklight'
+    executable: str = 'xbacklight'
     '''the xbacklight executable to be called'''
 
     @classmethod
@@ -250,7 +250,7 @@ class XBacklight:
 class XRandr:
     '''collection of screen brightness related methods using the xrandr executable'''
 
-    executable = 'xrandr'
+    executable: str = 'xrandr'
     '''the xrandr executable to be called'''
 
     @classmethod
@@ -453,9 +453,9 @@ class XRandr:
 class DDCUtil:
     '''collection of screen brightness related methods using the ddcutil executable'''
 
-    executable = 'ddcutil'
+    executable: str = 'ddcutil'
     '''the ddcutil executable to be called'''
-    sleep_multiplier = 0.5
+    sleep_multiplier: float = 0.5
     '''how long ddcutil should sleep between each DDC request (lower is shorter).
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
 

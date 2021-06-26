@@ -804,7 +804,7 @@ def filter_monitors(
         monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
     if display is not None and type(display) not in (str, int):
-        raise TypeError(f'display kwarg must be int or str, not {type(display)}')
+        raise TypeError(f'display kwarg must be int or str, not "{type(display).__name__}"')
 
     # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
     unique_identifiers = []
@@ -880,16 +880,28 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
+
+    def format_exc(name, e):
+        errors.append((
+            name, e.__class__.__name__,
+            traceback.format_exc() if verbose_error else e
+        ))
+
     output = []
     errors = []
 
     try:
         monitors = filter_monitors(display=display, method=method)
-    except LookupError as e:
-        errors.append((
-            'filter_monitors', 'LookupError',
-            traceback.format_exc() if verbose_error else e
-        ))
+    except ValueError as e:
+        if platform.system() == 'Linux' and method == 'xbacklight':
+            try:
+                output.append(getattr(linux.XBacklight, f'{meta_method}_brightness')())
+            except Exception as e:
+                format_exc('filter_monitors', e)
+        else:
+            format_exc('filter_monitors', e)
+    except Exception as e:
+        format_exc('filter_monitors', e)
     else:
         # a cache that only is active for multiple monitors. It's faster that way
         brightness_value_cache = {} if len(monitors) > 1 else False
@@ -910,10 +922,7 @@ def __brightness(
                         output.append(brightness_value_cache[monitor['method']][monitor['index']])
             except Exception as e:
                 output.append(None)
-                errors.append((
-                    monitor, e.__class__.__name__,
-                    traceback.format_exc() if verbose_error else e
-                ))
+                format_exc(monitor, e)
 
     output = flatten_list(output)
 
@@ -928,11 +937,11 @@ def __brightness(
     if errors:
         for monitor, exc_name, exc in errors:
             if type(monitor) == str:
-                msg += f'\n\t{monitor}'
+                msg += f'\t{monitor}'
             else:
-                msg += f'\n\t{monitor["name"]} ({monitor["serial"]})'
+                msg += f'\t{monitor["name"]} ({monitor["serial"]})'
             msg += f' -> {exc_name}: '
-            msg += str(exc).replace('\n', '\n\t\t')
+            msg += str(exc).replace('\n', '\n\t\t') + '\n'
     else:
         msg += '\tno valid output was recieved from brightness methods'
 
