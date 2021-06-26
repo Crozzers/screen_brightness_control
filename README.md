@@ -75,7 +75,7 @@ Raises `ScreenBrightnessError` upon failure
 **Arguments:**
 
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 
 **Usage:**  
@@ -102,7 +102,7 @@ Raises `ScreenBrightnessError` upon failure
 
 * `value` - the level to set the brightness to. Can either be an integer or a string.
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is what the brightness was set to.
@@ -169,7 +169,7 @@ Returns a list of the names of all detected monitors
 
 **Arguments:**
 
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, '`xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
 
 **Usage:**  
 ```python
