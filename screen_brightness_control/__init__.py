@@ -94,24 +94,23 @@ def set_brightness(
     '''
     if type(value) == str and ('+' in value or '-' in value):
         value = int(float(value))
-        current = get_brightness(method=method, verbose_error=verbose_error)
-        if type(current) == list:
-            # if there are multiple monitors then set the brightness value for
-            # each individually
+        monitors = filter_monitors(display=display, method=method)
+        if len(monitors) > 1:
             output = []
-            for i, c in enumerate(current):
+            for monitor in monitors:
                 output.append(
                     set_brightness(
-                        c + value, display=i, method=method,
-                        no_return=no_return, verbose_error=verbose_error
+                        get_brightness(display=monitor['serial']) + value,
+                        display=monitor['serial'],
+                        force=force,
+                        verbose_error=verbose_error,
+                        no_return=no_return
                     )
                 )
             output = flatten_list(output)
             return output[0] if len(output) == 1 else output
         else:
-            # if there is only one monitor then just add the offset to the
-            # current brightness and continue
-            value += current
+            value += get_brightness(display=monitors[0]['serial'])
     else:
         value = int(float(str(value)))
 
@@ -933,7 +932,7 @@ def __brightness(
             msg += f' -> {exc_name}: '
             msg += str(exc).replace('\n', '\n\t\t') + '\n'
     else:
-        msg += '\tno valid output was recieved from brightness methods'
+        msg += '\tno valid output was received from brightness methods'
 
     raise ScreenBrightnessError(msg)
 
