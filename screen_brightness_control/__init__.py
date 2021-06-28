@@ -903,8 +903,6 @@ def __brightness(
     except Exception as e:
         format_exc('filter_monitors', e)
     else:
-        # a cache that only is active for multiple monitors. It's faster that way
-        brightness_value_cache = {} if len(monitors) > 1 else False
         for monitor in monitors:
             try:
                 if meta_method == 'set':
@@ -912,14 +910,7 @@ def __brightness(
                     if no_return:
                         continue
 
-                if brightness_value_cache is False:
-                    output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))
-                else:
-                    try:
-                        output.append(brightness_value_cache[monitor['method']][monitor['index']])
-                    except KeyError:
-                        brightness_value_cache[monitor['method']] = monitor['method'].get_brightness(**kwargs)
-                        output.append(brightness_value_cache[monitor['method']][monitor['index']])
+                output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))
             except Exception as e:
                 output.append(None)
                 format_exc(monitor, e)
