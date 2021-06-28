@@ -40,8 +40,7 @@ def get_brightness(
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    out = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
-    return out[0] if (type(out) == list and len(out) == 1) else out
+    return __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
 
 
 def set_brightness(
@@ -919,6 +918,7 @@ def __brightness(
 
     if output and not set(output) == {None}:
         # if all of the outputs are None then all of the monitors failed
+        output = output[0] if len(output) == 1 else output
         return output if not no_return else None
     elif meta_method == 'set' and no_return:
         return
