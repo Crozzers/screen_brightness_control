@@ -289,12 +289,11 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', monitor['edid'])
         ```
     '''
-    try:
-        return __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
-    except Exception:
+    info = __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
+    if info is None:
         info = globals()['method'].list_monitors_info(method=method, allow_duplicates=allow_duplicates)
         __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
-        return info
+    return info
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
@@ -947,11 +946,14 @@ class __Cache(dict):
 
     def get(self, key, *args, **kwargs):
         if not self.enabled:
-            raise Exception
-        value, expires, orig_args, orig_kwargs = super().__getitem__(key)
-        if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
-            return value
-        raise KeyError
+            return None
+
+        try:
+            value, expires, orig_args, orig_kwargs = super().__getitem__(key)
+            if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
+                return value
+        except KeyError:
+            pass
 
     def store(self, key, value, *args, expires=1, **kwargs):
         super().__setitem__(key, (value, expires + time.time(), args, kwargs))

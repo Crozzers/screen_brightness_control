@@ -54,9 +54,8 @@ class Light:
             edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
-        try:
-            displays = __cache__.get('light_monitors_info')
-        except Exception:
+        displays = __cache__.get('light_monitors_info')
+        if displays is None:
             res = subprocess.run([cls.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
             displays = []
             count = 0
@@ -291,9 +290,8 @@ class XRandr:
                     return True
             return False
 
-        try:
-            data = __cache__.get('xrandr_monitors_info')
-        except Exception:
+        data = __cache__.get('xrandr_monitors_info')
+        if data is None:
             out = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
             names = cls.get_display_interfaces()
             data = []
@@ -497,9 +495,8 @@ class DDCUtil:
                 return True
             return False
 
-        try:
-            data = __cache__.get('ddcutil_monitors_info')
-        except Exception:
+        data = __cache__.get('ddcutil_monitors_info')
+        if data is None:
             out = []
             # Use -v to get EDID string but this means output cannot be decoded.
             # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
@@ -622,11 +619,8 @@ class DDCUtil:
 
         res = []
         for m in monitors:
-            try:
-                out = __cache__.get('ddcutil_' + m['edid'] + '_brightness')
-                if out is None:
-                    raise Exception
-            except Exception:
+            out = __cache__.get('ddcutil_' + m['edid'] + '_brightness')
+            if out is None:
                 out = subprocess.check_output(
                     [
                         cls.executable,
@@ -721,9 +715,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('Method:', monitor['method'])
         ```
     '''
-    try:
-        return __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
-    except Exception:
+    info = __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
+    if info is None:
         methods = [XRandr, DDCUtil, Light]
         if method is not None:
             method = method.lower()
@@ -745,7 +738,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
                             edids.append(i['edid'])
                             info.append(i)
         __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
-        return info
+    return info
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:

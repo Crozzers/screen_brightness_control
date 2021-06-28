@@ -54,9 +54,8 @@ def get_display_info() -> List[dict]:
             print(display['name'])
         ```
     '''
-    try:
-        info = __cache__.get('windows_monitors_info_raw')
-    except Exception:
+    info = __cache__.get('windows_monitors_info_raw')
+    if info is None:
         try:
             # collect all monitor UIDs (derived from DeviceID)
             monitor_uids = {}
@@ -218,9 +217,8 @@ class WMI:
             benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
-        try:
-            info = __cache__.get('wmi_monitor_info')
-        except Exception:
+        info = __cache__.get('wmi_monitor_info')
+        if info is None:
             info = [i for i in get_display_info() if i['method'] == cls]
             __cache__.store('wmi_monitor_info', info)
         if display is not None:
@@ -412,9 +410,8 @@ class VCP:
             # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
-        try:
-            info = __cache__.get('vcp_monitor_info')
-        except Exception:
+        info = __cache__.get('vcp_monitor_info')
+        if info is None:
             info = [i for i in get_display_info() if i['method'] == cls]
             __cache__.store('vcp_monitor_info', info)
         if display is not None:
@@ -501,10 +498,10 @@ class VCP:
         '''
         if display is not None:
             # attempt to retrieve cached value for speed reasons
-            try:
-                return [__cache__.get(f'vcp_brightness_{display}')]
-            except Exception:
-                pass
+            tmp = __cache__.get(f'vcp_brightness_{display}')
+            if tmp is not None:
+                return tmp
+            del tmp
 
         code = BYTE(0x10)
         values = []
@@ -512,14 +509,13 @@ class VCP:
             cls.iter_physical_monitors(start=display),
             start=display if display is not None else 0
         ):
-            try:
+            current = None
+            if display is None:
                 # Only try cache if display isn't specified
                 # (we already tried specified ones earlier)
-                if display is None:
-                    current = __cache__.get(f'vcp_brightness_{index}')
-                else:
-                    raise Exception
-            except Exception:
+                current = __cache__.get(f'vcp_brightness_{index}')
+
+            if current is None:
                 cur_out = DWORD()
                 handle = HANDLE(monitor)
                 for _ in range(10):
@@ -626,9 +622,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', info['edid'])
         ```
     '''
-    try:
-        return __cache__.get(f'windows_monitors_info_{method}_{allow_duplicates}')
-    except Exception:
+    info = __cache__.get(f'windows_monitors_info_{method}_{allow_duplicates}')
+    if info is None:
         info = get_display_info()
 
         if method is not None:
@@ -645,7 +640,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
                     serials.append(i['serial'])
                     info_final.append(i)
         __cache__.store(f'windows_monitors_info_{method}_{allow_duplicates}', info_final)
-        return info_final
+        info = info_final
+    return info
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
