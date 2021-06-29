@@ -889,15 +889,16 @@ def __brightness(
 
     output = []
     errors = []
+    method = method.lower() if type(method) == str else method
 
     try:
         monitors = filter_monitors(display=display, method=method)
-    except ValueError as e:
-        if platform.system() == 'Linux' and method == 'xbacklight':
+    except (LookupError, ValueError) as e:
+        if platform.system() == 'Linux' and display is None and method in ('xbacklight', None):
             try:
                 output.append(getattr(linux.XBacklight, f'{meta_method}_brightness')())
             except Exception as e:
-                format_exc('filter_monitors', e)
+                format_exc('XBacklight', e)
         else:
             format_exc('filter_monitors', e)
     except Exception as e:
