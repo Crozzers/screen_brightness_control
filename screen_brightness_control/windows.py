@@ -496,25 +496,13 @@ class VCP:
             secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)[0]
             ```
         '''
-        if display is not None:
-            # attempt to retrieve cached value for speed reasons
-            tmp = __cache__.get(f'vcp_brightness_{display}')
-            if tmp is not None:
-                return tmp
-            del tmp
-
         code = BYTE(0x10)
         values = []
         for index, monitor in enumerate(
             cls.iter_physical_monitors(start=display),
             start=display if display is not None else 0
         ):
-            current = None
-            if display is None:
-                # Only try cache if display isn't specified
-                # (we already tried specified ones earlier)
-                current = __cache__.get(f'vcp_brightness_{index}')
-
+            current = __cache__.get(f'vcp_brightness_{index}')
             if current is None:
                 cur_out = DWORD()
                 handle = HANDLE(monitor)
