@@ -213,6 +213,7 @@ class XBacklight:
 
         Args:
             value (int): the value to set the brightnes to
+            **kwargs: arbitrary keyword arguments. Ignored
 
         Example:
             ```python
@@ -231,6 +232,7 @@ class XBacklight:
 
         Returns:
             int: from 0 to 100
+            **kwargs: arbitrary keyword arguments. Ignored
 
         Example:
             ```python

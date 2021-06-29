@@ -142,7 +142,7 @@ def fade_brightness(
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
-        kwargs (dict): passed directly to set_brightness (see `set_brightness` docs for available kwargs).
+        kwargs (dict): passed directly to `set_brightness`.
             Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
 
     Returns:
@@ -193,7 +193,7 @@ def fade_brightness(
             )}
         )
     except (IndexError, LookupError) as e:
-        raise ScreenBrightnessError(f'{type(e).__name__} -> {e}')
+        raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
     except ValueError as e:
         if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
             available_monitors = [method.XBacklight]
@@ -204,11 +204,7 @@ def fade_brightness(
         try:
             if (
                 platform.system() == 'Linux'
-                and (
-                    'method' in kwargs
-                    and kwargs['method'] is not None
-                    and kwargs['method'].lower() == 'xbacklight'
-                )
+                and str(kwargs.get('method', '')).lower() == 'xbacklight'
             ):
                 monitor = i
             else:
@@ -226,8 +222,8 @@ def fade_brightness(
 
             st = current if st is None else st
             # make sure both values are within the correct range
-            fi = min(max(int(fi), 0), 100)
-            st = min(max(int(st), 0), 100)
+            fi = min(max(int(float(fi)), 0), 100)
+            st = min(max(int(float(st)), 0), 100)
 
             t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
             t1.start()
@@ -671,7 +667,7 @@ class Monitor():
             args (tuple): passed directly to `fade_brightness`
             kwargs (dict): passed directly to `fade_brightness`.
                 The `display` kwarg is always overwritten.
-                The `method` kwarg may also be overwritten
+                The `method` kwarg is also overwritten
 
         Returns:
             threading.Thread: if the the blocking kwarg is False
@@ -688,7 +684,7 @@ class Monitor():
         '''
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
-        self.get_info()
+        self.get_info(refresh=False)
         kwargs['display'] = self.index
         # the reason we override the method kwarg here is that
         # the 'index' is method specific and `fade_brightness`
@@ -703,9 +699,13 @@ class Monitor():
             return b[0]
         return b
 
-    def get_info(self) -> dict:
+    def get_info(self, refresh: bool = True) -> dict:
         '''
         Returns all known information about this monitor instance
+
+        Args:
+            refresh (bool): whether to refresh the information
+                or to return the cached version
 
         Returns:
             dict
@@ -720,6 +720,9 @@ class Monitor():
             info = primary.get_info()
             ```
         '''
+        if not refresh:
+            return vars(self)
+
         identifier = self.get_identifier()
 
         if identifier is not None:
@@ -960,19 +963,19 @@ class __Cache(dict):
     def expire(self, key=None, startswith=None, endswith=None):
         if key is not None:
             try:
-                del(self[key])
+                super().__delitem__(key)
             except Exception:
                 pass
         else:
-            for i in list(self.keys()):
+            for i in tuple(self.keys()):
                 cond1 = startswith is not None and i.startswith(startswith)
                 cond2 = endswith is not None and i.endswith(endswith)
                 if cond1 and cond2:
-                    del(self[i])
+                    super().__delitem__(i)
                 elif cond1:
-                    del(self[i])
+                    super().__delitem__(i)
                 elif cond2:
-                    del(self[i])
+                    super().__delitem__(i)
                 else:
                     pass
 
