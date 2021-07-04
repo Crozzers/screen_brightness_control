@@ -636,13 +636,9 @@ class Monitor():
             return
         return self.get_brightness()
 
-    def get_brightness(self, **kwargs) -> int:
+    def get_brightness(self) -> int:
         '''
-        Returns the brightness of this display. See `get_brightness` for the full docs
-
-        Args:
-            kwargs (dict): passed directly to this monitor's brightness method
-                The `display` kwarg is always overwritten
+        Returns the brightness of this display.
 
         Returns:
             int: from 0 to 100
@@ -659,8 +655,7 @@ class Monitor():
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-        kwargs['display'] = self.index
-        return self.method.get_brightness(**kwargs)[0]
+        return self.method.get_brightness(display=self.index)[0]
 
     def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
         '''
@@ -669,8 +664,8 @@ class Monitor():
         Args:
             args (tuple): passed directly to `fade_brightness`
             kwargs (dict): passed directly to `fade_brightness`.
-                The `display` kwarg is always overwritten.
-                The `method` kwarg is also overwritten
+                The `display` and `method` kwargs are always
+                overwritten.
 
         Returns:
             threading.Thread: if the the blocking kwarg is False
