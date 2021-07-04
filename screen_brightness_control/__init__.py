@@ -195,10 +195,12 @@ def fade_brightness(
     except (IndexError, LookupError) as e:
         raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
     except ValueError as e:
-        if platform.system() == 'Linux' and ('method' in kwargs and kwargs['method'].lower() == 'xbacklight'):
+        if platform.system() == 'Linux' and (str(kwargs.get('method', '')).lower() == 'xbacklight'):
             available_monitors = [method.XBacklight]
         else:
-            raise e
+            raise ScreenBrightnessError(e)
+    except Exception as e:
+        raise ScreenBrightnessError(e)
 
     for i in available_monitors:
         try:
@@ -512,8 +514,9 @@ class Monitor():
     def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
-            display (int or str): the index/name/model name/serial/edid of the display you wish to control.
-                Is passed to `filter_monitors` to decide which display to use
+            display (int or str or dict): the index/name/model name/serial/edid
+                of the display you wish to control. Is passed to `filter_monitors`
+                to decide which display to use.
 
         Raises:
             LookupError: if a matching display could not be found
@@ -525,7 +528,7 @@ class Monitor():
 
             # create a class for the primary monitor and then a specifically named monitor
             primary = sbc.Monitor(0)
-            benq_monitor = sbc.Monitor('BenQ GL2450HM')
+            benq_monitor = sbc.Monitor('BenQ GL2450H')
 
             # check if the benq monitor is the primary one
             if primary.serial == benq_monitor.serial:
@@ -760,7 +763,7 @@ class Monitor():
 
 def filter_monitors(
     display: Optional[Union[int, str]] = None,
-    haystack: Optional[list] = None,
+    haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
     include: List[str] = []
 ) -> List[dict]:
