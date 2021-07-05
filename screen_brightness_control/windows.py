@@ -332,7 +332,7 @@ class VCP:
                     ('description', WCHAR * 128)]
 
     @classmethod
-    def iter_physical_monitors(cls, start: int = 0) -> Generator[ctypes.wintypes.HANDLE]:
+    def iter_physical_monitors(cls, start: int = 0) -> Generator[ctypes.wintypes.HANDLE, None, None]:
         '''
         A generator to iterate through all physical monitors
         and then close them again afterwards, yielding their handles.

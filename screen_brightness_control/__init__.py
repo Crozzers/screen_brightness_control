@@ -471,7 +471,7 @@ MONITOR_MANUFACTURER_CODES = {
 }
 
 
-@lru_cache
+@lru_cache(maxsize=None)
 def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     '''internal function to search the monitor manufacturer codes dict'''
     keys = tuple(MONITOR_MANUFACTURER_CODES.keys())
