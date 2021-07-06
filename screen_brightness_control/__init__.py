@@ -118,6 +118,9 @@ def set_brightness(
     # make sure value is within bounds
     value = max(min(100, value), 0)
 
+    if platform.system() == 'Linux' and not force:
+        value = max(1, value)
+
     return __brightness(
         value, display=display, method=method,
         meta_method='set', no_return=no_return,
@@ -906,7 +909,9 @@ def __brightness(
     except (LookupError, ValueError) as e:
         if platform.system() == 'Linux' and display is None and method in ('xbacklight', None):
             try:
-                output.append(getattr(linux.XBacklight, f'{meta_method}_brightness')())
+                if meta_method == 'set':
+                    linux.XBacklight.set_brightness(*args)
+                output.append(linux.XBacklight.get_brightness())
             except Exception as e:
                 format_exc('XBacklight', e)
         else:
