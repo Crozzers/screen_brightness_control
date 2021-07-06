@@ -25,6 +25,23 @@ def get_method_names():
     return tuple(i.__name__.lower() for i in get_methods())
 
 
+class TestCase(unittest.TestCase):
+    def assertBrightnessEqual(self, a, b, display):
+        try:
+            self.assertEqual(a, b)
+        except AssertionError as e:
+            if os.name != 'nt':
+                raise e
+            else:
+                if sbc.list_monitors_info()[display]['method'] == sbc.windows.WMI:
+                    # some laptop displays will only have a set number of levels
+                    # the brightness can be set to so check the value is at least close.
+                    # this allows for 16ish brightness levels
+                    self.assertTrue(abs(a - b) < 7)
+                else:
+                    raise e
+
+
 class TestGetBrightness(unittest.TestCase):
     def test_normal(self):
         brightness = sbc.get_brightness()
@@ -72,7 +89,7 @@ class TestGetBrightness(unittest.TestCase):
         self.assertRaises(sbc.ScreenBrightnessError, sbc.get_brightness, display=0.0)
 
 
-class TestSetBrightness(unittest.TestCase):
+class TestSetBrightness(TestCase):
     def setUp(self):
         sbc.set_brightness(100)
 
@@ -82,46 +99,42 @@ class TestSetBrightness(unittest.TestCase):
     def test_normal(self):
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
             brightness = sbc.set_brightness(value)
-            try:
-                # check it is the right type and within
-                # the max and min values
-                self.assertIsInstance(brightness, list)
-            except AssertionError:
-                self.assertIsInstance(brightness, int)
-                self.assertTrue(0 <= brightness <= 100)
-                self.assertAlmostEqual(value, brightness)
-            else:
-                for i in brightness:
+            if type(brightness) == list:
+                for index, i in enumerate(brightness):
                     self.assertIsInstance(i, int)
                     self.assertTrue(0 <= i <= 100)
                     # use almost equal because some laptops cannot display all values 0 to 100
-                    self.assertAlmostEqual(value, i)
+                    self.assertBrightnessEqual(value, i, index)
+            else:
+                self.assertIsInstance(brightness, int)
+                self.assertTrue(0 <= brightness <= 100)
+                self.assertBrightnessEqual(value, brightness, 0)
 
     def test_increment_values(self):
-        self.assertAlmostEqual(sbc.set_brightness('50', display=0), 50)
-        self.assertAlmostEqual(sbc.set_brightness('10.0', display=0), 10)
-        self.assertAlmostEqual(sbc.set_brightness('+40', display=0), 50)
-        self.assertAlmostEqual(sbc.set_brightness('-20', display=0), 30)
-        self.assertAlmostEqual(sbc.set_brightness('+500', display=0), 100)
+        self.assertBrightnessEqual(sbc.set_brightness('50', display=0), 50, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('10.0', display=0), 10, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+40', display=0), 50, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('-20', display=0), 30, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+500', display=0), 100, 0)
 
         # test that all displays are affected equally
         for _ in sbc.list_monitors():
-            sbc.set_brightness(random.randint(0, 100))
+            sbc.set_brightness(random.randint(30, 70))
 
         old = sbc.get_brightness()
         new = sbc.set_brightness('-25')
         if type(new) == list:
             for i, v in enumerate(old):
-                self.assertAlmostEqual(max(0, v - 25), new[i])
+                self.assertBrightnessEqual(max(0, v - 25), new[i], i)
         else:
-            self.assertAlmostEqual(max(0, old - 25), new)
+            self.assertBrightnessEqual(max(0, old - 25), new, 0)
 
     def test_display_kwarg(self):
-        for monitor in sbc.list_monitors():
+        for index, monitor in enumerate(sbc.list_monitors()):
             brightness = sbc.set_brightness(90, display=monitor)
             self.assertIsInstance(brightness, int)
             self.assertTrue(0 <= brightness <= 100)
-            self.assertAlmostEqual(90, brightness)
+            self.assertBrightnessEqual(90, brightness, index)
 
     def test_method_kwarg(self):
         for method in get_method_names():
@@ -147,7 +160,7 @@ class TestSetBrightness(unittest.TestCase):
         self.assertRaises(sbc.ScreenBrightnessError, sbc.set_brightness, 100, display=0.0)
 
 
-class TestFadeBrightness(unittest.TestCase):
+class TestFadeBrightness(TestCase):
     def setUp(self):
         sbc.set_brightness(50)
 
@@ -159,31 +172,31 @@ class TestFadeBrightness(unittest.TestCase):
         self.assertIsInstance(brightness, (int, list))
         if type(brightness) == list:
             self.assertEqual(len(sbc.list_monitors()), len(brightness))
-            for i in brightness:
+            for index, i in enumerate(brightness):
                 self.assertIsInstance(i, int)
-                self.assertAlmostEqual(75, i)
+                self.assertBrightnessEqual(75, i, index)
         else:
             self.assertTrue(len(sbc.list_monitors()) == 1)
-            self.assertAlmostEqual(75, brightness)
+            self.assertBrightnessEqual(75, brightness, 0)
 
     def test_increment_values(self):
-        self.assertAlmostEqual(sbc.fade_brightness('60', display=0), 60)
-        self.assertAlmostEqual(sbc.fade_brightness('70.0', display=0), 70)
-        self.assertAlmostEqual(sbc.fade_brightness('+10', display=0), 80)
-        self.assertAlmostEqual(sbc.fade_brightness('-10', display=0), 70)
-        self.assertAlmostEqual(sbc.fade_brightness('+500', display=0), 100)
+        self.assertBrightnessEqual(sbc.fade_brightness('60', display=0), 60, 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('70.0', display=0), 70, 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), 80, 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), 70, 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), 100, 0)
 
         # test that all displays are affected equally
         for _ in sbc.list_monitors():
-            sbc.set_brightness(random.randint(0, 100))
+            sbc.set_brightness(random.randint(30, 70))
 
         old = sbc.get_brightness()
         new = sbc.fade_brightness('-25')
         if type(new) == list:
             for i, v in enumerate(old):
-                self.assertAlmostEqual(max(0, v - 25), new[i])
+                self.assertBrightnessEqual(max(0, v - 25), new[i], i)
         else:
-            self.assertAlmostEqual(max(0, old - 25), new)
+            self.assertBrightnessEqual(max(0, old - 25), new, 0)
 
     def test_increment_kwarg(self):
         # smaller increment should take longer
@@ -205,14 +218,14 @@ class TestFadeBrightness(unittest.TestCase):
         for i, thread in enumerate(threads):
             self.assertIsInstance(thread, threading.Thread)
             thread.join()
-            self.assertAlmostEqual(sbc.get_brightness(display=i), 60)
+            self.assertEqual(sbc.get_brightness(display=i), 60)
 
     def test_display_kwarg(self):
         for monitor in sbc.list_monitors():
             brightness = sbc.fade_brightness(60, display=monitor)
             self.assertIsInstance(brightness, int)
             self.assertTrue(0 <= brightness <= 100)
-            self.assertAlmostEqual(60, brightness)
+            self.assertEqual(60, brightness)
 
     def test_method_kwarg(self):
         for method in get_method_names():
@@ -312,7 +325,7 @@ class TestMonitorBrandLookup(unittest.TestCase):
             self.assertEqual(sbc._monitor_brand_lookup(item), None)
 
 
-class TestMonitor(unittest.TestCase):
+class TestMonitor(TestCase):
     def test_normal(self):
         primary = sbc.list_monitors_info()[0]
         monitor = sbc.Monitor(0)
@@ -341,7 +354,7 @@ class TestMonitor(unittest.TestCase):
             self.assertIsInstance(brightness, int)
             self.assertTrue(0 <= brightness <= 100)
             # use almost equal because some laptops cannot display all values 0 to 100
-            self.assertAlmostEqual(value, brightness)
+            self.assertBrightnessEqual(value, brightness, 0)
 
         self.assertIsNone(monitor.set_brightness(100, no_return=True))
 
@@ -358,14 +371,14 @@ class TestMonitor(unittest.TestCase):
         brightness = monitor.fade_brightness(75)
         self.assertIsInstance(brightness, int)
         self.assertTrue(0 <= brightness <= 100)
-        self.assertAlmostEqual(75, brightness)
+        self.assertBrightnessEqual(75, brightness, 0)
 
         # test increment values
-        self.assertAlmostEqual(monitor.fade_brightness('60'), 60)
-        self.assertAlmostEqual(monitor.fade_brightness('70.0'), 70)
-        self.assertAlmostEqual(monitor.fade_brightness('+10'), 80)
-        self.assertAlmostEqual(monitor.fade_brightness('-10'), 70)
-        self.assertAlmostEqual(monitor.fade_brightness('+500'), 100)
+        self.assertBrightnessEqual(monitor.fade_brightness('60'), 60, 0)
+        self.assertBrightnessEqual(monitor.fade_brightness('70.0'), 70, 0)
+        self.assertBrightnessEqual(monitor.fade_brightness('+10'), 80, 0)
+        self.assertBrightnessEqual(monitor.fade_brightness('-10'), 70, 0)
+        self.assertBrightnessEqual(monitor.fade_brightness('+500'), 100, 0)
 
         # test increment kwarg
         # smaller increment should take longer
@@ -378,7 +391,7 @@ class TestMonitor(unittest.TestCase):
         thread = monitor.fade_brightness(100, blocking=False)
         self.assertIsInstance(thread, threading.Thread)
         thread.join()
-        self.assertAlmostEqual(monitor.get_brightness(), 100)
+        self.assertBrightnessEqual(monitor.get_brightness(), 100, 0)
 
     def test_get_info(self):
         monitor = sbc.Monitor(0)
