@@ -54,55 +54,52 @@ class Light:
             edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
-        displays = __cache__.get('light_monitors_info')
-        if displays is None:
-            res = subprocess.run([cls.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
-            displays = []
-            count = 0
-            for r in res:
-                if 'backlight' in r and 'sysfs/backlight/auto' not in r:
-                    r = r[r.index('backlight/') + 10:]
-                    if os.path.isfile(f'/sys/class/backlight/{r}/device/edid'):
-                        tmp = {
-                            'name': r,
-                            'path': f'/sys/class/backlight/{r}',
-                            'light_path': f'sysfs/backlight/{r}',
-                            'method': cls,
-                            'index': count,
-                            'model': None,
-                            'serial': None,
-                            'manufacturer': None,
-                            'manufacturer_id': None,
-                            'edid': None
-                        }
-                        count += 1
+        res = subprocess.run([cls.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
+        displays = []
+        count = 0
+        for r in res:
+            if 'backlight' in r and 'sysfs/backlight/auto' not in r:
+                r = r[r.index('backlight/') + 10:]
+                if os.path.isfile(f'/sys/class/backlight/{r}/device/edid'):
+                    tmp = {
+                        'name': r,
+                        'path': f'/sys/class/backlight/{r}',
+                        'light_path': f'sysfs/backlight/{r}',
+                        'method': cls,
+                        'index': count,
+                        'model': None,
+                        'serial': None,
+                        'manufacturer': None,
+                        'manufacturer_id': None,
+                        'edid': None
+                    }
+                    count += 1
+                    try:
+                        out = subprocess.check_output(
+                            ['hexdump', tmp['path'] + '/device/edid'],
+                            stderr=subprocess.DEVNULL
+                        ).decode().split('\n')
+                        # either the hexdump reports each hex char backwards (ff00 instead of 00ff)
+                        # or both xrandr and ddcutil do. So I swap these bits around
+                        edid = ''
+                        for line in out:
+                            for i in line.split(' '):
+                                if len(i) == 4:
+                                    edid += i[2:] + i[:2]
+                        tmp['edid'] = edid
+                        name, serial = EDID.parse_edid(edid)
+                        if name is not None:
+                            tmp['serial'] = serial
+                            tmp['name'] = name
                         try:
-                            out = subprocess.check_output(
-                                ['hexdump', tmp['path'] + '/device/edid'],
-                                stderr=subprocess.DEVNULL
-                            ).decode().split('\n')
-                            # either the hexdump reports each hex char backwards (ff00 instead of 00ff)
-                            # or both xrandr and ddcutil do. So I swap these bits around
-                            edid = ''
-                            for line in out:
-                                for i in line.split(' '):
-                                    if len(i) == 4:
-                                        edid += i[2:] + i[:2]
-                            tmp['edid'] = edid
-                            name, serial = EDID.parse_edid(edid)
-                            if name is not None:
-                                tmp['serial'] = serial
-                                tmp['name'] = name
-                            try:
-                                tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(name.split(' ')[0])
-                            except Exception:
-                                tmp['manufacturer'] = name.split(' ')[0]
-                                tmp['manufacturer_id'] = None
-                            tmp['model'] = name.split(' ')[1]
+                            tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(name.split(' ')[0])
                         except Exception:
-                            pass
-                        displays.append(tmp)
-            __cache__.store('light_monitors_info', displays)
+                            tmp['manufacturer'] = name.split(' ')[0]
+                            tmp['manufacturer_id'] = None
+                        tmp['model'] = name.split(' ')[1]
+                    except Exception:
+                        pass
+                    displays.append(tmp)
 
         if display is not None:
             displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
@@ -255,7 +252,7 @@ class XRandr:
     '''the xrandr executable to be called'''
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[Union[int, str]] = None, brightness: bool = False) -> List[dict]:
         '''
         Returns info about all detected monitors as reported by xrandr
 
@@ -263,6 +260,8 @@ class XRandr:
             display (str or int): [*Optional*] The monitor to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
+            brightness (bool): whether to include the current brightness
+                in the returned info
 
         Returns:
             list: list of dicts
@@ -292,58 +291,55 @@ class XRandr:
                     return True
             return False
 
-        data = __cache__.get('xrandr_monitors_info')
-        if data is None:
-            out = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
-            names = cls.get_display_interfaces()
-            data = []
-            tmp = {}
-            count = 0
-            for i in out:
-                if i != '':
-                    if i.startswith(tuple(names)):
-                        if check_tmp(tmp):
-                            data.append(tmp)
-                        tmp = {
-                            'interface': i.split(' ')[0],
-                            'name': i.split(' ')[0],
-                            'line': i,
-                            'method': cls,
-                            'index': count,
-                            'model': None,
-                            'serial': None,
-                            'manufacturer': None,
-                            'manufacturer_id': None,
-                            'edid': None
-                        }
-                        count += 1
-                    elif 'EDID:' in i:
-                        st = out[out.index(tmp['line']):]
-                        edid = []
-                        for j in range(st.index(i) + 1, st.index(i) + 9):
-                            edid.append(st[j].replace('\t', '').replace(' ', ''))
-                        edid = ''.join(edid)
-                        tmp['edid'] = edid
-                        name, serial = EDID.parse_edid(edid)
-                        tmp['name'] = name if name is not None else tmp['interface']
-                        if name is not None:
-                            tmp['manufacturer'] = name.split(' ')[0]
-                            try:
-                                tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(
-                                    tmp['manufacturer']
-                                )
-                            except Exception:
-                                tmp['manufacturer_id'] = None
-                            tmp['model'] = name.split(' ')[1]
-                            tmp['serial'] = serial
-                    elif 'Brightness:' in i:
-                        tmp['brightness'] = int(
-                            float(i.replace('Brightness:', '').replace(' ', '').replace('\t', '')) * 100
-                        )
-            if check_tmp(tmp):
-                data.append(tmp)
+        out = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
+        names = cls.get_display_interfaces()
+        data = []
+        tmp = {}
+        count = 0
+        for i in out:
+            if i != '':
+                if i.startswith(tuple(names)):
+                    if check_tmp(tmp):
+                        data.append(tmp)
+                    tmp = {
+                        'interface': i.split(' ')[0],
+                        'name': i.split(' ')[0],
+                        'line': i,
+                        'method': cls,
+                        'index': count,
+                        'model': None,
+                        'serial': None,
+                        'manufacturer': None,
+                        'manufacturer_id': None,
+                        'edid': None
+                    }
+                    count += 1
+                elif 'EDID:' in i:
+                    st = out[out.index(tmp['line']):]
+                    edid = []
+                    for j in range(st.index(i) + 1, st.index(i) + 9):
+                        edid.append(st[j].replace('\t', '').replace(' ', ''))
+                    edid = ''.join(edid)
+                    tmp['edid'] = edid
+                    name, serial = EDID.parse_edid(edid)
+                    tmp['name'] = name if name is not None else tmp['interface']
+                    if name is not None:
+                        tmp['manufacturer'] = name.split(' ')[0]
+                        try:
+                            tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(
+                                tmp['manufacturer']
+                            )
+                        except Exception:
+                            tmp['manufacturer_id'] = None
+                        tmp['model'] = name.split(' ')[1]
+                        tmp['serial'] = serial
+                elif 'Brightness:' in i and brightness:
+                    tmp['brightness'] = int(
+                        float(i.replace('Brightness:', '').replace(' ', '').replace('\t', '')) * 100
+                    )
+        if check_tmp(tmp):
+            data.append(tmp)
 
-            __cache__.store('xrandr_monitors_info', data)
         if display is not None:
             data = filter_monitors(display=display, haystack=data, include=['interface'])
         return data
@@ -409,7 +405,7 @@ class XRandr:
             primary_brightness = sbc.linux.XRandr.get_brightness(display=0)[0]
             ```
         '''
-        monitors = cls.get_display_info()
+        monitors = cls.get_display_info(brightness=True)
         if display is not None:
             monitors = [monitors[display]]
         brightness = [i['brightness'] for i in monitors]

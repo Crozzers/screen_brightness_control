@@ -578,8 +578,7 @@ class Monitor():
         # this assigns any extra info that is returned to this class
         # eg: the 'interface' key in XRandr monitors on Linux
         for key, value in info.items():
-            # exclude the 'brightness' key because that will quickly become out of date
-            if value is not None and key != 'brightness':
+            if value is not None:
                 setattr(self, key, value)
 
     def __getitem__(self, item: Any) -> Any:
@@ -741,8 +740,7 @@ class Monitor():
             # refresh the info we have on this monitor
             info = filter_monitors(display=identifier[1], method=self.method.__name__)[0]
             for key, value in info.items():
-                # exclude the 'brightness' key because that will quickly become out of date
-                if value is not None and key != 'brightness':
+                if value is not None:
                     setattr(self, key, value)
 
         return vars(self)
