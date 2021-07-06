@@ -2,6 +2,7 @@ import os
 import random
 import sys
 import threading
+import time
 import unittest
 from functools import lru_cache
 from timeit import timeit
@@ -91,14 +92,14 @@ class TestGetBrightness(unittest.TestCase):
 
 class TestSetBrightness(TestCase):
     def setUp(self):
-        sbc.set_brightness(100)
+        sbc.set_brightness(100, verbose_error=True)
 
     def tearDown(self):
         sbc.set_brightness(100)
 
     def test_normal(self):
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
-            brightness = sbc.set_brightness(value)
+            brightness = sbc.set_brightness(value, force=True)
             if type(brightness) == list:
                 for index, i in enumerate(brightness):
                     self.assertIsInstance(i, int)
@@ -111,11 +112,13 @@ class TestSetBrightness(TestCase):
                 self.assertBrightnessEqual(value, brightness, 0)
 
     def test_increment_values(self):
-        self.assertBrightnessEqual(sbc.set_brightness('50', display=0), 50, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('10.0', display=0), 10, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('+40', display=0), 50, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('-20', display=0), 30, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('+500', display=0), 100, 0)
+        kw = {'display': 0} if sbc.list_monitors_info() else {}
+
+        self.assertBrightnessEqual(sbc.set_brightness('50', **kw), 50, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('10.0', **kw), 10, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+40', **kw), 50, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('-20', **kw), 30, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+500', **kw), 100, 0)
 
         # test that all displays are affected equally
         for _ in sbc.list_monitors():
@@ -201,8 +204,8 @@ class TestFadeBrightness(TestCase):
     def test_increment_kwarg(self):
         # smaller increment should take longer
         self.assertGreater(
-            timeit(lambda: sbc.fade_brightness(60, start=50, increment=1), number=1),
-            timeit(lambda: sbc.fade_brightness(60, start=50, increment=2), number=1)
+            timeit(lambda: sbc.fade_brightness(70, start=50, increment=1), number=1),
+            timeit(lambda: sbc.fade_brightness(70, start=50, increment=5), number=1)
         )
 
     def test_interval_kwarg(self):
@@ -329,8 +332,8 @@ class TestMonitor(TestCase):
     def test_normal(self):
         primary = sbc.list_monitors_info()[0]
         monitor = sbc.Monitor(0)
-        self.assertEqual(monitor.get_info(), primary)
-        self.assertEqual(vars(sbc.Monitor(primary['name'])), primary)
+        self.assertDictEqual(monitor.get_info(), primary)
+        self.assertDictEqual(vars(sbc.Monitor(primary['name'])), primary)
 
     def test_get_identifier(self):
         monitor = sbc.Monitor(0)
@@ -499,4 +502,49 @@ class TestFlattenList(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    if os.name == 'nt' or '--full' not in sys.argv:
+        unittest.main()
+    else:
+        print('Full test:')
+        sys.argv.remove('--full')
+        unittest.main(exit=False)
+
+        # let cache expire
+        time.sleep(5)
+
+        print('Only light exe:')
+        # test with only light exe available
+        for m in get_methods():
+            m.executable = 'file doesnt exist'
+        sbc.linux.Light.executable = 'light'
+        unittest.main(exit=False)
+
+        # let cache expire
+        time.sleep(5)
+
+        print('Only xbacklight exe:')
+        # test with only xbacklight exe available
+        for m in get_methods():
+            m.executable = 'file doesnt exist'
+        sbc.linux.XBacklight.executable = 'xbacklight'
+        unittest.main(exit=False)
+
+        # let cache expire
+        time.sleep(5)
+
+        print('Only xrandr exe:')
+        # test with only xrandr exe available
+        for m in get_methods():
+            m.executable = 'file doesnt exist'
+        sbc.linux.XRandr.executable = 'xrandr'
+        unittest.main(exit=False)
+
+        # let cache expire
+        time.sleep(5)
+
+        print('Only ddcutil exe:')
+        # test with only ddcutil exe available
+        for m in get_methods():
+            m.executable = 'file doesnt exist'
+        sbc.linux.DDCUtil.executable = 'ddcutil'
+        unittest.main()
