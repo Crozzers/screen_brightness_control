@@ -853,7 +853,7 @@ def filter_monitors(
     if monitors == [] or type(display) is int:
         msg = 'no monitors found'
         if display is not None:
-            msg += f' with name/serial/model/edid/index of "{display}"'
+            msg += f' with name/serial/model/edid/index of {repr(display)}'
         if method is not None:
             msg += f' with method of "{method}"'
         raise LookupError(msg)

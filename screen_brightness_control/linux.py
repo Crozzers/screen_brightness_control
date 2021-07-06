@@ -344,8 +344,8 @@ class XRandr:
             data = filter_monitors(display=display, haystack=data, include=['interface'])
         return data
 
-    @staticmethod
-    def get_display_interfaces() -> List[str]:
+    @classmethod
+    def get_display_interfaces(cls) -> List[str]:
         '''
         Returns the interfaces of each display, as reported by xrandr
 
@@ -360,7 +360,7 @@ class XRandr:
             # EG output: ['eDP-1', 'HDMI1', 'HDMI2']
             ```
         '''
-        out = subprocess.check_output(['xrandr', '-q']).decode().split('\n')
+        out = subprocess.check_output([cls.executable, '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
     @classmethod
@@ -443,7 +443,6 @@ class XRandr:
         # The get_brightness method takes the brightness value from get_display_info
         # The problem is that that display info is cached, meaning that the brightness
         # value is also cached. We must expire it here.
-        __cache__.expire('xrandr_monitors_info')
 
 
 class DDCUtil:
