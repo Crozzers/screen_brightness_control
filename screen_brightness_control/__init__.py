@@ -98,10 +98,11 @@ def set_brightness(
         if len(monitors) > 1:
             output = []
             for monitor in monitors:
+                identifier = Monitor.get_identifier(monitor)[1]
                 output.append(
                     set_brightness(
-                        get_brightness(display=monitor['serial']) + value,
-                        display=monitor['serial'],
+                        get_brightness(display=identifier) + value,
+                        display=identifier,
                         force=force,
                         verbose_error=verbose_error,
                         no_return=no_return
@@ -110,7 +111,7 @@ def set_brightness(
             output = flatten_list(output)
             return output[0] if len(output) == 1 else output
         else:
-            value += get_brightness(display=monitors[0]['serial'])
+            value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])
     else:
         value = int(float(str(value)))
 
@@ -584,7 +585,7 @@ class Monitor():
     def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
-    def get_identifier(self, monitor: dict = None) -> Tuple[str, Any]:
+    def get_identifier(self, monitor: dict = None) -> Tuple[str, Union[int, str]]:
         '''
         Returns the piece of information used to identify this monitor.
         Will iterate through the EDID, serial, name and index and return the first
@@ -596,6 +597,19 @@ class Monitor():
         Returns:
             tuple: the name of the property returned and the value of said property.
                 EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+            primary = sbc.Monitor(0)
+            print(primary.get_identifier())  # eg: ('serial', '123abc...')
+
+            secondary = sbc.list_monitors_info()[1]
+            print(primary.get_identifier(monitor=secondary))  # eg: ('serial', '456def...')
+
+            # you can also use the class uninitialized
+            print(sbc.Monitor.get_identifier(secondary))  # eg: ('serial', '456def...')
+            ```
         '''
         if monitor is None:
             monitor = self
@@ -951,8 +965,11 @@ class __Cache(dict):
 
         try:
             value, expires, orig_args, orig_kwargs = super().__getitem__(key)
-            if time.time() < expires and orig_args == args and orig_kwargs == kwargs:
-                return value
+            if time.time() < expires:
+                if orig_args == args and orig_kwargs == kwargs:
+                    return value
+            else:
+                super().__delitem__(key)
         except KeyError:
             pass
 
