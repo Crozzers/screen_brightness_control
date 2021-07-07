@@ -264,28 +264,20 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         monitors = sbc.list_monitors_info()
         for monitor in monitors:
             print('=======================')
-
             # the manufacturer name plus the model
             print('Name:', monitor['name'])
-
             # the general model of the display
             print('Model:', monitor['model'])
-
-            # a unique string assigned by Windows to this display
+            # the serial of the display
             print('Serial:', monitor['serial'])
-
             # the name of the brand of the monitor
             print('Manufacturer:', monitor['manufacturer'])
-
             # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
             print('Manufacturer ID:', monitor['manufacturer_id'])
-
             # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Index:', monitor['index'])
-
             # the method this monitor can be addressed by
             print('Method:', monitor['method'])
-
             # the EDID string associated with that monitor
             print('EDID:', monitor['edid'])
         ```
@@ -325,7 +317,7 @@ class EDID:
 
     The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
     '''
-    EDID_FORMAT = (
+    EDID_FORMAT: str = (
         ">"     # big-endian
         "8s"    # constant header (8 bytes)
         "H"     # manufacturer id (2 bytes)

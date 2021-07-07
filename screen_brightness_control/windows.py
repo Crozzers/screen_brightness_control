@@ -228,7 +228,7 @@ class WMI:
     @classmethod
     def get_display_names(cls) -> List[str]:
         '''
-        DEPRECATED.
+        **DEPRECATED**.
         Returns names of all displays that can be addressed by WMI
 
         Returns:
@@ -417,7 +417,7 @@ class VCP:
     @staticmethod
     def get_monitor_caps(monitor: ctypes.wintypes.HANDLE) -> str:
         '''
-        DEPRECATED.
+        **DEPRECATED**.
         Fetches and returns the VCP capabilities string of a monitor.
         This function takes anywhere from 1-2 seconds to run
 
@@ -448,7 +448,7 @@ class VCP:
     @classmethod
     def get_display_names(cls) -> List[str]:
         '''
-        DEPRECATED.
+        **DEPRECATED**.
         Return the names of each detected monitor
 
         Returns:
@@ -580,28 +580,20 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         monitors = sbc.windows.list_monitors_info()
         for info in monitors:
             print('=======================')
-
             # the manufacturer name plus the model
             print('Name:', info['name'])
-
             # the general model of the display
             print('Model:', info['model'])
-
             # a unique string assigned by Windows to this display
             print('Serial:', info['serial'])
-
             # the name of the brand of the monitor
             print('Manufacturer:', info['manufacturer'])
-
             # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
             print('Manufacturer ID:', info['manufacturer_id'])
-
             # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Index:', info['index'])
-
             # the method this monitor can be addressed by
             print('Method:', info['method'])
-
             # the EDID string of the monitor
             print('EDID:', info['edid'])
         ```
@@ -630,7 +622,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
-    DEPRECATED.
+    **DEPRECATED**.
     Returns a list of all addressable monitor names
 
     Args:
@@ -653,7 +645,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
 
 def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
     '''
-    DEPRECATED.
+    **DEPRECATED**.
     Internal function, do not call. Either sets the brightness or gets it.
     Exists because set_brightness and get_brightness only have a couple differences
     '''
@@ -704,7 +696,7 @@ def set_brightness(
     **kwargs
 ) -> Union[List[int], None]:
     '''
-    DEPRECATED.
+    **DEPRECATED**.
     Sets the brightness of any connected monitors
 
     Args:
@@ -749,7 +741,7 @@ def set_brightness(
 
 def get_brightness(display: Optional[Union[int, str]] = None, method: Optional[str] = None, **kwargs) -> List[int]:
     '''
-    DEPRECATED.
+    **DEPRECATED**.
     Returns the brightness of any connected monitors
 
     Args:
