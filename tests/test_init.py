@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def get_methods():
     if os.name == 'nt':
         methods = (sbc.windows.WMI, sbc.windows.VCP)
@@ -21,7 +21,7 @@ def get_methods():
     return methods
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def get_method_names():
     return tuple(i.__name__.lower() for i in get_methods())
 

@@ -254,10 +254,6 @@ class WMI:
             value (int): The percentage to set the brightness to
             display (int): The specific display you wish to query.
 
-        Returns:
-            list: list of integers (0 to 100)
-            None: if `no_return` is set to `True`
-
         Raises:
             LookupError: if the given display cannot be found
 
