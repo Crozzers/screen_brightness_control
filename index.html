@@ -80,7 +80,7 @@
     Removed search bar because the search index needs some work
     -->
     <main class="pdoc">
-        <h1>screen_brightness_control 0.8.6</h1>
+        <h1>screen_brightness_control 0.9.0</h1>
         <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  </p>
 <h1>Installation</h1>
 <h4>Pip:</h4>
@@ -181,35 +181,40 @@ Here is a quick outline of each program:</p>
 </code></pre>
 <h1>Quick Start</h1>
 <p>You can read <a href="https://crozzers.github.io/screen_brightness_control">the full documentation</a> for this project for more details but here are the basics.</p>
-<h3>get_brightness(<code>verbose_error=False, **kwargs</code>)</h3>
+<h3>get_brightness(<code>display=None, method=None, verbose_error=False</code>)</h3>
 <p><strong>Summary:</strong><br />
 Returns the current screen brightness as a percentage. It may return a list of values if you have multiple, brightness adjustable monitors.<br />
 Raises <code>ScreenBrightnessError</code> upon failure</p>
 <p><strong>Arguments:</strong></p>
 <ul>
+<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-<li><code>kwargs</code> - passed to the OS relevant brightness method</li>
 </ul>
 <p><strong>Usage:</strong>  </p>
 <pre><code class="language-python">import screen_brightness_control as sbc
 
-#get the current screen brightness (for all detected displays)
+# get the current screen brightness (for all detected displays)
 all_screens_brightness = sbc.get_brightness()
-#get the brightness of the primary display
+# get the brightness of the primary display
 primary_display_brightness = sbc.get_brightness(display=0)
-#get the brightness of the secondary display (if connected)
+# get the brightness of the secondary display (if connected)
 secondary_display_brightness = sbc.get_brightness(display=1)
+# get the brightness for a named monitor
+benq_brightness = sbc.get_brightness(display='BenQ GL2450H')
 </code></pre>
-<h3>set_brightness(<code>value, force=False, verbose_error=False, **kwargs</code>)</h3>
+<h3>set_brightness(<code>value, display=None, method=None, force=False, verbose_error=False, no_return=False</code>)</h3>
 <p><strong>Summary:</strong><br />
 Sets the brightness to <code>value</code>. If <code>value</code> is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
 Raises <code>ScreenBrightnessError</code> upon failure</p>
 <p><strong>Arguments:</strong></p>
 <ul>
 <li><code>value</code> - the level to set the brightness to. Can either be an integer or a string.</li>
+<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
 <li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-<li><code>kwargs</code> - passed to the OS relevant brightness method</li>
+<li><code>no_return</code> - boolean value, whether this function should return <code>None</code> or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return <code>None</code> by default.</li>
 </ul>
 <p><strong>Usage:</strong>  </p>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -260,6 +265,18 @@ sbc.fade_brightness(90, start=100, interval=0.1)
 #fade the brightness to 100% in a new thread
 sbc.fade_brightness(100, blocking=False)
 </code></pre>
+<h3>list_monitors(<code>method=None</code>)</h3>
+<p><strong>Summary:</strong><br />
+Returns a list of the names of all detected monitors</p>
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
+</ul>
+<p><strong>Usage:</strong>  </p>
+<pre><code class="language-python">import screen_brightness_control as sbc
+monitor_names = sbc.list_monitors()
+# eg: ['BenQ GL2450H', 'Dell U2211H']
+</code></pre>
 <h2>A Toast</h2>
 <p>To GitHub users <a href="https://github.com/lcharles">lcharles</a>, <a href="https://github.com/Ved-programmer">Ved Rathi</a>, <a href="https://github.com/drojf">Daniel Wong</a>, <a href="https://github.com/shadoWalker89">Melek REBAI</a> and <a href="https://github.com/Mathias9807">Mathias Johansson</a> for contributing to this project</p>
 <h2>License</h2>
@@ -297,7 +314,7 @@ If you know how this might be done, feel free to <a href="https://github.com/Cro
 You can likely see this if you open your display settings and very slowly move the brightness slider.<br />
 You can find out your brightness 'levels' by running the following python code:</p>
 <pre><code class="language-python">import wmi
-monitor = wmi.WMI(namespace='wmi').MonitorBrightness[0]
+monitor = wmi.WMI(namespace='wmi').WmiMonitorBrightness()[0]
 #the number of levels the monitor can be set to
 print(monitor.Levels)
 #the actual brightness values your monitor can be set to
@@ -338,6 +355,7 @@ print(monitor.Level)
                     currentContent = elem;
                 }
             }
+
 
             function getSearchTerm() {
                 return (new URL(window.location)).searchParams.get("search");
