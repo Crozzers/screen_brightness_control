@@ -65,7 +65,7 @@ def set_brightness(
             If True, this check is bypassed
         verbose_error (bool): boolean value controls the amount of detail error messages will contain
         no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
-            If True, this function returns None
+            If True, this function returns None. In the future this function will return `None` by default
 
     Returns:
         list: list of ints (0 to 100)

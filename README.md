@@ -105,7 +105,7 @@ Raises `ScreenBrightnessError` upon failure
 * `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
-* `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is what the brightness was set to.
+* `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return `None` by default.
 
 **Usage:**  
 ```python
