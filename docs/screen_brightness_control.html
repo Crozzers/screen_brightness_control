@@ -248,7 +248,7 @@ screen_brightness_control    </h1>
 <span class="sd">            If True, this check is bypassed</span>
 <span class="sd">        verbose_error (bool): boolean value controls the amount of detail error messages will contain</span>
 <span class="sd">        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).</span>
-<span class="sd">            If True, this function returns None</span>
+<span class="sd">            If True, this function returns None. In the future this function will return `None` by default</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: list of ints (0 to 100)</span>
@@ -451,7 +451,7 @@ screen_brightness_control    </h1>
 <span class="sd">            print(&#39;Name:&#39;, monitor[&#39;name&#39;])</span>
 <span class="sd">            # the general model of the display</span>
 <span class="sd">            print(&#39;Model:&#39;, monitor[&#39;model&#39;])</span>
-<span class="sd">            # a unique string assigned by Windows to this display</span>
+<span class="sd">            # the serial of the display</span>
 <span class="sd">            print(&#39;Serial:&#39;, monitor[&#39;serial&#39;])</span>
 <span class="sd">            # the name of the brand of the monitor</span>
 <span class="sd">            print(&#39;Manufacturer:&#39;, monitor[&#39;manufacturer&#39;])</span>
@@ -1188,7 +1188,7 @@ screen_brightness_control    </h1>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">plat</span><span class="si">}</span><span class="s1"> is not yet supported&#39;</span><span class="p">)</span>
 <span class="k">del</span><span class="p">(</span><span class="n">plat</span><span class="p">)</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.9.0-dev&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.9.0&#39;</span>
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
 </pre></div>
 
@@ -1324,7 +1324,7 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
 <span class="sd">            If True, this check is bypassed</span>
 <span class="sd">        verbose_error (bool): boolean value controls the amount of detail error messages will contain</span>
 <span class="sd">        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).</span>
-<span class="sd">            If True, this function returns None</span>
+<span class="sd">            If True, this function returns None. In the future this function will return `None` by default</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: list of ints (0 to 100)</span>
@@ -1404,7 +1404,7 @@ This is because on most displays a brightness of 0 will turn off the backlight.
 If True, this check is bypassed</li>
 <li><strong>verbose_error (bool):</strong>  boolean value controls the amount of detail error messages will contain</li>
 <li><strong>no_return (bool):</strong>  if False, this function returns new brightness (by calling <code><a href="#get_brightness">get_brightness</a></code>).
-If True, this function returns None</li>
+If True, this function returns None. In the future this function will return <code>None</code> by default</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1659,7 +1659,7 @@ otherwise it returns the result of <code><a href="#get_brightness">get_brightnes
 <span class="sd">            print(&#39;Name:&#39;, monitor[&#39;name&#39;])</span>
 <span class="sd">            # the general model of the display</span>
 <span class="sd">            print(&#39;Model:&#39;, monitor[&#39;model&#39;])</span>
-<span class="sd">            # a unique string assigned by Windows to this display</span>
+<span class="sd">            # the serial of the display</span>
 <span class="sd">            print(&#39;Serial:&#39;, monitor[&#39;serial&#39;])</span>
 <span class="sd">            # the name of the brand of the monitor</span>
 <span class="sd">            print(&#39;Manufacturer:&#39;, monitor[&#39;manufacturer&#39;])</span>
@@ -1710,7 +1710,7 @@ On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Name:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
     <span class="c1"># the general model of the display</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Model:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">])</span>
-    <span class="c1"># a unique string assigned by Windows to this display</span>
+    <span class="c1"># the serial of the display</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Serial:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">])</span>
     <span class="c1"># the name of the brand of the monitor</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Manufacturer:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">])</span>
