@@ -1,0 +1,13 @@
+.dropdown {
+    position: relative;
+    display: block;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    padding-left: 25px;
+}
+.dropdown:hover .dropdown-content {
+    display: contents;
+}
