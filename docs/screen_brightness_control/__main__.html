@@ -127,10 +127,7 @@
 
     <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">set</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">:</span>
-                <span class="n">arrow</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">arrow</span> <span class="o">=</span> <span class="s1">&#39; -&gt;&#39;</span>
+            <span class="n">arrow</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span> <span class="k">else</span> <span class="s1">&#39; -&gt;&#39;</span>
             <span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">get_monitors</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
                 <span class="n">name</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">name</span>
                 <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
@@ -139,7 +136,7 @@
                     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">:</span>
                         <span class="n">ret_val</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">ret_val</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">set</span><span class="p">)</span>
+                        <span class="n">ret_val</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">set</span><span class="p">,</span> <span class="n">no_return</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="n">ret_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">Exception</span>
@@ -176,7 +173,7 @@
                         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">monitor</span><span class="o">.</span><span class="n">initial_brightness</span><span class="si">}</span><span class="s1">% -&gt; </span><span class="si">{</span><span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span><span class="si">}</span><span class="s1">%&#39;</span><span class="p">)</span>
                         <span class="n">done</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
                 <span class="n">monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">monitors</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">done</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">monitors</span> <span class="o">==</span> <span class="p">[]:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">monitors</span><span class="p">:</span>
                     <span class="k">break</span>
                 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -203,22 +200,13 @@
                     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Display </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="s1">&#39;Display </span><span class="si">{}</span><span class="s1">:</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Name: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Model: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Manufacturer: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Manufacturer ID: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Serial: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
-                        <span class="s1">&#39;Method: </span><span class="si">{}</span><span class="se">\n\t</span><span class="s1">EDID:&#39;</span>
-                    <span class="p">)</span>
-                    <span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                        <span class="n">i</span><span class="p">,</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">],</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;serial&#39;</span><span class="p">],</span>
-                        <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;method&#39;</span><span class="p">]</span><span class="o">.</span><span class="vm">__name__</span>
+                        <span class="sa">f</span><span class="s1">&#39;Display </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">:</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Name: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Model: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;model&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Manufacturer: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;manufacturer&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Manufacturer ID: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;manufacturer_id&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Serial: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;serial&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">&#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Method: </span><span class="si">{</span><span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="se">\n\t</span><span class="s1">EDID:&#39;</span>
                     <span class="p">)</span>
                     <span class="c1"># format the edid string</span>
                     <span class="k">if</span> <span class="n">monitors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>

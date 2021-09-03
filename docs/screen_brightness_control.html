@@ -232,8 +232,8 @@ screen_brightness_control    </h1>
     <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">verbose_error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Sets the screen brightness</span>
 
@@ -248,12 +248,12 @@ screen_brightness_control    </h1>
 <span class="sd">            If True, this check is bypassed</span>
 <span class="sd">        verbose_error (bool): boolean value controls the amount of detail error messages will contain</span>
 <span class="sd">        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).</span>
-<span class="sd">            If True, this function returns None. In the future this function will return `None` by default</span>
+<span class="sd">            If True, this function returns None (default behaviour).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: if only one display is affected</span>
-<span class="sd">        None: if the `no_return` kwarg is specified</span>
+<span class="sd">        None: if the `no_return` kwarg is `True`</span>
+<span class="sd">        list: list of ints (0 to 100) only if the `no_return` kwarg is `False`</span>
+<span class="sd">        int: if only one display is affected and the `no_return` kwarg is `False`</span>
 
 <span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
@@ -380,7 +380,12 @@ screen_brightness_control    </h1>
             <span class="p">)}</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="ne">LookupError</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># if a user ONLY has XBacklight installed and no method was specified</span>
+            <span class="c1"># then filter_monitors will raise a LookupError</span>
+            <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">):</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
@@ -796,7 +801,7 @@ screen_brightness_control    </h1>
             <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span>
 
-    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for this display. See `set_brightness` for the full docs</span>
 
@@ -806,8 +811,8 @@ screen_brightness_control    </h1>
 <span class="sd">                Otherwise it returns the result of `Monitor.get_brightness`</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            int: from 0 to 100</span>
 <span class="sd">            None: if `no_return==True`</span>
+<span class="sd">            int: from 0 to 100</span>
 
 <span class="sd">        Example:</span>
 <span class="sd">            ```python</span>
@@ -1099,6 +1104,7 @@ screen_brightness_control    </h1>
                 <span class="k">if</span> <span class="n">meta_method</span> <span class="o">==</span> <span class="s1">&#39;set&#39;</span><span class="p">:</span>
                     <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
+                        <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                         <span class="k">continue</span>
 
                 <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
@@ -1108,12 +1114,21 @@ screen_brightness_control    </h1>
 
     <span class="n">output</span> <span class="o">=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">output</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="kc">None</span><span class="p">}:</span>
-        <span class="c1"># if all of the outputs are None then all of the monitors failed</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">output</span>
-        <span class="k">return</span> <span class="n">output</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">no_return</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="k">elif</span> <span class="n">meta_method</span> <span class="o">==</span> <span class="s1">&#39;set&#39;</span> <span class="ow">and</span> <span class="n">no_return</span><span class="p">:</span>
-        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
+        <span class="n">output_is_none</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="c1"># can&#39;t have None output if we are trying to get the brightness</span>
+            <span class="p">(</span><span class="n">meta_method</span> <span class="o">==</span> <span class="s1">&#39;get&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">output_is_none</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span>
+                <span class="c1"># if we are setting the brightness then we CAN have a None output</span>
+                <span class="c1"># but only if no_return is True.</span>
+                <span class="n">meta_method</span> <span class="o">==</span> <span class="s1">&#39;set&#39;</span>
+                <span class="ow">and</span> <span class="p">((</span><span class="n">no_return</span> <span class="ow">and</span> <span class="n">output_is_none</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">output_is_none</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">output</span>
 
     <span class="c1"># if the function hasn&#39;t returned then it has failed</span>
     <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
@@ -1188,7 +1203,7 @@ screen_brightness_control    </h1>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">plat</span><span class="si">}</span><span class="s1"> is not yet supported&#39;</span><span class="p">)</span>
 <span class="k">del</span><span class="p">(</span><span class="n">plat</span><span class="p">)</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.9.0&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.10.0&#39;</span>
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
 </pre></div>
 
@@ -1296,8 +1311,8 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
     method: Optional[str] = None,
     force: bool = False,
     verbose_error: bool = False,
-    no_return: bool = False
-) -&gt; Union[List[int], int, NoneType]</span>:
+    no_return: bool = True
+) -&gt; Union[NoneType, List[int], int]</span>:
     </div>
 
                 <details>
@@ -1308,8 +1323,8 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
     <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">verbose_error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Sets the screen brightness</span>
 
@@ -1324,12 +1339,12 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
 <span class="sd">            If True, this check is bypassed</span>
 <span class="sd">        verbose_error (bool): boolean value controls the amount of detail error messages will contain</span>
 <span class="sd">        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).</span>
-<span class="sd">            If True, this function returns None. In the future this function will return `None` by default</span>
+<span class="sd">            If True, this function returns None (default behaviour).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: if only one display is affected</span>
-<span class="sd">        None: if the `no_return` kwarg is specified</span>
+<span class="sd">        None: if the `no_return` kwarg is `True`</span>
+<span class="sd">        list: list of ints (0 to 100) only if the `no_return` kwarg is `False`</span>
+<span class="sd">        int: if only one display is affected and the `no_return` kwarg is `False`</span>
 
 <span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
@@ -1404,15 +1419,15 @@ This is because on most displays a brightness of 0 will turn off the backlight.
 If True, this check is bypassed</li>
 <li><strong>verbose_error (bool):</strong>  boolean value controls the amount of detail error messages will contain</li>
 <li><strong>no_return (bool):</strong>  if False, this function returns new brightness (by calling <code><a href="#get_brightness">get_brightness</a></code>).
-If True, this function returns None. In the future this function will return <code>None</code> by default</li>
+If True, this function returns None (default behaviour).</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>list:</strong>  list of ints (0 to 100)</li>
-<li><strong>int:</strong>  if only one display is affected</li>
-<li><strong>None:</strong>  if the <code>no_return</code> kwarg is specified</li>
+<li><strong>None:</strong>  if the <code>no_return</code> kwarg is <code>True</code></li>
+<li><strong>list:</strong>  list of ints (0 to 100) only if the <code>no_return</code> kwarg is <code>False</code></li>
+<li><strong>int:</strong>  if only one display is affected and the <code>no_return</code> kwarg is <code>False</code></li>
 </ul>
 
 <h6 id="example">Example</h6>
@@ -1526,7 +1541,12 @@ If True, this function returns None. In the future this function will return <co
             <span class="p">)}</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="ne">LookupError</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># if a user ONLY has XBacklight installed and no method was specified</span>
+            <span class="c1"># then filter_monitors will raise a LookupError</span>
+            <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">):</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
@@ -2221,7 +2241,7 @@ Raised when the brightness cannot be set/retrieved.</p>
             <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span>
 
-    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for this display. See `set_brightness` for the full docs</span>
 
@@ -2231,8 +2251,8 @@ Raised when the brightness cannot be set/retrieved.</p>
 <span class="sd">                Otherwise it returns the result of `Monitor.get_brightness`</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            int: from 0 to 100</span>
 <span class="sd">            None: if `no_return==True`</span>
+<span class="sd">            int: from 0 to 100</span>
 
 <span class="sd">        Example:</span>
 <span class="sd">            ```python</span>
@@ -2673,12 +2693,12 @@ EG: <code>('serial', '123abc...')</code> or <code>('name', 'BenQ GL2450H')</code
 
         
             <span class="def">def</span>
-            <span class="name">set_brightness</span><span class="signature">(self, value: int, no_return: bool = False) -&gt; Optional[int]</span>:
+            <span class="name">set_brightness</span><span class="signature">(self, value: int, no_return: bool = True) -&gt; Optional[int]</span>:
     </div>
 
                 <details>
             <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+            <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">no_return</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for this display. See `set_brightness` for the full docs</span>
 
@@ -2688,8 +2708,8 @@ EG: <code>('serial', '123abc...')</code> or <code>('name', 'BenQ GL2450H')</code
 <span class="sd">                Otherwise it returns the result of `Monitor.get_brightness`</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            int: from 0 to 100</span>
 <span class="sd">            None: if `no_return==True`</span>
+<span class="sd">            int: from 0 to 100</span>
 
 <span class="sd">        Example:</span>
 <span class="sd">            ```python</span>
@@ -2725,8 +2745,8 @@ Otherwise it returns the result of <code><a href="#Monitor.get_brightness">Monit
 <h6 id="returns">Returns</h6>
 
 <ul>
-<li><strong>int:</strong>  from 0 to 100</li>
 <li><strong>None:</strong>  if <code>no_return==True</code></li>
+<li><strong>int:</strong>  from 0 to 100</li>
 </ul>
 
 <h6 id="example">Example</h6>

@@ -41,9 +41,6 @@
                     <h2>API Documentation</h2>
                         <ul class="memberlist">
             <li>
-                    <a class="function" href="#warn_deprecated">warn_deprecated</a>
-            </li>
-            <li>
                     <a class="class" href="#Light">Light</a>
                             <ul class="memberlist">
                         <li>
@@ -54,9 +51,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#Light.get_display_info">get_display_info</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Light.get_display_names">get_display_names</a>
                         </li>
                         <li>
                                 <a class="function" href="#Light.set_brightness">set_brightness</a>
@@ -101,9 +95,6 @@
                                 <a class="function" href="#XRandr.get_display_interfaces">get_display_interfaces</a>
                         </li>
                         <li>
-                                <a class="function" href="#XRandr.get_display_names">get_display_names</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#XRandr.get_brightness">get_brightness</a>
                         </li>
                         <li>
@@ -128,9 +119,6 @@
                                 <a class="function" href="#DDCUtil.get_display_info">get_display_info</a>
                         </li>
                         <li>
-                                <a class="function" href="#DDCUtil.get_display_names">get_display_names</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#DDCUtil.get_brightness">get_brightness</a>
                         </li>
                         <li>
@@ -143,16 +131,7 @@
                     <a class="function" href="#list_monitors_info">list_monitors_info</a>
             </li>
             <li>
-                    <a class="function" href="#list_monitors">list_monitors</a>
-            </li>
-            <li>
                     <a class="function" href="#get_brightness_from_sysfiles">get_brightness_from_sysfiles</a>
-            </li>
-            <li>
-                    <a class="function" href="#set_brightness">set_brightness</a>
-            </li>
-            <li>
-                    <a class="function" href="#get_brightness">get_brightness</a>
             </li>
     </ul>
 
@@ -204,24 +183,9 @@
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">flatten_list</span><span class="p">,</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">EDID</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">EDID</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
-
-<span class="c1"># edid class used to be defined here as _EDID</span>
-<span class="n">_EDID</span> <span class="o">=</span> <span class="n">EDID</span>
-
-
-<span class="k">def</span> <span class="nf">warn_deprecated</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">alternative</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Temporary function to warn you that things have been deprecated</span>
-<span class="sd">    and will be removed in the next update.&#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">alternative</span> <span class="o">=</span> <span class="n">name</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;screen_brightness_control.linux.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> is deprecated.&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; Use screen_brightness_control.</span><span class="si">{</span><span class="n">alternative</span><span class="si">}</span><span class="s1"> instead&#39;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 
 <span class="k">class</span> <span class="nc">Light</span><span class="p">:</span>
@@ -308,26 +272,6 @@
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;light_path&#39;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">displays</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by light</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.Light.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;edp-backlight&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;Light.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;light&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -568,26 +512,6 @@
         <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">out</span> <span class="k">if</span> <span class="s1">&#39;connected&#39;</span> <span class="ow">in</span> <span class="n">i</span> <span class="ow">and</span> <span class="s1">&#39;disconnected&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by xrandr</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.XRandr.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;XRandr.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;xrandr&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-
-    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Returns the brightness for a display using the xrandr executable</span>
@@ -773,26 +697,6 @@
         <span class="k">return</span> <span class="n">data</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by ddcutil</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.DDCUtil.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;Dell U2211H&#39;, &#39;BenQ GL2450H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;DDCUtil.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;ddcutil&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-
-    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Returns the brightness for a display using the ddcutil executable</span>
@@ -935,30 +839,6 @@
     <span class="k">return</span> <span class="n">info</span>
 
 
-<span class="k">def</span> <span class="nf">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the names of all detected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        method (str): the method the monitor can be addressed by. Can be &#39;xrandr&#39; or &#39;ddcutil&#39; or &#39;light&#39;</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of strings</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        monitors = sbc.linux.list_monitors()</span>
-<span class="sd">        # EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;, &#39;edp-backlight&#39;]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;list_monitors&#39;</span><span class="p">)</span>
-    <span class="n">displays</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">displays</span><span class="p">)</span>
-
-
 <span class="k">def</span> <span class="nf">get_brightness_from_sysfiles</span><span class="p">(</span><span class="n">display</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    **DEPRECATED**.</span>
@@ -982,7 +862,12 @@
 <span class="sd">        # Eg Output: 100</span>
 <span class="sd">        ```</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness_from_sysfiles&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">warn</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="s1">&#39;screen_brightness_control.linux.get_brightness_from_sysfiles is&#39;</span>
+            <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
+        <span class="p">),</span> <span class="ne">DeprecationWarning</span>
+    <span class="p">)</span>
     <span class="n">backlight_dir</span> <span class="o">=</span> <span class="s1">&#39;/sys/class/backlight/&#39;</span>
     <span class="n">error</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="c1"># if function has not returned yet try reading the brightness file</span>
@@ -1014,195 +899,11 @@
             <span class="n">exc</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
     <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Backlight directory </span><span class="si">{</span><span class="n">backlight_dir</span><span class="si">}</span><span class="s1"> not found&#39;</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">__set_and_get_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Internal function, do not call. Either sets the brightness or gets it.</span>
-<span class="sd">    Exists because set_brightness and get_brightness only have a couple differences</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;__set_and_get_brightness&#39;</span><span class="p">,</span> <span class="s1">&#39;__brightness&#39;</span><span class="p">)</span>
-    <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">try</span><span class="p">:</span>  <span class="c1"># filter known list of monitors according to kwargs</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
-            <span class="n">monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)[</span><span class="n">display</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">monitors</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>  <span class="c1"># add the output of each brightness method to the output list</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="nb">getattr</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">],</span> <span class="n">meta_method</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                <span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-
-        <span class="c1"># use `&#39;no_return&#39; not in kwargs` because dict membership only checks the keys</span>
-        <span class="k">if</span> <span class="n">output</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">all</span><span class="p">(</span><span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">output</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;no_return&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;no_return&#39;</span><span class="p">])):</span>
-            <span class="c1"># flatten and return any valid output (taking into account the no_return parameter)</span>
-            <span class="k">if</span> <span class="s1">&#39;no_return&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;no_return&#39;</span><span class="p">]:</span>
-                <span class="k">return</span> <span class="kc">None</span>
-            <span class="n">output</span> <span class="o">=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">output</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">XBacklight</span><span class="p">,</span> <span class="n">meta_method</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s1">&#39;XBacklight&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-
-    <span class="c1"># if function hasn&#39;t already returned it has failed</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">display</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="n">meta_method</span> <span class="o">==</span> <span class="s1">&#39;get&#39;</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">get_brightness_from_sysfiles</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s1">&#39;/sys/class/backlight/*&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="k">if</span> <span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">no valid output was received from brightness methods&#39;</span>
-    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span>
-    <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        value (int): Sets the brightness to this value</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display.</span>
-<span class="sd">            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</span>
-<span class="sd">        method (str): the method to use (&#39;light&#39;, &#39;xrandr&#39;, &#39;ddcutil&#39; or &#39;xbacklight&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to the chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: int (0 to 100) if the method is &#39;XBacklight&#39;</span>
-<span class="sd">        None: if `no_return` is True</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: if you pass in an invalid value for `method`</span>
-<span class="sd">        LookupError: if the chosen display or method is not found</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # set brightness to 50%</span>
-<span class="sd">        sbc.linux.set_brightness(50)</span>
-
-<span class="sd">        # set brightness of the primary display to 75%</span>
-<span class="sd">        sbc.linux.set_brightness(75, display=0)</span>
-
-<span class="sd">        # set the brightness to 25% via the XRandr method</span>
-<span class="sd">        sbc.linux.set_brightness(25, method=&#39;xrandr&#39;)</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;set_brightness&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">XBacklight</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display.</span>
-<span class="sd">            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</span>
-<span class="sd">        method (str): the method to use (&#39;light&#39;, &#39;xrandr&#39;, &#39;ddcutil&#39; or &#39;xbacklight&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: int (0 to 100) if the method is &#39;XBacklight&#39;</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: if you pass in an invalid value for `method`</span>
-<span class="sd">        LookupError: if the chosen display or method is not found</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # get the current screen brightness</span>
-<span class="sd">        current_brightness = sbc.linux.get_brightness()</span>
-
-<span class="sd">        # get the brightness of the primary display</span>
-<span class="sd">        primary_brightness = sbc.linux.get_brightness(display=0)[0]</span>
-
-<span class="sd">        # get the brightness via the XRandr method</span>
-<span class="sd">        xrandr_brightness = sbc.linux.get_brightness(method=&#39;xrandr&#39;)</span>
-
-<span class="sd">        # get the brightness of the secondary display using Light</span>
-<span class="sd">        light_brightness = sbc.get_brightness(display=1, method=&#39;light&#39;)[0]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">XBacklight</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
             </section>
-                <section id="warn_deprecated">
-                            <div class="attr function"><a class="headerlink" href="#warn_deprecated">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">warn_deprecated</span><span class="signature">(name, alternative=None)</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">warn_deprecated</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">alternative</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Temporary function to warn you that things have been deprecated</span>
-<span class="sd">    and will be removed in the next update.&#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">alternative</span> <span class="o">=</span> <span class="n">name</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;screen_brightness_control.linux.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> is deprecated.&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; Use screen_brightness_control.</span><span class="si">{</span><span class="n">alternative</span><span class="si">}</span><span class="s1"> instead&#39;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Temporary function to warn you that things have been deprecated
-and will be removed in the next update.</p>
-</div>
-
-
-                </section>
                 <section id="Light">
                                 <div class="attr class">
         <a class="headerlink" href="#Light">#&nbsp;&nbsp</a>
@@ -1298,26 +999,6 @@ and will be removed in the next update.</p>
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;light_path&#39;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">displays</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by light</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.Light.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;edp-backlight&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;Light.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;light&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -1542,62 +1223,6 @@ This is passed to <code>filter_monitors</code></li>
 
 <span class="c1"># get info about a monitor called &#39;edp-backlight&#39;</span>
 <span class="n">edp_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">Light</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="s1">&#39;edp-backlight&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
-                            <div id="Light.get_display_names" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#Light.get_display_names">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@classmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_display_names</span><span class="signature">(cls) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by light</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.Light.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;edp-backlight&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;Light.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;light&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the names of each display, as reported by light</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">Light</span><span class="o">.</span><span class="n">get_display_names</span><span class="p">()</span>
-<span class="c1"># EG output: [&#39;edp-backlight&#39;]</span>
 </code></pre></div>
 </blockquote>
 </div>
@@ -2095,26 +1720,6 @@ Returns the names of each display, as reported by light</p>
         <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">out</span> <span class="k">if</span> <span class="s1">&#39;connected&#39;</span> <span class="ow">in</span> <span class="n">i</span> <span class="ow">and</span> <span class="s1">&#39;disconnected&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by xrandr</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.XRandr.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;XRandr.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;xrandr&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-
-    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Returns the brightness for a display using the xrandr executable</span>
@@ -2409,62 +2014,6 @@ in the returned info</li>
 
 
                             </div>
-                            <div id="XRandr.get_display_names" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#XRandr.get_display_names">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@classmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_display_names</span><span class="signature">(cls) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by xrandr</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.XRandr.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;XRandr.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;xrandr&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the names of each display, as reported by xrandr</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">XRandr</span><span class="o">.</span><span class="n">get_display_names</span><span class="p">()</span>
-<span class="c1"># EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;]</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
                             <div id="XRandr.get_brightness" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#XRandr.get_brightness">#&nbsp;&nbsp</a>
 
@@ -2743,26 +2292,6 @@ Returns the names of each display, as reported by xrandr</p>
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;i2c_bus&#39;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">data</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by ddcutil</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.DDCUtil.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;Dell U2211H&#39;, &#39;BenQ GL2450H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;DDCUtil.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;ddcutil&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
@@ -3045,62 +2574,6 @@ This is passed to <code>filter_monitors</code></li>
 
 <span class="c1"># get information about a monitor with a specific name</span>
 <span class="n">benq_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">DDCUtil</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="s1">&#39;BenQ GL2450HM&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
-                            <div id="DDCUtil.get_display_names" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#DDCUtil.get_display_names">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@classmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_display_names</span><span class="signature">(cls) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns the names of each display, as reported by ddcutil</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.linux.DDCUtil.get_display_names()</span>
-<span class="sd">            # EG output: [&#39;Dell U2211H&#39;, &#39;BenQ GL2450H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;DDCUtil.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;ddcutil&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the names of each display, as reported by ddcutil</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">DDCUtil</span><span class="o">.</span><span class="n">get_display_names</span><span class="p">()</span>
-<span class="c1"># EG output: [&#39;Dell U2211H&#39;, &#39;BenQ GL2450H&#39;]</span>
 </code></pre></div>
 </blockquote>
 </div>
@@ -3397,70 +2870,6 @@ Returns the names of each display, as reported by ddcutil</p>
 
 
                 </section>
-                <section id="list_monitors">
-                            <div class="attr function"><a class="headerlink" href="#list_monitors">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">list_monitors</span><span class="signature">(method: Optional[str] = None) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the names of all detected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        method (str): the method the monitor can be addressed by. Can be &#39;xrandr&#39; or &#39;ddcutil&#39; or &#39;light&#39;</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of strings</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        monitors = sbc.linux.list_monitors()</span>
-<span class="sd">        # EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;, &#39;edp-backlight&#39;]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;list_monitors&#39;</span><span class="p">)</span>
-    <span class="n">displays</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">displays</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the names of all detected monitors</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>method (str):</strong>  the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">monitors</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">()</span>
-<span class="c1"># EG output: [&#39;BenQ GL2450HM&#39;, &#39;Dell U2211H&#39;, &#39;edp-backlight&#39;]</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
                 <section id="get_brightness_from_sysfiles">
                             <div class="attr function"><a class="headerlink" href="#get_brightness_from_sysfiles">#&nbsp;&nbsp</a>
 
@@ -3494,7 +2903,12 @@ Returns the names of all detected monitors</p>
 <span class="sd">        # Eg Output: 100</span>
 <span class="sd">        ```</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness_from_sysfiles&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">warn</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="s1">&#39;screen_brightness_control.linux.get_brightness_from_sysfiles is&#39;</span>
+            <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
+        <span class="p">),</span> <span class="ne">DeprecationWarning</span>
+    <span class="p">)</span>
     <span class="n">backlight_dir</span> <span class="o">=</span> <span class="s1">&#39;/sys/class/backlight/&#39;</span>
     <span class="n">error</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="c1"># if function has not returned yet try reading the brightness file</span>
@@ -3559,240 +2973,6 @@ Returns the current display brightness by reading files from <code>/sys/class/ba
 
 <span class="n">brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">get_brightness_from_sysfiles</span><span class="p">()</span>
 <span class="c1"># Eg Output: 100</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="set_brightness">
-                            <div class="attr function"><a class="headerlink" href="#set_brightness">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">set_brightness</span><span class="signature">(
-    value: int,
-    display: Union[str, int, NoneType] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -&gt; Union[List[int], int, NoneType]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span>
-    <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        value (int): Sets the brightness to this value</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display.</span>
-<span class="sd">            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</span>
-<span class="sd">        method (str): the method to use (&#39;light&#39;, &#39;xrandr&#39;, &#39;ddcutil&#39; or &#39;xbacklight&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to the chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: int (0 to 100) if the method is &#39;XBacklight&#39;</span>
-<span class="sd">        None: if `no_return` is True</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: if you pass in an invalid value for `method`</span>
-<span class="sd">        LookupError: if the chosen display or method is not found</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # set brightness to 50%</span>
-<span class="sd">        sbc.linux.set_brightness(50)</span>
-
-<span class="sd">        # set brightness of the primary display to 75%</span>
-<span class="sd">        sbc.linux.set_brightness(75, display=0)</span>
-
-<span class="sd">        # set the brightness to 25% via the XRandr method</span>
-<span class="sd">        sbc.linux.set_brightness(25, method=&#39;xrandr&#39;)</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;set_brightness&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">XBacklight</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>value (int):</strong>  Sets the brightness to this value</li>
-<li><strong>display (int or str):</strong>  The specific display you wish to adjust.
-Can be index, model, name or serial of the display.
-Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</li>
-<li><strong>method (str):</strong>  the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')</li>
-<li><strong>kwargs (dict):</strong>  passed directly to the chosen brightness method</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of ints (0 to 100)</li>
-<li><strong>int:</strong>  int (0 to 100) if the method is 'XBacklight'</li>
-<li><strong>None:</strong>  if <code>no_return</code> is True</li>
-</ul>
-
-<h6 id="raises">Raises</h6>
-
-<ul>
-<li><strong>ValueError:</strong>  if you pass in an invalid value for <code>method</code></li>
-<li><strong>LookupError:</strong>  if the chosen display or method is not found</li>
-<li><strong>TypeError:</strong>  if the value given for <code>display</code> is not int or str</li>
-<li><strong>Exception:</strong>  if the brightness could not be obtained by any method</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># set brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1"># set brightness of the primary display to 75%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-<span class="c1"># set the brightness to 25% via the XRandr method</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;xrandr&#39;</span><span class="p">)</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="get_brightness">
-                            <div class="attr function"><a class="headerlink" href="#get_brightness">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">get_brightness</span><span class="signature">(
-    display: Union[str, int, NoneType] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -&gt; Union[List[int], int]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display.</span>
-<span class="sd">            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</span>
-<span class="sd">        method (str): the method to use (&#39;light&#39;, &#39;xrandr&#39;, &#39;ddcutil&#39; or &#39;xbacklight&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-<span class="sd">        int: int (0 to 100) if the method is &#39;XBacklight&#39;</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        ValueError: if you pass in an invalid value for `method`</span>
-<span class="sd">        LookupError: if the chosen display or method is not found</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # get the current screen brightness</span>
-<span class="sd">        current_brightness = sbc.linux.get_brightness()</span>
-
-<span class="sd">        # get the brightness of the primary display</span>
-<span class="sd">        primary_brightness = sbc.linux.get_brightness(display=0)[0]</span>
-
-<span class="sd">        # get the brightness via the XRandr method</span>
-<span class="sd">        xrandr_brightness = sbc.linux.get_brightness(method=&#39;xrandr&#39;)</span>
-
-<span class="sd">        # get the brightness of the secondary display using Light</span>
-<span class="sd">        light_brightness = sbc.get_brightness(display=1, method=&#39;light&#39;)[0]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">XBacklight</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>display (int or str):</strong>  The specific display you wish to adjust.
-Can be index, model, name or serial of the display.
-Can also be i2c bus (ddcutil), interface (xrandr) or path (light)</li>
-<li><strong>method (str):</strong>  the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')</li>
-<li><strong>kwargs (dict):</strong>  passed directly to chosen brightness method</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of ints (0 to 100)</li>
-<li><strong>int:</strong>  int (0 to 100) if the method is 'XBacklight'</li>
-</ul>
-
-<h6 id="raises">Raises</h6>
-
-<ul>
-<li><strong>ValueError:</strong>  if you pass in an invalid value for <code>method</code></li>
-<li><strong>LookupError:</strong>  if the chosen display or method is not found</li>
-<li><strong>TypeError:</strong>  if the value given for <code>display</code> is not int or str</li>
-<li><strong>Exception:</strong>  if the brightness could not be obtained by any method</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># get the current screen brightness</span>
-<span class="n">current_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
-
-<span class="c1"># get the brightness of the primary display</span>
-<span class="n">primary_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-<span class="c1"># get the brightness via the XRandr method</span>
-<span class="n">xrandr_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;xrandr&#39;</span><span class="p">)</span>
-
-<span class="c1"># get the brightness of the secondary display using Light</span>
-<span class="n">light_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;light&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div>
 </blockquote>
 </div>

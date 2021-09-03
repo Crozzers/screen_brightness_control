@@ -41,9 +41,6 @@
                     <h2>API Documentation</h2>
                         <ul class="memberlist">
             <li>
-                    <a class="function" href="#warn_deprecated">warn_deprecated</a>
-            </li>
-            <li>
                     <a class="function" href="#get_display_info">get_display_info</a>
             </li>
             <li>
@@ -54,9 +51,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#WMI.get_display_info">get_display_info</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#WMI.get_display_names">get_display_names</a>
                         </li>
                         <li>
                                 <a class="function" href="#WMI.set_brightness">set_brightness</a>
@@ -83,9 +77,6 @@
                                 <a class="function" href="#VCP.get_monitor_caps">get_monitor_caps</a>
                         </li>
                         <li>
-                                <a class="function" href="#VCP.get_display_names">get_display_names</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#VCP.get_brightness">get_brightness</a>
                         </li>
                         <li>
@@ -96,15 +87,6 @@
             </li>
             <li>
                     <a class="function" href="#list_monitors_info">list_monitors_info</a>
-            </li>
-            <li>
-                    <a class="function" href="#list_monitors">list_monitors</a>
-            </li>
-            <li>
-                    <a class="function" href="#set_brightness">set_brightness</a>
-            </li>
-            <li>
-                    <a class="function" href="#get_brightness">get_brightness</a>
             </li>
     </ul>
 
@@ -162,27 +144,15 @@
 <span class="kn">import</span> <span class="nn">ctypes</span>
 <span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">windll</span><span class="p">,</span> <span class="n">byref</span><span class="p">,</span> <span class="n">Structure</span><span class="p">,</span> <span class="n">WinError</span><span class="p">,</span> <span class="n">POINTER</span><span class="p">,</span> <span class="n">WINFUNCTYPE</span>
 <span class="kn">from</span> <span class="nn">ctypes.wintypes</span> <span class="kn">import</span> <span class="n">BOOL</span><span class="p">,</span> <span class="n">HMONITOR</span><span class="p">,</span> <span class="n">HDC</span><span class="p">,</span> <span class="n">RECT</span><span class="p">,</span> <span class="n">LPARAM</span><span class="p">,</span> <span class="n">DWORD</span><span class="p">,</span> <span class="n">BYTE</span><span class="p">,</span> <span class="n">WCHAR</span><span class="p">,</span> <span class="n">HANDLE</span>
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">flatten_list</span><span class="p">,</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">EDID</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">EDID</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 <span class="c1"># a bunch of typing classes were deprecated in Python 3.9</span>
 <span class="c1"># in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)</span>
 <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">platform</span><span class="o">.</span><span class="n">python_version_tuple</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generator</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Generator</span>
-
-
-<span class="k">def</span> <span class="nf">warn_deprecated</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">alternative</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Temporary function to warn you that things have been deprecated</span>
-<span class="sd">    and will be removed in the next update.&#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">alternative</span> <span class="o">=</span> <span class="n">name</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;screen_brightness_control.windows.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> is deprecated.&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; Use screen_brightness_control.</span><span class="si">{</span><span class="n">alternative</span><span class="si">}</span><span class="s1"> instead&#39;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_wmi_init</span><span class="p">():</span>
@@ -382,26 +352,6 @@
         <span class="k">return</span> <span class="n">info</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns names of all displays that can be addressed by WMI</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for name in sbc.windows.WMI.get_display_names():</span>
-<span class="sd">                print(name)</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;WMI.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;wmi&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-
-    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the display brightness for Windows using WMI</span>
@@ -592,7 +542,12 @@
 <span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_monitor_caps&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
+                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
+            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
+        <span class="p">)</span>
         <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
             <span class="k">return</span>
@@ -600,27 +555,6 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">CapabilitiesRequestAndCapabilitiesReply</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">caps_string</span><span class="p">,</span> <span class="n">caps_string_length</span><span class="p">):</span>
             <span class="k">return</span>
         <span class="k">return</span> <span class="n">caps_string</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ASCII&#39;</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Return the names of each detected monitor</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.windows.VCP.get_display_names()</span>
-<span class="sd">            print(names)</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;vcp&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
@@ -774,207 +708,11 @@
         <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;windows_monitors_info_</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">allow_duplicates</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">info_final</span><span class="p">)</span>
         <span class="n">info</span> <span class="o">=</span> <span class="n">info_final</span>
     <span class="k">return</span> <span class="n">info</span>
-
-
-<span class="k">def</span> <span class="nf">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns a list of all addressable monitor names</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of strings</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        monitors = sbc.windows.list_monitors()</span>
-<span class="sd">        # EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;list_monitors&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)]</span>
-
-
-<span class="k">def</span> <span class="nf">__set_and_get_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Internal function, do not call. Either sets the brightness or gets it.</span>
-<span class="sd">    Exists because set_brightness and get_brightness only have a couple differences</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;__set_and_get_brightness&#39;</span><span class="p">,</span> <span class="s1">&#39;__brightness&#39;</span><span class="p">)</span>
-    <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">try</span><span class="p">:</span>  <span class="c1"># filter known list of monitors according to kwargs</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
-            <span class="n">monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)[</span><span class="n">display</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">monitors</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>  <span class="c1"># add the output of each brightness method to the output list</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="nb">getattr</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">],</span> <span class="n">meta_method</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                <span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-
-        <span class="c1"># use `&#39;no_return&#39; not in kwargs` because dict membership only checks the keys</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">output</span> <span class="ow">and</span> <span class="ow">not</span>
-            <span class="p">(</span><span class="nb">all</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">output</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;no_return&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;no_return&#39;</span><span class="p">]))</span>
-        <span class="p">):</span>
-            <span class="c1"># flatten and return any output (taking into account the no_return parameter)</span>
-            <span class="k">if</span> <span class="s1">&#39;no_return&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;no_return&#39;</span><span class="p">]:</span>
-                <span class="k">return</span> <span class="kc">None</span>
-            <span class="n">output</span> <span class="o">=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">output</span>
-
-    <span class="c1"># if function hasn&#39;t already returned it has failed</span>
-    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="k">if</span> <span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">no valid output was received from brightness methods&#39;</span>
-    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span>
-    <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Sets the brightness of any connected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        value (int): Sets the brightness to this value as a percentage</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display</span>
-<span class="sd">        method (str): the method to use (&#39;wmi&#39; or &#39;vcp&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to the chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100) (the result of `get_brightness`)</span>
-<span class="sd">        None: if `no_return` is True</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        LookupError: if the chosen display (with method if applicable) is not found</span>
-<span class="sd">        ValueError: if the chosen method is invalid</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be set by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # set the current brightness to 50%</span>
-<span class="sd">        sbc.windows.set_brightness(50)</span>
-
-<span class="sd">        # set the brightness of the primary display to 75%</span>
-<span class="sd">        sbc.windows.set_brightness(75, display = 0)</span>
-
-<span class="sd">        # set the brightness of any displays using VCP to 25%</span>
-<span class="sd">        sbc.windows.set_brightness(25, method = &#39;vcp&#39;)</span>
-
-<span class="sd">        # set the brightness of displays with model name &#39;BenQ GL2450H&#39; to 100%</span>
-<span class="sd">        sbc.windows.set_brightness(100, display = &#39;BenQ GL2450H&#39;)</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;set_brightness&#39;</span><span class="p">)</span>
-    <span class="c1"># this function is called because set_brightness and get_brightness only differed by 1 line of code</span>
-    <span class="c1"># so I made another internal function to reduce the filesize</span>
-    <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the brightness of any connected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display</span>
-<span class="sd">        method (str): the method to use (&#39;wmi&#39; or &#39;vcp&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        LookupError: if the chosen display (with method if applicable) is not found</span>
-<span class="sd">        ValueError: if the chosen method is invalid</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # get the current brightness</span>
-<span class="sd">        current_brightness = sbc.windows.get_brightness()</span>
-<span class="sd">        if type(current_brightness) is int:</span>
-<span class="sd">            print(&#39;There is only one detected display&#39;)</span>
-<span class="sd">        else:</span>
-<span class="sd">            print(&#39;There are&#39;, len(current_brightness), &#39;detected displays&#39;)</span>
-
-<span class="sd">        # get the brightness of the primary display</span>
-<span class="sd">        primary_brightness = sbc.windows.get_brightness(display=0)[0]</span>
-
-<span class="sd">        # get the brightness of any displays using VCP</span>
-<span class="sd">        vcp_brightness = sbc.windows.get_brightness(method=&#39;vcp&#39;)</span>
-
-<span class="sd">        # get the brightness of displays with the model name &#39;BenQ GL2450H&#39;</span>
-<span class="sd">        benq_brightness = sbc.windows.get_brightness(display=&#39;BenQ GL2450H&#39;)[0]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness&#39;</span><span class="p">)</span>
-    <span class="c1"># this function is called because set_brightness and get_brightness only differed by 1 line of code</span>
-    <span class="c1"># so I made another internal function to reduce the filesize</span>
-    <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
             </section>
-                <section id="warn_deprecated">
-                            <div class="attr function"><a class="headerlink" href="#warn_deprecated">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">warn_deprecated</span><span class="signature">(name, alternative=None)</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">warn_deprecated</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">alternative</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Temporary function to warn you that things have been deprecated</span>
-<span class="sd">    and will be removed in the next update.&#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">alternative</span> <span class="o">=</span> <span class="n">name</span>
-
-    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;screen_brightness_control.windows.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> is deprecated.&#39;</span>
-    <span class="k">if</span> <span class="n">alternative</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; Use screen_brightness_control.</span><span class="si">{</span><span class="n">alternative</span><span class="si">}</span><span class="s1"> instead&#39;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Temporary function to warn you that things have been deprecated
-and will be removed in the next update.</p>
-</div>
-
-
-                </section>
                 <section id="get_display_info">
                             <div class="attr function"><a class="headerlink" href="#get_display_info">#&nbsp;&nbsp</a>
 
@@ -1208,26 +946,6 @@ and will be removed in the next update.</p>
         <span class="k">return</span> <span class="n">info</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns names of all displays that can be addressed by WMI</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for name in sbc.windows.WMI.get_display_names():</span>
-<span class="sd">                print(name)</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;WMI.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;wmi&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-
-    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the display brightness for Windows using WMI</span>
@@ -1400,62 +1118,6 @@ Pass in the serial number, name, model, edid or index</li>
 
 <span class="c1"># get information about a monitor with a specific name</span>
 <span class="n">benq_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">WMI</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="s1">&#39;BenQ GL2450H&#39;</span><span class="p">)</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
-                            <div id="WMI.get_display_names" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#WMI.get_display_names">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@classmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_display_names</span><span class="signature">(cls) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Returns names of all displays that can be addressed by WMI</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for name in sbc.windows.WMI.get_display_names():</span>
-<span class="sd">                print(name)</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;WMI.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;wmi&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns names of all displays that can be addressed by WMI</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">WMI</span><span class="o">.</span><span class="n">get_display_names</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 </code></pre></div>
 </blockquote>
 </div>
@@ -1769,7 +1431,12 @@ Returns names of all displays that can be addressed by WMI</p>
 <span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_monitor_caps&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
+                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
+            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
+        <span class="p">)</span>
         <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
             <span class="k">return</span>
@@ -1777,27 +1444,6 @@ Returns names of all displays that can be addressed by WMI</p>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">CapabilitiesRequestAndCapabilitiesReply</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">caps_string</span><span class="p">,</span> <span class="n">caps_string_length</span><span class="p">):</span>
             <span class="k">return</span>
         <span class="k">return</span> <span class="n">caps_string</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ASCII&#39;</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Return the names of each detected monitor</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.windows.VCP.get_display_names()</span>
-<span class="sd">            print(names)</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;vcp&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
@@ -2129,7 +1775,12 @@ Pass in the serial number, name, model, edid or index</li>
 <span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_monitor_caps&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
+                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
+            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
+        <span class="p">)</span>
         <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
             <span class="k">return</span>
@@ -2165,64 +1816,6 @@ This function takes anywhere from 1-2 seconds to run</p>
 <span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">():</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">))</span>
 <span class="c1"># EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
-                            <div id="VCP.get_display_names" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#VCP.get_display_names">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@classmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_display_names</span><span class="signature">(cls) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_display_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Return the names of each detected monitor</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            list: list of strings</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            names = sbc.windows.VCP.get_display_names()</span>
-<span class="sd">            print(names)</span>
-<span class="sd">            # EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;VCP.get_display_names&#39;</span><span class="p">,</span> <span class="s1">&#39;list_monitors(method=&quot;vcp&quot;)&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Return the names of each detected monitor</p>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">get_display_names</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
-<span class="c1"># EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
 </code></pre></div>
 </blockquote>
 </div>
@@ -2532,303 +2125,6 @@ Return the names of each detected monitor</p>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Method:&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">])</span>
     <span class="c1"># the EDID string of the monitor</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;EDID:&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">])</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="list_monitors">
-                            <div class="attr function"><a class="headerlink" href="#list_monitors">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">list_monitors</span><span class="signature">(method: Optional[str] = None) -&gt; List[str]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns a list of all addressable monitor names</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        method (str): the method the monitor can be addressed by. Can be &#39;wmi&#39; or &#39;vcp&#39;</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of strings</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        monitors = sbc.windows.list_monitors()</span>
-<span class="sd">        # EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;list_monitors&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)]</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns a list of all addressable monitor names</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>method (str):</strong>  the method the monitor can be addressed by. Can be 'wmi' or 'vcp'</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of strings</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">monitors</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">()</span>
-<span class="c1"># EG output: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="set_brightness">
-                            <div class="attr function"><a class="headerlink" href="#set_brightness">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">set_brightness</span><span class="signature">(
-    value: int,
-    display: Union[str, int, NoneType] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -&gt; Optional[List[int]]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span>
-    <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Sets the brightness of any connected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        value (int): Sets the brightness to this value as a percentage</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display</span>
-<span class="sd">        method (str): the method to use (&#39;wmi&#39; or &#39;vcp&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to the chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100) (the result of `get_brightness`)</span>
-<span class="sd">        None: if `no_return` is True</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        LookupError: if the chosen display (with method if applicable) is not found</span>
-<span class="sd">        ValueError: if the chosen method is invalid</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be set by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # set the current brightness to 50%</span>
-<span class="sd">        sbc.windows.set_brightness(50)</span>
-
-<span class="sd">        # set the brightness of the primary display to 75%</span>
-<span class="sd">        sbc.windows.set_brightness(75, display = 0)</span>
-
-<span class="sd">        # set the brightness of any displays using VCP to 25%</span>
-<span class="sd">        sbc.windows.set_brightness(25, method = &#39;vcp&#39;)</span>
-
-<span class="sd">        # set the brightness of displays with model name &#39;BenQ GL2450H&#39; to 100%</span>
-<span class="sd">        sbc.windows.set_brightness(100, display = &#39;BenQ GL2450H&#39;)</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;set_brightness&#39;</span><span class="p">)</span>
-    <span class="c1"># this function is called because set_brightness and get_brightness only differed by 1 line of code</span>
-    <span class="c1"># so I made another internal function to reduce the filesize</span>
-    <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Sets the brightness of any connected monitors</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>value (int):</strong>  Sets the brightness to this value as a percentage</li>
-<li><strong>display (int or str):</strong>  The specific display you wish to adjust.
-Can be index, model, name or serial of the display</li>
-<li><strong>method (str):</strong>  the method to use ('wmi' or 'vcp')</li>
-<li><strong>kwargs (dict):</strong>  passed directly to the chosen brightness method</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of ints (0 to 100) (the result of <code><a href="#get_brightness">get_brightness</a></code>)</li>
-<li><strong>None:</strong>  if <code>no_return</code> is True</li>
-</ul>
-
-<h6 id="raises">Raises</h6>
-
-<ul>
-<li><strong>LookupError:</strong>  if the chosen display (with method if applicable) is not found</li>
-<li><strong>ValueError:</strong>  if the chosen method is invalid</li>
-<li><strong>TypeError:</strong>  if the value given for <code>display</code> is not int or str</li>
-<li><strong>Exception:</strong>  if the brightness could not be set by any method</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># set the current brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1"># set the brightness of the primary display to 75%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
-
-<span class="c1"># set the brightness of any displays using VCP to 25%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;vcp&#39;</span><span class="p">)</span>
-
-<span class="c1"># set the brightness of displays with model name &#39;BenQ GL2450H&#39; to 100%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="s1">&#39;BenQ GL2450H&#39;</span><span class="p">)</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="get_brightness">
-                            <div class="attr function"><a class="headerlink" href="#get_brightness">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">get_brightness</span><span class="signature">(
-    display: Union[str, int, NoneType] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -&gt; List[int]</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the brightness of any connected monitors</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int or str): The specific display you wish to adjust.</span>
-<span class="sd">            Can be index, model, name or serial of the display</span>
-<span class="sd">        method (str): the method to use (&#39;wmi&#39; or &#39;vcp&#39;)</span>
-<span class="sd">        kwargs (dict): passed directly to chosen brightness method</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        list: list of ints (0 to 100)</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        LookupError: if the chosen display (with method if applicable) is not found</span>
-<span class="sd">        ValueError: if the chosen method is invalid</span>
-<span class="sd">        TypeError: if the value given for `display` is not int or str</span>
-<span class="sd">        Exception: if the brightness could not be obtained by any method</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        # get the current brightness</span>
-<span class="sd">        current_brightness = sbc.windows.get_brightness()</span>
-<span class="sd">        if type(current_brightness) is int:</span>
-<span class="sd">            print(&#39;There is only one detected display&#39;)</span>
-<span class="sd">        else:</span>
-<span class="sd">            print(&#39;There are&#39;, len(current_brightness), &#39;detected displays&#39;)</span>
-
-<span class="sd">        # get the brightness of the primary display</span>
-<span class="sd">        primary_brightness = sbc.windows.get_brightness(display=0)[0]</span>
-
-<span class="sd">        # get the brightness of any displays using VCP</span>
-<span class="sd">        vcp_brightness = sbc.windows.get_brightness(method=&#39;vcp&#39;)</span>
-
-<span class="sd">        # get the brightness of displays with the model name &#39;BenQ GL2450H&#39;</span>
-<span class="sd">        benq_brightness = sbc.windows.get_brightness(display=&#39;BenQ GL2450H&#39;)[0]</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn_deprecated</span><span class="p">(</span><span class="s1">&#39;get_brightness&#39;</span><span class="p">)</span>
-    <span class="c1"># this function is called because set_brightness and get_brightness only differed by 1 line of code</span>
-    <span class="c1"># so I made another internal function to reduce the filesize</span>
-    <span class="k">return</span> <span class="n">__set_and_get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">meta_method</span><span class="o">=</span><span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the brightness of any connected monitors</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>display (int or str):</strong>  The specific display you wish to adjust.
-Can be index, model, name or serial of the display</li>
-<li><strong>method (str):</strong>  the method to use ('wmi' or 'vcp')</li>
-<li><strong>kwargs (dict):</strong>  passed directly to chosen brightness method</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>list:</strong>  list of ints (0 to 100)</li>
-</ul>
-
-<h6 id="raises">Raises</h6>
-
-<ul>
-<li><strong>LookupError:</strong>  if the chosen display (with method if applicable) is not found</li>
-<li><strong>ValueError:</strong>  if the chosen method is invalid</li>
-<li><strong>TypeError:</strong>  if the value given for <code>display</code> is not int or str</li>
-<li><strong>Exception:</strong>  if the brightness could not be obtained by any method</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># get the current brightness</span>
-<span class="n">current_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
-<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">current_brightness</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;There is only one detected display&#39;</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;There are&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_brightness</span><span class="p">),</span> <span class="s1">&#39;detected displays&#39;</span><span class="p">)</span>
-
-<span class="c1"># get the brightness of the primary display</span>
-<span class="n">primary_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-<span class="c1"># get the brightness of any displays using VCP</span>
-<span class="n">vcp_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;vcp&#39;</span><span class="p">)</span>
-
-<span class="c1"># get the brightness of displays with the model name &#39;BenQ GL2450H&#39;</span>
-<span class="n">benq_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="s1">&#39;BenQ GL2450H&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div>
 </blockquote>
 </div>
