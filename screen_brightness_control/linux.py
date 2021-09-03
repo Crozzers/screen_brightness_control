@@ -1,20 +1,8 @@
 import subprocess
 import os
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__, EDID
+from . import _monitor_brand_lookup, filter_monitors, __cache__, EDID
 from typing import List, Union, Optional
-import warnings
-
-
-def warn_deprecated(name, alternative=None):
-    '''Temporary function to warn you that things have been deprecated
-    and will be removed in the next update.'''
-    if alternative is None:
-        alternative = name
-
-    msg = f'screen_brightness_control.linux.{name} is deprecated.'
-    if alternative:
-        msg += f' Use screen_brightness_control.{alternative} instead'
-    warnings.warn(msg, DeprecationWarning)
+from warnings import warn
 
 
 class Light:
@@ -101,26 +89,6 @@ class Light:
         if display is not None:
             displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
         return displays
-
-    @classmethod
-    def get_display_names(cls) -> List[str]:
-        '''
-        **DEPRECATED**.
-        Returns the names of each display, as reported by light
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            names = sbc.linux.Light.get_display_names()
-            # EG output: ['edp-backlight']
-            ```
-        '''
-        warn_deprecated('Light.get_display_names', 'list_monitors(method="light")')
-        return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
     def set_brightness(cls, value: int, display: Optional[int] = None):
@@ -361,26 +329,6 @@ class XRandr:
         return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
     @classmethod
-    def get_display_names(cls) -> List[str]:
-        '''
-        **DEPRECATED**.
-        Returns the names of each display, as reported by xrandr
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            names = sbc.linux.XRandr.get_display_names()
-            # EG output: ['BenQ GL2450HM', 'Dell U2211H']
-            ```
-        '''
-        warn_deprecated('XRandr.get_display_names', 'list_monitors(method="xrandr")')
-        return [i['name'] for i in cls.get_display_info()]
-
-    @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
         Returns the brightness for a display using the xrandr executable
@@ -566,26 +514,6 @@ class DDCUtil:
         return data
 
     @classmethod
-    def get_display_names(cls) -> List[str]:
-        '''
-        **DEPRECATED**.
-        Returns the names of each display, as reported by ddcutil
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            names = sbc.linux.DDCUtil.get_display_names()
-            # EG output: ['Dell U2211H', 'BenQ GL2450H']
-            ```
-        '''
-        warn_deprecated('DDCUtil.get_display_names', 'list_monitors(method="ddcutil")')
-        return [i['name'] for i in cls.get_display_info()]
-
-    @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
         Returns the brightness for a display using the ddcutil executable
@@ -728,30 +656,6 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     return info
 
 
-def list_monitors(method: Optional[str] = None) -> List[str]:
-    '''
-    **DEPRECATED**.
-    Returns the names of all detected monitors
-
-    Args:
-        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
-
-    Returns:
-        list: list of strings
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        monitors = sbc.linux.list_monitors()
-        # EG output: ['BenQ GL2450HM', 'Dell U2211H', 'edp-backlight']
-        ```
-    '''
-    warn_deprecated('list_monitors')
-    displays = [i['name'] for i in list_monitors_info(method=method)]
-    return flatten_list(displays)
-
-
 def get_brightness_from_sysfiles(display: int = None) -> int:
     '''
     **DEPRECATED**.
@@ -775,7 +679,12 @@ def get_brightness_from_sysfiles(display: int = None) -> int:
         # Eg Output: 100
         ```
     '''
-    warn_deprecated('get_brightness_from_sysfiles', False)
+    warn(
+        (
+            'screen_brightness_control.linux.get_brightness_from_sysfiles is'
+            ' deprecated and will be removed in the next update'
+        ), DeprecationWarning
+    )
     backlight_dir = '/sys/class/backlight/'
     error = []
     # if function has not returned yet try reading the brightness file
@@ -807,157 +716,3 @@ def get_brightness_from_sysfiles(display: int = None) -> int:
             exc += f'\n    {e[0]}: {e[1]}'
         raise Exception(exc)
     raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')
-
-
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
-    '''
-    **DEPRECATED**.
-    Internal function, do not call. Either sets the brightness or gets it.
-    Exists because set_brightness and get_brightness only have a couple differences
-    '''
-    warn_deprecated('__set_and_get_brightness', '__brightness')
-    errors = []
-    try:  # filter known list of monitors according to kwargs
-        if type(display) == int:
-            monitors = [list_monitors_info(method=method)[display]]
-        else:
-            monitors = filter_monitors(display=display, method=method)
-    except Exception as e:
-        errors.append(['', type(e).__name__, e])
-    else:
-        output = []
-        for m in monitors:  # add the output of each brightness method to the output list
-            try:
-                output.append(
-                    getattr(m['method'], meta_method + '_brightness')(*args, display=m['index'], **kwargs)
-                )
-            except Exception as e:
-                output.append(None)
-                errors.append([f"{m['name']}", type(e).__name__, e])
-
-        # use `'no_return' not in kwargs` because dict membership only checks the keys
-        if output and not (all(i is None for i in output) and ('no_return' not in kwargs or not kwargs['no_return'])):
-            # flatten and return any valid output (taking into account the no_return parameter)
-            if 'no_return' in kwargs and kwargs['no_return']:
-                return None
-            output = flatten_list(output)
-            return output
-        else:
-            try:
-                return getattr(XBacklight, meta_method + '_brightness')(*args, **kwargs)
-            except Exception as e:
-                errors.append(['XBacklight', type(e).__name__, e])
-
-    # if function hasn't already returned it has failed
-    if (method, display) == (None, None) and meta_method == 'get':
-        try:
-            return get_brightness_from_sysfiles(**kwargs)
-        except Exception as e:
-            errors.append(['/sys/class/backlight/*', type(e).__name__, e])
-
-    msg = '\n'
-    for e in errors:
-        msg += f'\t{e[0]} -> {e[1]}: {e[2]}\n'
-    if msg == '\n':
-        msg += '\tno valid output was received from brightness methods'
-    raise Exception(msg)
-
-
-def set_brightness(
-    value: int,
-    display: Optional[Union[int, str]] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -> Union[List[int], int, None]:
-    '''
-    **DEPRECATED**.
-    Sets the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
-
-    Args:
-        value (int): Sets the brightness to this value
-        display (int or str): The specific display you wish to adjust.
-            Can be index, model, name or serial of the display.
-            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)
-        method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
-        kwargs (dict): passed directly to the chosen brightness method
-
-    Returns:
-        list: list of ints (0 to 100)
-        int: int (0 to 100) if the method is 'XBacklight'
-        None: if `no_return` is True
-
-    Raises:
-        ValueError: if you pass in an invalid value for `method`
-        LookupError: if the chosen display or method is not found
-        TypeError: if the value given for `display` is not int or str
-        Exception: if the brightness could not be obtained by any method
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # set brightness to 50%
-        sbc.linux.set_brightness(50)
-
-        # set brightness of the primary display to 75%
-        sbc.linux.set_brightness(75, display=0)
-
-        # set the brightness to 25% via the XRandr method
-        sbc.linux.set_brightness(25, method='xrandr')
-        ```
-    '''
-    warn_deprecated('set_brightness')
-    if method is not None and method.lower() == 'xbacklight':
-        return XBacklight.set_brightness(value, **kwargs)
-    else:
-        return __set_and_get_brightness(value, display=display, method=method, meta_method='set', **kwargs)
-
-
-def get_brightness(
-    display: Optional[Union[int, str]] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -> Union[List[int], int]:
-    '''
-    **DEPRECATED**.
-    Returns the brightness for a display, cycles through Light, XRandr, DDCUtil and XBacklight methods until one works
-
-    Args:
-        display (int or str): The specific display you wish to adjust.
-            Can be index, model, name or serial of the display.
-            Can also be i2c bus (ddcutil), interface (xrandr) or path (light)
-        method (str): the method to use ('light', 'xrandr', 'ddcutil' or 'xbacklight')
-        kwargs (dict): passed directly to chosen brightness method
-
-    Returns:
-        list: list of ints (0 to 100)
-        int: int (0 to 100) if the method is 'XBacklight'
-
-    Raises:
-        ValueError: if you pass in an invalid value for `method`
-        LookupError: if the chosen display or method is not found
-        TypeError: if the value given for `display` is not int or str
-        Exception: if the brightness could not be obtained by any method
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # get the current screen brightness
-        current_brightness = sbc.linux.get_brightness()
-
-        # get the brightness of the primary display
-        primary_brightness = sbc.linux.get_brightness(display=0)[0]
-
-        # get the brightness via the XRandr method
-        xrandr_brightness = sbc.linux.get_brightness(method='xrandr')
-
-        # get the brightness of the secondary display using Light
-        light_brightness = sbc.get_brightness(display=1, method='light')[0]
-        ```
-    '''
-    warn_deprecated('get_brightness')
-    if method is not None and method.lower() == 'xbacklight':
-        return XBacklight.get_brightness(**kwargs)
-    else:
-        return __set_and_get_brightness(display=display, method=method, meta_method='get', **kwargs)
