@@ -34,10 +34,7 @@ if __name__ == '__main__':
 
     if (args.get, args.set) != (False, None):
         try:
-            if args.get:
-                arrow = ':'
-            else:
-                arrow = ' ->'
+            arrow = ':' if args.get else ' ->'
             for monitor in get_monitors(args):
                 name = monitor.name
                 if args.verbose:
@@ -46,7 +43,7 @@ if __name__ == '__main__':
                     if args.get:
                         ret_val = monitor.get_brightness()
                     else:
-                        ret_val = monitor.set_brightness(args.set)
+                        ret_val = monitor.set_brightness(args.set, no_return=False)
 
                     if ret_val is None:
                         raise Exception
@@ -83,7 +80,7 @@ if __name__ == '__main__':
                         print(f'{name}: {monitor.initial_brightness}% -> {monitor.get_brightness()}%')
                         done.append(monitor)
                 monitors = [i for i in monitors if i not in done]
-                if monitors == []:
+                if not monitors:
                     break
                 time.sleep(0.1)
         except Exception:
@@ -110,22 +107,13 @@ if __name__ == '__main__':
                     print(f'Display {i}: {monitors[i]}')
                 else:
                     msg = (
-                        'Display {}:\n\t'
-                        'Name: {}\n\t'
-                        'Model: {}\n\t'
-                        'Manufacturer: {}\n\t'
-                        'Manufacturer ID: {}\n\t'
-                        'Serial: {}\n\t'
-                        'Method: {}\n\tEDID:'
-                    )
-                    msg = msg.format(
-                        i,
-                        monitors[i]['name'],
-                        monitors[i]['model'],
-                        monitors[i]['manufacturer'],
-                        monitors[i]['manufacturer_id'],
-                        monitors[i]['serial'],
-                        monitors[i]['method'].__name__
+                        f'Display {i}:\n\t'
+                        f'Name: {monitors[i]["name"]}\n\t'
+                        f'Model: {monitors[i]["model"]}\n\t'
+                        f'Manufacturer: {monitors[i]["manufacturer"]}\n\t'
+                        f'Manufacturer ID: {monitors[i]["manufacturer_id"]}\n\t'
+                        f'Serial: {monitors[i]["serial"]}\n\t'
+                        f'Method: {monitors[i]["method"].__name__}\n\tEDID:'
                     )
                     # format the edid string
                     if monitors[i]['edid'] is not None:
