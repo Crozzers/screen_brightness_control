@@ -49,8 +49,8 @@ def set_brightness(
     method: Optional[str] = None,
     force: bool = False,
     verbose_error: bool = False,
-    no_return: bool = False
-) -> Union[List[int], int, None]:
+    no_return: bool = True
+) -> Union[None, List[int], int]:
     '''
     Sets the screen brightness
 
@@ -65,12 +65,12 @@ def set_brightness(
             If True, this check is bypassed
         verbose_error (bool): boolean value controls the amount of detail error messages will contain
         no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
-            If True, this function returns None. In the future this function will return `None` by default
+            If True, this function returns None (default behaviour).
 
     Returns:
-        list: list of ints (0 to 100)
-        int: if only one display is affected
-        None: if the `no_return` kwarg is specified
+        None: if the `no_return` kwarg is `True`
+        list: list of ints (0 to 100) only if the `no_return` kwarg is `False`
+        int: if only one display is affected and the `no_return` kwarg is `False`
 
     Example:
         ```python
@@ -613,7 +613,7 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, value: int, no_return: bool = False) -> Union[int, None]:
+    def set_brightness(self, value: int, no_return: bool = True) -> Union[None, int]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
@@ -623,8 +623,8 @@ class Monitor():
                 Otherwise it returns the result of `Monitor.get_brightness`
 
         Returns:
-            int: from 0 to 100
             None: if `no_return==True`
+            int: from 0 to 100
 
         Example:
             ```python

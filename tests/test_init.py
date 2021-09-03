@@ -99,7 +99,7 @@ class TestSetBrightness(TestCase):
 
     def test_normal(self):
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
-            brightness = sbc.set_brightness(value, force=True)
+            brightness = sbc.set_brightness(value, force=True, no_return=False)
             if type(brightness) == list:
                 for index, i in enumerate(brightness):
                     self.assertIsInstance(i, int)
@@ -113,6 +113,7 @@ class TestSetBrightness(TestCase):
 
     def test_increment_values(self):
         kw = {'display': 0} if sbc.list_monitors_info() else {}
+        kw['no_return'] = False
 
         self.assertBrightnessEqual(sbc.set_brightness('50', **kw), 50, 0)
         self.assertBrightnessEqual(sbc.set_brightness('10.0', **kw), 10, 0)
@@ -125,7 +126,7 @@ class TestSetBrightness(TestCase):
             sbc.set_brightness(random.randint(30, 70))
 
         old = sbc.get_brightness()
-        new = sbc.set_brightness('-25')
+        new = sbc.set_brightness('-25', no_return=False)
         if type(new) == list:
             for i, v in enumerate(old):
                 self.assertBrightnessEqual(max(0, v - 25), new[i], i)
@@ -134,7 +135,7 @@ class TestSetBrightness(TestCase):
 
     def test_display_kwarg(self):
         for index, monitor in enumerate(sbc.list_monitors()):
-            brightness = sbc.set_brightness(90, display=monitor)
+            brightness = sbc.set_brightness(90, display=monitor, no_return=False)
             self.assertIsInstance(brightness, int)
             self.assertTrue(0 <= brightness <= 100)
             self.assertBrightnessEqual(90, brightness, index)
@@ -351,7 +352,7 @@ class TestMonitor(TestCase):
 
         # test normal
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
-            brightness = monitor.set_brightness(value)
+            brightness = monitor.set_brightness(value, no_return=False)
             # check it is the right type and within
             # the max and min values
             self.assertIsInstance(brightness, int)
@@ -359,6 +360,7 @@ class TestMonitor(TestCase):
             # use almost equal because some laptops cannot display all values 0 to 100
             self.assertBrightnessEqual(value, brightness, 0)
 
+        self.assertIsNone(monitor.set_brightness(100))
         self.assertIsNone(monitor.set_brightness(100, no_return=True))
 
     def test_get_brightness(self):
