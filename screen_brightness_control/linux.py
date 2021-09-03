@@ -4,9 +4,6 @@ from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__, E
 from typing import List, Union, Optional
 import warnings
 
-# edid class used to be defined here as _EDID
-_EDID = EDID
-
 
 def warn_deprecated(name, alternative=None):
     '''Temporary function to warn you that things have been deprecated
