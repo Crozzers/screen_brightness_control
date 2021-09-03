@@ -197,6 +197,7 @@ def fade_brightness(
             )}
         )
     except (IndexError, LookupError) as e:
+        # fix this breaking if user ONLY has xbacklight installed
         raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
     except ValueError as e:
         if platform.system() == 'Linux' and (str(kwargs.get('method', '')).lower() == 'xbacklight'):
@@ -916,6 +917,7 @@ def __brightness(
                 if meta_method == 'set':
                     monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
                     if no_return:
+                        output.append(None)
                         continue
 
                 output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))
@@ -925,12 +927,21 @@ def __brightness(
 
     output = flatten_list(output)
 
-    if output and not set(output) == {None}:
-        # if all of the outputs are None then all of the monitors failed
-        output = output[0] if len(output) == 1 else output
-        return output if not no_return else None
-    elif meta_method == 'set' and no_return:
-        return
+    if output:
+        output_is_none = set(output) == {None}
+        if (
+            # can't have None output if we are trying to get the brightness
+            (meta_method == 'get' and not output_is_none)
+            or (
+                # if we are setting the brightness then we CAN have a None output
+                # but only if no_return is True.
+                meta_method == 'set'
+                and ((no_return and output_is_none) or not output_is_none)
+            )
+        ):
+            if no_return:
+                return
+            return output[0] if len(output) == 1 else output
 
     # if the function hasn't returned then it has failed
     msg = '\n'
