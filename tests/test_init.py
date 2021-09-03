@@ -514,7 +514,7 @@ if __name__ == '__main__':
         # let cache expire
         time.sleep(5)
 
-        print('Only light exe:')
+        print('\n\nOnly light exe:')
         # test with only light exe available
         for m in get_methods():
             m.executable = 'file doesnt exist'
@@ -524,7 +524,7 @@ if __name__ == '__main__':
         # let cache expire
         time.sleep(5)
 
-        print('Only xbacklight exe:')
+        print('\n\nOnly xbacklight exe:')
         # test with only xbacklight exe available
         for m in get_methods():
             m.executable = 'file doesnt exist'
@@ -534,7 +534,7 @@ if __name__ == '__main__':
         # let cache expire
         time.sleep(5)
 
-        print('Only xrandr exe:')
+        print('\n\nOnly xrandr exe:')
         # test with only xrandr exe available
         for m in get_methods():
             m.executable = 'file doesnt exist'
@@ -544,7 +544,7 @@ if __name__ == '__main__':
         # let cache expire
         time.sleep(5)
 
-        print('Only ddcutil exe:')
+        print('\n\nOnly ddcutil exe:')
         # test with only ddcutil exe available
         for m in get_methods():
             m.executable = 'file doesnt exist'
