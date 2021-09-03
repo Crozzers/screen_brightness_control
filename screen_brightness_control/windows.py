@@ -6,27 +6,15 @@ import time
 import ctypes
 from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import flatten_list, _monitor_brand_lookup, filter_monitors, __cache__, platform, EDID
+from . import _monitor_brand_lookup, filter_monitors, __cache__, platform, EDID
 from typing import List, Union, Optional
-import warnings
+from warnings import warn
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
 else:
     from collections.abc import Generator
-
-
-def warn_deprecated(name, alternative=None):
-    '''Temporary function to warn you that things have been deprecated
-    and will be removed in the next update.'''
-    if alternative is None:
-        alternative = name
-
-    msg = f'screen_brightness_control.windows.{name} is deprecated.'
-    if alternative:
-        msg += f' Use screen_brightness_control.{alternative} instead'
-    warnings.warn(msg, DeprecationWarning)
 
 
 def _wmi_init():
@@ -226,26 +214,6 @@ class WMI:
         return info
 
     @classmethod
-    def get_display_names(cls) -> List[str]:
-        '''
-        **DEPRECATED**.
-        Returns names of all displays that can be addressed by WMI
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            for name in sbc.windows.WMI.get_display_names():
-                print(name)
-            ```
-        '''
-        warn_deprecated('WMI.get_display_names', 'list_monitors(method="wmi")')
-        return [i['name'] for i in cls.get_display_info()]
-
-    @classmethod
     def set_brightness(cls, value: int, display: Optional[int] = None):
         '''
         Sets the display brightness for Windows using WMI
@@ -436,7 +404,12 @@ class VCP:
             # EG output: '(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)'
             ```
         '''
-        warn_deprecated('VCP.get_monitor_caps', False)
+        warn(
+            (
+                'screen_brightness_control.windows.VCP.get_monitor_caps is'
+                ' deprecated and will be removed in the next update'
+            ), DeprecationWarning
+        )
         caps_string_length = DWORD()
         if not windll.dxva2.GetCapabilitiesStringLength(monitor, ctypes.byref(caps_string_length)):
             return
@@ -444,27 +417,6 @@ class VCP:
         if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
             return
         return caps_string.value.decode('ASCII')
-
-    @classmethod
-    def get_display_names(cls) -> List[str]:
-        '''
-        **DEPRECATED**.
-        Return the names of each detected monitor
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            names = sbc.windows.VCP.get_display_names()
-            print(names)
-            # EG output: ['BenQ GL2450H', 'Dell U2211H']
-            ```
-        '''
-        warn_deprecated('VCP.get_display_names', 'list_monitors(method="vcp")')
-        return [i['name'] for i in cls.get_display_info()]
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
@@ -618,169 +570,3 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         __cache__.store(f'windows_monitors_info_{method}_{allow_duplicates}', info_final)
         info = info_final
     return info
-
-
-def list_monitors(method: Optional[str] = None) -> List[str]:
-    '''
-    **DEPRECATED**.
-    Returns a list of all addressable monitor names
-
-    Args:
-        method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
-
-    Returns:
-        list: list of strings
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        monitors = sbc.windows.list_monitors()
-        # EG output: ['BenQ GL2450H', 'Dell U2211H']
-        ```
-    '''
-    warn_deprecated('list_monitors')
-    return [i['name'] for i in list_monitors_info(method=method)]
-
-
-def __set_and_get_brightness(*args, display=None, method=None, meta_method='get', **kwargs) -> Union[List[int], None]:
-    '''
-    **DEPRECATED**.
-    Internal function, do not call. Either sets the brightness or gets it.
-    Exists because set_brightness and get_brightness only have a couple differences
-    '''
-    warn_deprecated('__set_and_get_brightness', '__brightness')
-    errors = []
-    try:  # filter known list of monitors according to kwargs
-        if type(display) == int:
-            monitors = [list_monitors_info(method=method)[display]]
-        else:
-            monitors = filter_monitors(display=display, method=method)
-    except Exception as e:
-        errors.append(['', type(e).__name__, e])
-    else:
-        output = []
-        for m in monitors:  # add the output of each brightness method to the output list
-            try:
-                output.append(
-                    getattr(m['method'], meta_method + '_brightness')(*args, display=m['index'], **kwargs)
-                )
-            except Exception as e:
-                output.append(None)
-                errors.append([f"{m['name']} ({m['serial']})", type(e).__name__, e])
-
-        # use `'no_return' not in kwargs` because dict membership only checks the keys
-        if (
-            output and not
-            (all(i in (None, []) for i in output) and ('no_return' not in kwargs or not kwargs['no_return']))
-        ):
-            # flatten and return any output (taking into account the no_return parameter)
-            if 'no_return' in kwargs and kwargs['no_return']:
-                return None
-            output = flatten_list(output)
-            return output
-
-    # if function hasn't already returned it has failed
-    msg = '\n'
-    for e in errors:
-        msg += f'\t{e[0]} -> {e[1]}: {e[2]}\n'
-    if msg == '\n':
-        msg += '\tno valid output was received from brightness methods'
-    raise Exception(msg)
-
-
-def set_brightness(
-    value: int,
-    display: Optional[Union[int, str]] = None,
-    method: Optional[str] = None,
-    **kwargs
-) -> Union[List[int], None]:
-    '''
-    **DEPRECATED**.
-    Sets the brightness of any connected monitors
-
-    Args:
-        value (int): Sets the brightness to this value as a percentage
-        display (int or str): The specific display you wish to adjust.
-            Can be index, model, name or serial of the display
-        method (str): the method to use ('wmi' or 'vcp')
-        kwargs (dict): passed directly to the chosen brightness method
-
-    Returns:
-        list: list of ints (0 to 100) (the result of `get_brightness`)
-        None: if `no_return` is True
-
-    Raises:
-        LookupError: if the chosen display (with method if applicable) is not found
-        ValueError: if the chosen method is invalid
-        TypeError: if the value given for `display` is not int or str
-        Exception: if the brightness could not be set by any method
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # set the current brightness to 50%
-        sbc.windows.set_brightness(50)
-
-        # set the brightness of the primary display to 75%
-        sbc.windows.set_brightness(75, display = 0)
-
-        # set the brightness of any displays using VCP to 25%
-        sbc.windows.set_brightness(25, method = 'vcp')
-
-        # set the brightness of displays with model name 'BenQ GL2450H' to 100%
-        sbc.windows.set_brightness(100, display = 'BenQ GL2450H')
-        ```
-    '''
-    warn_deprecated('set_brightness')
-    # this function is called because set_brightness and get_brightness only differed by 1 line of code
-    # so I made another internal function to reduce the filesize
-    return __set_and_get_brightness(value, display=display, method=method, meta_method='set', **kwargs)
-
-
-def get_brightness(display: Optional[Union[int, str]] = None, method: Optional[str] = None, **kwargs) -> List[int]:
-    '''
-    **DEPRECATED**.
-    Returns the brightness of any connected monitors
-
-    Args:
-        display (int or str): The specific display you wish to adjust.
-            Can be index, model, name or serial of the display
-        method (str): the method to use ('wmi' or 'vcp')
-        kwargs (dict): passed directly to chosen brightness method
-
-    Returns:
-        list: list of ints (0 to 100)
-
-    Raises:
-        LookupError: if the chosen display (with method if applicable) is not found
-        ValueError: if the chosen method is invalid
-        TypeError: if the value given for `display` is not int or str
-        Exception: if the brightness could not be obtained by any method
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        # get the current brightness
-        current_brightness = sbc.windows.get_brightness()
-        if type(current_brightness) is int:
-            print('There is only one detected display')
-        else:
-            print('There are', len(current_brightness), 'detected displays')
-
-        # get the brightness of the primary display
-        primary_brightness = sbc.windows.get_brightness(display=0)[0]
-
-        # get the brightness of any displays using VCP
-        vcp_brightness = sbc.windows.get_brightness(method='vcp')
-
-        # get the brightness of displays with the model name 'BenQ GL2450H'
-        benq_brightness = sbc.windows.get_brightness(display='BenQ GL2450H')[0]
-        ```
-    '''
-    warn_deprecated('get_brightness')
-    # this function is called because set_brightness and get_brightness only differed by 1 line of code
-    # so I made another internal function to reduce the filesize
-    return __set_and_get_brightness(display=display, method=method, meta_method='get', **kwargs)
