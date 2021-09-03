@@ -197,8 +197,12 @@ def fade_brightness(
             )}
         )
     except (IndexError, LookupError) as e:
-        # fix this breaking if user ONLY has xbacklight installed
-        raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
+        if type(e) == LookupError and platform.system() == 'Linux' and method is None:
+            # if a user ONLY has XBacklight installed and no method was specified
+            # then filter_monitors will raise a LookupError
+            available_monitors = [method.XBacklight]
+        else:
+            raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
     except ValueError as e:
         if platform.system() == 'Linux' and (str(kwargs.get('method', '')).lower() == 'xbacklight'):
             available_monitors = [method.XBacklight]
