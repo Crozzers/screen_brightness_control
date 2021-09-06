@@ -635,13 +635,13 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">__cache__</span><span class="o">.</span><span class="n">expire</span><span class="p">(</span><span class="n">startswith</span><span class="o">=</span><span class="s1">&#39;vcp_brightness_&#39;</span><span class="p">)</span>
         <span class="n">code</span> <span class="o">=</span> <span class="n">BYTE</span><span class="p">(</span><span class="mh">0x10</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">display</span><span class="p">),</span>
             <span class="n">start</span><span class="o">=</span><span class="n">display</span> <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
@@ -1524,13 +1524,13 @@ Pass in the serial number, name, model, edid or index</li>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">__cache__</span><span class="o">.</span><span class="n">expire</span><span class="p">(</span><span class="n">startswith</span><span class="o">=</span><span class="s1">&#39;vcp_brightness_&#39;</span><span class="p">)</span>
         <span class="n">code</span> <span class="o">=</span> <span class="n">BYTE</span><span class="p">(</span><span class="mh">0x10</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">display</span><span class="p">),</span>
             <span class="n">start</span><span class="o">=</span><span class="n">display</span> <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
@@ -1960,13 +1960,13 @@ This function takes anywhere from 1-2 seconds to run</p>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">__cache__</span><span class="o">.</span><span class="n">expire</span><span class="p">(</span><span class="n">startswith</span><span class="o">=</span><span class="s1">&#39;vcp_brightness_&#39;</span><span class="p">)</span>
         <span class="n">code</span> <span class="o">=</span> <span class="n">BYTE</span><span class="p">(</span><span class="mh">0x10</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">display</span><span class="p">),</span>
             <span class="n">start</span><span class="o">=</span><span class="n">display</span> <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
