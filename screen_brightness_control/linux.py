@@ -2,7 +2,6 @@ import subprocess
 import os
 from . import _monitor_brand_lookup, filter_monitors, __cache__, EDID
 from typing import List, Union, Optional
-from warnings import warn
 
 
 class Light:
@@ -654,65 +653,3 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
                             info.append(i)
         __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
     return info
-
-
-def get_brightness_from_sysfiles(display: int = None) -> int:
-    '''
-    **DEPRECATED**.
-    Returns the current display brightness by reading files from `/sys/class/backlight`
-
-    Args:
-        display (int): The index of the display you wish to query
-
-    Returns:
-        int: from 0 to 100
-
-    Raises:
-        Exception: if no values could be obtained from reading `/sys/class/backlight`
-        FileNotFoundError: if the `/sys/class/backlight` directory doesn't exist or it is empty
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        brightness = sbc.linux.get_brightness_from_sysfiles()
-        # Eg Output: 100
-        ```
-    '''
-    warn(
-        (
-            'screen_brightness_control.linux.get_brightness_from_sysfiles is'
-            ' deprecated and will be removed in the next update'
-        ), DeprecationWarning
-    )
-    backlight_dir = '/sys/class/backlight/'
-    error = []
-    # if function has not returned yet try reading the brightness file
-    if os.path.isdir(backlight_dir) and os.listdir(backlight_dir) != []:
-        # if the backlight dir exists and is not empty
-        folders = [dir for dir in os.listdir(backlight_dir) if os.path.isdir(os.path.join(backlight_dir, dir))]
-        if display is not None:
-            folders = [folders[display]]
-        for folder in folders:
-            try:
-                # try to read the brightness value in the file
-                with open(os.path.join(backlight_dir, folder, 'brightness'), 'r') as f:
-                    brightness_value = int(float(str(f.read().rstrip('\n'))))
-
-                try:
-                    # try open the max_brightness file to calculate the value to set the brightness file to
-                    with open(os.path.join(backlight_dir, folder, 'max_brightness'), 'r') as f:
-                        max_brightness = int(float(str(f.read().rstrip('\n'))))
-                except Exception:
-                    # if the file does not exist we cannot calculate the brightness
-                    return False
-                brightness_value = int(round((brightness_value / max_brightness) * 100, 0))
-                return brightness_value
-            except Exception as e:
-                error.append([type(Exception).__name__, e])
-        # if function hasn't returned, it failed
-        exc = f'Failed to get brightness from {backlight_dir}:'
-        for e in error:
-            exc += f'\n    {e[0]}: {e[1]}'
-        raise Exception(exc)
-    raise FileNotFoundError(f'Backlight directory {backlight_dir} not found')

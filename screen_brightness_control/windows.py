@@ -8,7 +8,6 @@ from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
 from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
 from . import _monitor_brand_lookup, filter_monitors, __cache__, platform, EDID
 from typing import List, Union, Optional
-from warnings import warn
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
 if int(platform.python_version_tuple()[1]) < 9:
@@ -381,42 +380,6 @@ class VCP:
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
         return info
-
-    @staticmethod
-    def get_monitor_caps(monitor: ctypes.wintypes.HANDLE) -> str:
-        '''
-        **DEPRECATED**.
-        Fetches and returns the VCP capabilities string of a monitor.
-        This function takes anywhere from 1-2 seconds to run
-
-        Args:
-            monitor: a monitor handle as returned by `VCP.iter_physical_monitors()`
-
-        Returns:
-            str: a string of the monitor's capabilities
-
-        Examples:
-            ```python
-            import screen_brightness_control as sbc
-
-            for monitor in sbc.windows.VCP.iter_physical_monitors():
-                print(sbc.windows.VCP.get_monitor_caps(monitor))
-            # EG output: '(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)'
-            ```
-        '''
-        warn(
-            (
-                'screen_brightness_control.windows.VCP.get_monitor_caps is'
-                ' deprecated and will be removed in the next update'
-            ), DeprecationWarning
-        )
-        caps_string_length = DWORD()
-        if not windll.dxva2.GetCapabilitiesStringLength(monitor, ctypes.byref(caps_string_length)):
-            return
-        caps_string = (ctypes.c_char * caps_string_length.value)()
-        if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(monitor, caps_string, caps_string_length):
-            return
-        return caps_string.value.decode('ASCII')
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
