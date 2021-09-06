@@ -497,13 +497,13 @@ class VCP:
         '''
         __cache__.expire(startswith='vcp_brightness_')
         code = BYTE(0x10)
+        value = DWORD(value)
         for index, monitor in enumerate(
             cls.iter_physical_monitors(start=display),
             start=display if display is not None else 0
         ):
             if display is None or display == index:
                 handle = HANDLE(monitor)
-                value = DWORD(value)
                 for _ in range(10):
                     if windll.dxva2.SetVCPFeature(handle, code, value):
                         break
