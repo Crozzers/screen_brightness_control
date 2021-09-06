@@ -7,7 +7,7 @@ import unittest
 from functools import lru_cache
 from timeit import timeit
 
-sys.path.append(os.path.abspath('./'))
+sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
 
 
