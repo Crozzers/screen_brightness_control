@@ -84,7 +84,8 @@ class TestWMI(BasicMethodTest, unittest.TestCase):
     method = windows.WMI
 
     def tearDownClass():
-        windows.WMI.set_brightness(100)
+        if windows.WMI.get_display_info():
+            windows.WMI.set_brightness(100)
 
 
 class TestVCP(BasicMethodTest, unittest.TestCase):
@@ -99,7 +100,8 @@ class TestVCP(BasicMethodTest, unittest.TestCase):
         self.assertGreater(len(monitors), len(list(self.method.iter_physical_monitors(start=1))))
 
     def tearDownClass():
-        windows.VCP.set_brightness(100)
+        if windows.VCP.get_display_info():
+            windows.VCP.set_brightness(100)
 
 
 class TestListMonitorsInfo(unittest.TestCase):

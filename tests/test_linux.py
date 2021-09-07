@@ -58,7 +58,8 @@ class TestLight(BasicMethodTest, unittest.TestCase):
     method = linux.Light
 
     def tearDownClass():
-        linux.Light.set_brightness(100)
+        if linux.Light.get_display_info():
+            linux.Light.set_brightness(100)
 
 
 class TestXBacklight(unittest.TestCase):
@@ -92,14 +93,16 @@ class TestXRandr(BasicMethodTest, unittest.TestCase):
             self.assertIsInstance(interface, str)
 
     def tearDownClass():
-        linux.XRandr.set_brightness(100)
+        if linux.XRandr.get_display_info():
+            linux.XRandr.set_brightness(100)
 
 
 class TestDDCUtil(BasicMethodTest, unittest.TestCase):
     method = linux.DDCUtil
 
     def tearDownClass():
-        linux.DDCUtil.set_brightness(100)
+        if linux.DDCUtil.get_display_info():
+            linux.DDCUtil.set_brightness(100)
 
 
 class TestListMonitorsInfo(unittest.TestCase):
