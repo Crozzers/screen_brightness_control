@@ -540,7 +540,7 @@ class DDCUtil:
 
         res = []
         for m in monitors:
-            out = __cache__.get('ddcutil_' + m['edid'] + '_brightness')
+            out = __cache__.get(f'ddcutil_brightness_{m["index"]}')
             if out is None:
                 out = subprocess.check_output(
                     [
@@ -550,7 +550,7 @@ class DDCUtil:
                         f'--sleep-multiplier={cls.sleep_multiplier}'
                     ]
                 ).decode().split(' ')[-2]
-                __cache__.store('ddcutil_' + m['edid'] + '_brightness', out, expires=0.5)
+                __cache__.store(f'ddcutil_brightness_{m["index"]}', out, expires=0.5)
             try:
                 res.append(int(out))
             except Exception:
