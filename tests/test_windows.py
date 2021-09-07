@@ -83,6 +83,9 @@ class BasicMethodTest(object):
 class TestWMI(BasicMethodTest, unittest.TestCase):
     method = windows.WMI
 
+    def tearDownClass():
+        windows.WMI.set_brightness(100)
+
 
 class TestVCP(BasicMethodTest, unittest.TestCase):
     '''More specialized tests for `windows.VCP` methods not covered by `TestAllMethodsBasic`'''
@@ -94,6 +97,9 @@ class TestVCP(BasicMethodTest, unittest.TestCase):
 
         # check that the start kwarg does indeed skip handles correctly
         self.assertGreater(len(monitors), len(list(self.method.iter_physical_monitors(start=1))))
+
+    def tearDownClass():
+        windows.VCP.set_brightness(100)
 
 
 class TestListMonitorsInfo(unittest.TestCase):
