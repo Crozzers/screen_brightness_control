@@ -1,57 +1,10 @@
 import os
 import sys
 import unittest
+from helpers import get_methods, get_method_names, BasicMethodTest
 
 sys.path.insert(0, os.path.abspath('./'))
 from screen_brightness_control import linux  # noqa: E402
-
-
-def get_methods():
-    return (linux.Light, linux.XRandr, linux.DDCUtil)
-
-
-def get_method_names():
-    return (i.__name__.lower() for i in get_methods())
-
-
-class BasicMethodTest(object):
-    def test_get_display_info(self):
-        displays = self.method.get_display_info()
-        self.assertIsInstance(displays, list)
-        for display in displays:
-            self.assertIsInstance(display, dict)
-            self.assertEqual(display['method'], self.method)
-
-            for key in ('name', 'model', 'serial', 'manufacturer', 'manufacturer_id', 'edid'):
-                self.assertIn(key, display)
-                self.assertIsInstance(display[key], (str, type(None)))
-
-            self.assertIn('index', display)
-            self.assertIsInstance(display['index'], int)
-
-    def test_get_brightness(self):
-        displays = self.method.get_display_info()
-        if displays:  # if there are any displays this method can address
-            brightness = self.method.get_brightness()
-            self.assertIsInstance(brightness, list)
-            self.assertEqual(len(displays), len(brightness))
-
-            for value in brightness:
-                self.assertIsInstance(value, int)
-                self.assertTrue(0 <= value <= 100)
-
-            single_brightness = self.method.get_brightness(display=0)
-            self.assertIsInstance(single_brightness, list)
-            self.assertEqual(len(single_brightness), 1)
-
-    def test_set_brightness(self):
-        if self.method.get_display_info():  # if there are any displays this method can address
-            for i in (0, 10, 25, 45, 50, 60, 71, 80, 99, 100):
-                self.assertIsNone(self.method.set_brightness(i))
-
-                for value in self.method.get_brightness():
-                    self.assertIsInstance(value, int)
-                    self.assertEqual(value, i)
 
 
 class TestLight(BasicMethodTest, unittest.TestCase):
