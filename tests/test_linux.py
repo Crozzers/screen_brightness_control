@@ -7,6 +7,14 @@ sys.path.insert(0, os.path.abspath('./'))
 from screen_brightness_control import linux  # noqa: E402
 
 
+class TestSysFiles(BasicMethodTest, unittest.TestCase):
+    method = linux.SysFiles
+
+    def tearDownClass():
+        if linux.SysFiles.get_display_info():
+            linux.SysFiles.set_brightness(100)
+
+
 class TestLight(BasicMethodTest, unittest.TestCase):
     method = linux.Light
 

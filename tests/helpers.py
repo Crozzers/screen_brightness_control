@@ -9,7 +9,7 @@ def get_methods():
     if os.name == 'nt':
         return (sbc.windows.WMI, sbc.windows.VCP)
     else:
-        return (sbc.linux.Light, sbc.linux.XRandr, sbc.linux.DDCUtil)
+        return (sbc.linux.Light, sbc.linux.XRandr, sbc.linux.DDCUtil, sbc.linux.SysFiles)
 
 
 def get_method_names():
