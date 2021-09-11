@@ -19,7 +19,7 @@ if __name__ == '__main__':
     if platform.system() == 'Windows':
         mthd = ('wmi', 'vcp')
     elif platform.system() == 'Linux':
-        mthd = ('xrandr', 'ddcutil', 'light', 'xbacklight')
+        mthd = ('xrandr', 'ddcutil', 'light', 'xbacklight', 'sysfiles')
     parser.add_argument('-m', '--method', type=str, help=f'specify which method to use ({" or ".join(mthd)})')
     parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
     parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
