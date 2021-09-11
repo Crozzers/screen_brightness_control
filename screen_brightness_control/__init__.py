@@ -403,6 +403,37 @@ class EDID:
                 pass
         return name, serial.strip(' ')
 
+    @staticmethod
+    def hexdump(file: str) -> str:
+        '''
+        Returns a hexadecimal string of binary data from a file
+
+        Args:
+            file (str): the file to read
+
+        Returns:
+            str: one long hex string
+
+        Example:
+            ```python
+            from screen_brightness_control import EDID
+
+            print(EDID.hexdump('/sys/class/backlight/intel_backlight/device/edid'))
+            # '00ffffffffffff00...'
+            ```
+        '''
+        with open(file, 'rb') as f:
+            data = f.read()
+
+        hex_str = ''
+        for char in data:
+            char = str(hex(char))[2:]
+            if len(char) == 1:
+                hex_str += '0'
+            hex_str += char
+
+        return hex_str
+
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",

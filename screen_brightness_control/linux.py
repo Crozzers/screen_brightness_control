@@ -59,19 +59,8 @@ class Light:
                     }
                     count += 1
                     try:
-                        out = subprocess.check_output(
-                            ['hexdump', tmp['path'] + '/device/edid'],
-                            stderr=subprocess.DEVNULL
-                        ).decode().split('\n')
-                        # either the hexdump reports each hex char backwards (ff00 instead of 00ff)
-                        # or both xrandr and ddcutil do. So I swap these bits around
-                        edid = ''
-                        for line in out:
-                            for i in line.split(' '):
-                                if len(i) == 4:
-                                    edid += i[2:] + i[:2]
-                        tmp['edid'] = edid
-                        name, serial = EDID.parse_edid(edid)
+                        tmp['edid'] = EDID.hexdump(f'/sys/class/backlight/{r}/device/edid')
+                        name, serial = EDID.parse_edid(tmp['edid'])
                         if name is not None:
                             tmp['serial'] = serial
                             tmp['name'] = name
