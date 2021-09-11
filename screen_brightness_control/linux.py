@@ -186,7 +186,10 @@ class Light:
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns information about detected displays as reported by Light
+        Returns information about detected displays as reported by Light.
+
+        It works by taking the output of `SysFiles.get_display_info` and
+        filtering out any displays that aren't supported by Light
 
         Args:
             display (str or int): [*Optional*] The monitor to return info about.
@@ -211,41 +214,20 @@ class Light:
             edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
-        res = subprocess.run([cls.executable, '-L'], stdout=subprocess.PIPE).stdout.decode().split('\n')
+        light_output = subprocess.check_output([cls.executable, '-L']).decode()
         displays = []
-        count = 0
-        for r in res:
-            if 'backlight' in r and 'sysfs/backlight/auto' not in r:
-                r = r[r.index('backlight/') + 10:]
-                if os.path.isfile(f'/sys/class/backlight/{r}/device/edid'):
-                    tmp = {
-                        'name': r,
-                        'path': f'/sys/class/backlight/{r}',
-                        'light_path': f'sysfs/backlight/{r}',
-                        'method': cls,
-                        'index': count,
-                        'model': None,
-                        'serial': None,
-                        'manufacturer': None,
-                        'manufacturer_id': None,
-                        'edid': None
-                    }
-                    count += 1
-                    try:
-                        tmp['edid'] = EDID.hexdump(f'/sys/class/backlight/{r}/device/edid')
-                        name, serial = EDID.parse_edid(tmp['edid'])
-                        if name is not None:
-                            tmp['serial'] = serial
-                            tmp['name'] = name
-                        try:
-                            tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(name.split(' ')[0])
-                        except Exception:
-                            tmp['manufacturer'] = name.split(' ')[0]
-                            tmp['manufacturer_id'] = None
-                        tmp['model'] = name.split(' ')[1]
-                    except Exception:
-                        pass
-                    displays.append(tmp)
+        index = 0
+        for device in SysFiles.get_display_info():
+            # SysFiles scrapes info from the same place that Light used to
+            # so it makes sense to use that output
+            if device['path'].replace('/sys/class', 'sysfs') in light_output:
+                del device['scale']
+                device['light_path'] = device['path'].replace('/sys/class', 'sysfs')
+                device['method'] = cls
+                device['index'] = index
+
+                displays.append(device)
+                index += 1
 
         if display is not None:
             displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
