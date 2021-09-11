@@ -4,6 +4,179 @@ from . import _monitor_brand_lookup, filter_monitors, __cache__, EDID
 from typing import List, Union, Optional
 
 
+class SysFiles:
+    '''
+    A way of getting display information and adjusting the brightness
+    that does not rely on any 3rd party software.
+
+    This class works with displays that show up in the `/sys/class/backlight`
+    directory (so usually laptop displays).
+
+    To set the brightness, your user will need write permissions for
+    `/sys/class/backlight/*/brightness` or you will need to run the program
+    as root.
+    '''
+    @classmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+        '''
+        Returns information about detected displays by reading files from the
+        `/sys/class/backlight` directory
+
+        Args:
+            display (str or int): [*Optional*] The monitor to return info about.
+                Pass in the serial number, name, model, interface, edid or index.
+                This is passed to `filter_monitors`
+
+        Returns:
+            list: list of dicts
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get info about all monitors
+            info = sbc.linux.SysFiles.get_display_info()
+            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
+
+            # get info about the primary monitor
+            primary_info = sbc.linux.SysFiles.get_display_info(0)[0]
+
+            # get info about a monitor called 'edp-backlight'
+            edp_info = sbc.linux.SysFiles.get_display_info('edp-backlight')[0]
+            ```
+        '''
+        displays = {}
+        index = 0
+        for folder in os.listdir('/sys/class/backlight'):
+            if os.path.isfile(f'/sys/class/backlight/{folder}/device/edid'):
+                device = {
+                    'name': folder,
+                    'path': f'/sys/class/backlight/{folder}',
+                    'method': cls,
+                    'index': index,
+                    'model': None,
+                    'serial': None,
+                    'manufacturer': None,
+                    'manufacturer_id': None,
+                    'edid': EDID.hexdump(f'/sys/class/backlight/{folder}/device/edid'),
+                    'scale': None
+                }
+
+                try:
+                    # try to get resolution of brightness settings
+                    with open(os.path.join(device['path'], 'max_brightness'), 'r') as f:
+                        device['scale'] = int(f.read().rstrip('\n')) / 100
+                except (FileNotFoundError, TypeError):
+                    # if the scale cannot be figured out then exclude the display
+                    continue
+
+                # now check for duplicate displays
+                if device['edid'] in displays:
+                    if (
+                        displays[device['edid']]['scale'] == 1
+                        or displays[device['edid']]['scale'] >= device['scale']
+                    ):
+                        # if there is a duplicate display, pick the display with
+                        # a scale equal to 1 or the display with the highest scale.
+                        # Reduces rounding errrors when converting percentages
+                        # to 'actual' values
+                        continue
+
+                name, serial = EDID.parse_edid(device['edid'])
+                if name is not None:
+                    device['name'], device['serial'] = name, serial
+
+                    try:
+                        manufacturer_id, manufacturer = _monitor_brand_lookup(name.split(' ')[0])
+                    except TypeError:
+                        device['manufacturer'] = name.split(' ')[0]
+                        device['manufacturer_id'] = None
+                    else:
+                        device['manufacturer_id'], device['manufacturer'] = manufacturer_id, manufacturer
+
+                    device['model'] = name.split(' ')[1]
+
+                displays[device['edid']] = device
+                index += 1
+
+        displays = list(displays.values())
+        if display is not None:
+            displays = filter_monitors(display=display, haystack=displays, include=['path'])
+        return displays
+
+    @classmethod
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+        '''
+        Gets the brightness for a display by reading the brightness files
+        stored in `/sys/class/backlight/*/brightness`
+
+        Args:
+            display (int): The specific display you wish to query.
+
+        Returns:
+            list: list of ints (0 to 100)
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the current display brightness
+            current_brightness = sbc.linux.SysFiles.get_brightness()
+
+            # get the brightness of the primary display
+            primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]
+
+            # get the brightness of the secondary display
+            edp_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]
+            ```
+        '''
+        info = cls.get_display_info()
+        if display is not None:
+            info = [info[display]]
+
+        results = []
+        for device in info:
+            with open(os.path.join(device['path'], 'brightness'), 'r') as f:
+                brightness = int(f.read().rstrip('\n'))
+            results.append(int(brightness / device['scale']))
+
+        return results
+
+    @classmethod
+    def set_brightness(cls, value: int, display: Optional[int] = None):
+        '''
+        Sets the brightness for a display by writing to the brightness files
+        stored in `/sys/class/backlight/*/brightness`.
+        This function requires permission to write to these files which is
+        usually provided when it's run as root.
+
+        Args:
+            value (int): Sets the brightness to this value
+            display (int): The specific display you wish to query.
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 50%
+            sbc.linux.SysFiles.set_brightness(50)
+
+            # set the primary display brightness to 75%
+            sbc.linux.SysFiles.set_brightness(75, display = 0)
+
+            # set the secondary display brightness to 25%
+            sbc.linux.SysFiles.set_brightness(75, display = 1)
+            ```
+        '''
+        info = cls.get_display_info()
+        if display is not None:
+            info = [info[display]]
+
+        for device in info:
+            with open(os.path.join(device['path'], 'brightness'), 'w') as f:
+                f.write(str(int(value * device['scale'])))
+
+
 class Light:
     '''collection of screen brightness related methods using the light executable'''
 
@@ -111,7 +284,7 @@ class Light:
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         '''
-        Sets the brightness for a display using the light executable
+        Gets the brightness for a display using the light executable
 
         Args:
             display (int): The specific display you wish to query.
@@ -620,11 +793,14 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     '''
     info = __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
     if info is None:
-        methods = [XRandr, DDCUtil, Light]
+        methods = [XRandr, DDCUtil, Light, SysFiles]
         if method is not None:
             method = method.lower()
-            if method not in ('xrandr', 'ddcutil', 'light'):
-                raise ValueError('method must be \'xrandr\' or \'ddcutil\' or \'light\' to get monitor information')
+            if method not in ('xrandr', 'ddcutil', 'light', 'sysfiles'):
+                raise ValueError((
+                    'method must be "xrandr" or "ddcutil" or "light"'
+                    ' or "sysfiles" to get monitor information'
+                ))
 
         info = []
         edids = []

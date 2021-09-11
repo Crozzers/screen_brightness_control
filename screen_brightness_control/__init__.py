@@ -257,7 +257,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     Args:
         method (str): the method to use to list the available monitors.
             On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'sysfiles'`.
         allow_duplicates (bool): whether to filter out duplicate displays or not
 
     Returns:
@@ -301,7 +301,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     Args:
         method (str): the method to use to list the available monitors.
             On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`.
+            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'sysfiles'`.
 
     Returns:
         list: list of strings
