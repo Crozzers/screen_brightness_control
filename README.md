@@ -13,15 +13,16 @@ pip3 install .
 ```
 
 #### Note:
-For running on Linux you will need to install one of these programs: xrandr, ddcutil, [light](https://github.com/haikarainen/light) or xbacklight.  
+For running on Linux you may need to install one of these programs: xrandr, ddcutil, [light](https://github.com/haikarainen/light) or xbacklight. If you do not wish to install any 3rd party programs you will have to run this module as root.  
 Here is a quick outline of each program:
 
-Program     | Is it Fast | Works with laptop displays | Works with external monitors | Multi-display support                 | Requires RandR support
-------------|------------|----------------------------|------------------------------|---------------------------------------|-----------------------
-ddcutil     | No         | No                         | Yes                          | Yes                                   | No
-xrandr      | Yes        | Yes                        | Yes                          | Yes                                   | Yes
-xbacklight  | Yes        | Yes                        | No                           | Yes but not individually controllable | Yes
-light       | Yes        | Yes                        | No                           | Yes                                   | No
+Program     | Works on laptop displays | Works on external monitors | Multi-display support                 | Requires RandR support | Requires Root
+------------|--------------------------|----------------------------|---------------------------------------|------------------------|--------------
+ddcutil     | No                       | Yes (slow)                 | Yes                                   | No                     | Yes
+xrandr      | Yes                      | Yes                        | Yes                                   | Yes                    | No
+xbacklight  | Yes                      | No                         | Yes but not individually controllable | Yes                    | No
+light       | Yes                      | No                         | Yes                                   | No                     | No
+[No program]| Yes                      | No                         | Yes                                   | No                     | Yes
 
 Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
@@ -75,7 +76,7 @@ Raises `ScreenBrightnessError` upon failure
 **Arguments:**
 
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 
 **Usage:**  
@@ -102,7 +103,7 @@ Raises `ScreenBrightnessError` upon failure
 
 * `value` - the level to set the brightness to. Can either be an integer or a string.
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return `None` by default.
@@ -169,7 +170,7 @@ Returns a list of the names of all detected monitors
 
 **Arguments:**
 
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'xbacklight'`
+* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
 
 **Usage:**  
 ```python
@@ -190,21 +191,26 @@ This software is licensed under the [MIT license](https://mit-license.org/)
 **Why this happens:**  
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
 The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
-If none of these programs can be called a `ScreenBrightnessError` is raised
+If none of these programs are installed then it attempts to read/write to files located in the `/sys/class/backlight`
+directory, which will require root permissions.
+
+If none of methods succeed, a `ScreenBrightnessError` is raised.
 
 **How to fix it:**  
 Install `xrandr`, `ddcutil`, `light`, or `xbacklight` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
+Or run the module as root if you do not wish to install 3rd party software.
 
 
 ### I call `set_brightness()` and nothing happens (Linux)
 **Why this happens:**  
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
-If you installed ddcutil, this requires root access to run for every query.
+If you installed ddcutil or have none of the recommended 3rd party softwares installed,
+you require root access to run for every query.
 
 **How to fix it:**   
 If you installed `xrandr` or `xbacklight`: make sure your graphics drivers support RandR.  
-If you installed `ddcutil`: make sure to run the script with root permissions.  
+If you installed `ddcutil` or none of the recommended 3rd party softwares: make sure to run the script with root permissions.  
 If you installed `light`: follow [these steps](https://github.com/haikarainen/light#installation) making sure to run the install as sudo or re-compile from source (requires `autoconf` to be installed):
 ```
 git clone https://github.com/haikarainen/light && cd light
@@ -214,7 +220,7 @@ sh autogen.sh && ./configure && make && sudo make install
 
 ### Using the `display` kwarg does nothing/creates exceptions (Linux)
 **Why this happens:**  
-The `display` kwarg is only supported by the `Light`, `XRandr` and `DDCUtil` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
+The `display` kwarg is only supported by the `Light`, `XRandr`, `DDCUtil` and `SysFiles` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
 
 **How to fix it:**  
 Install `xrandr` or `ddcutil` or `light` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
