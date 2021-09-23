@@ -64,6 +64,9 @@
                         <li>
                                 <a class="function" href="#EDID.parse_edid">parse_edid</a>
                         </li>
+                        <li>
+                                <a class="function" href="#EDID.hexdump">hexdump</a>
+                        </li>
                 </ul>
 
             </li>
@@ -440,7 +443,7 @@ screen_brightness_control    </h1>
 <span class="sd">    Args:</span>
 <span class="sd">        method (str): the method to use to list the available monitors.</span>
 <span class="sd">            On Windows this can be `&#39;wmi&#39;` or `&#39;vcp&#39;`.</span>
-<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;xbacklight&#39;`.</span>
+<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;sysfiles&#39;`.</span>
 <span class="sd">        allow_duplicates (bool): whether to filter out duplicate displays or not</span>
 
 <span class="sd">    Returns:</span>
@@ -484,7 +487,7 @@ screen_brightness_control    </h1>
 <span class="sd">    Args:</span>
 <span class="sd">        method (str): the method to use to list the available monitors.</span>
 <span class="sd">            On Windows this can be `&#39;wmi&#39;` or `&#39;vcp&#39;`.</span>
-<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;xbacklight&#39;`.</span>
+<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;sysfiles&#39;`.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: list of strings</span>
@@ -585,6 +588,38 @@ screen_brightness_control    </h1>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="k">pass</span>
         <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">serial</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hexdump</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a hexadecimal string of binary data from a file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file (str): the file to read</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: one long hex string</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            from screen_brightness_control import EDID</span>
+
+<span class="sd">            print(EDID.hexdump(&#39;/sys/class/backlight/intel_backlight/device/edid&#39;))</span>
+<span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                <span class="c1"># hex values less than 16 get represented as single char</span>
+                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+
+        <span class="k">return</span> <span class="n">hex_str</span>
 
 
 <span class="n">MONITOR_MANUFACTURER_CODES</span> <span class="o">=</span> <span class="p">{</span>
@@ -1203,7 +1238,7 @@ screen_brightness_control    </h1>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">plat</span><span class="si">}</span><span class="s1"> is not yet supported&#39;</span><span class="p">)</span>
 <span class="k">del</span><span class="p">(</span><span class="n">plat</span><span class="p">)</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.10.1&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.11.0&#39;</span>
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
 </pre></div>
 
@@ -1663,7 +1698,7 @@ otherwise it returns the result of <code><a href="#get_brightness">get_brightnes
 <span class="sd">    Args:</span>
 <span class="sd">        method (str): the method to use to list the available monitors.</span>
 <span class="sd">            On Windows this can be `&#39;wmi&#39;` or `&#39;vcp&#39;`.</span>
-<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;xbacklight&#39;`.</span>
+<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;sysfiles&#39;`.</span>
 <span class="sd">        allow_duplicates (bool): whether to filter out duplicate displays or not</span>
 
 <span class="sd">    Returns:</span>
@@ -1709,7 +1744,7 @@ otherwise it returns the result of <code><a href="#get_brightness">get_brightnes
 <ul>
 <li><strong>method (str):</strong>  the method to use to list the available monitors.
 On Windows this can be <code>'wmi'</code> or <code>'vcp'</code>.
-On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code>.</li>
+On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'sysfiles'</code>.</li>
 <li><strong>allow_duplicates (bool):</strong>  whether to filter out duplicate displays or not</li>
 </ul>
 
@@ -1765,7 +1800,7 @@ On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil
 <span class="sd">    Args:</span>
 <span class="sd">        method (str): the method to use to list the available monitors.</span>
 <span class="sd">            On Windows this can be `&#39;wmi&#39;` or `&#39;vcp&#39;`.</span>
-<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;xbacklight&#39;`.</span>
+<span class="sd">            On Linux this can be `&#39;light&#39;`, `&#39;xrandr&#39;`, `&#39;ddcutil&#39;` or `&#39;sysfiles&#39;`.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: list of strings</span>
@@ -1789,7 +1824,7 @@ On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil
 <ul>
 <li><strong>method (str):</strong>  the method to use to list the available monitors.
 On Windows this can be <code>'wmi'</code> or <code>'vcp'</code>.
-On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code>.</li>
+On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'sysfiles'</code>.</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1907,6 +1942,38 @@ On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="k">pass</span>
         <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">serial</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hexdump</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a hexadecimal string of binary data from a file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file (str): the file to read</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: one long hex string</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            from screen_brightness_control import EDID</span>
+
+<span class="sd">            print(EDID.hexdump(&#39;/sys/class/backlight/intel_backlight/device/edid&#39;))</span>
+<span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                <span class="c1"># hex values less than 16 get represented as single char</span>
+                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+
+        <span class="k">return</span> <span class="n">hex_str</span>
 </pre></div>
 
         </details>
@@ -2037,6 +2104,79 @@ failed to extract the serial correctly.</li>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Serial:&#39;</span><span class="p">,</span> <span class="n">serial</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Unable to extract the data&#39;</span><span class="p">)</span>
+</code></pre></div>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="EDID.hexdump" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#EDID.hexdump">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@staticmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">hexdump</span><span class="signature">(file: str) -&gt; str</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hexdump</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a hexadecimal string of binary data from a file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file (str): the file to read</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: one long hex string</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            from screen_brightness_control import EDID</span>
+
+<span class="sd">            print(EDID.hexdump(&#39;/sys/class/backlight/intel_backlight/device/edid&#39;))</span>
+<span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                <span class="c1"># hex values less than 16 get represented as single char</span>
+                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+
+        <span class="k">return</span> <span class="n">hex_str</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Returns a hexadecimal string of binary data from a file</p>
+
+<h6 id="args">Args</h6>
+
+<ul>
+<li><strong>file (str):</strong>  the file to read</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>str:</strong>  one long hex string</li>
+</ul>
+
+<h6 id="example">Example</h6>
+
+<blockquote>
+  <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">screen_brightness_control</span> <span class="kn">import</span> <span class="n">EDID</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">EDID</span><span class="o">.</span><span class="n">hexdump</span><span class="p">(</span><span class="s1">&#39;/sys/class/backlight/intel_backlight/device/edid&#39;</span><span class="p">))</span>
+<span class="c1"># &#39;00ffffffffffff00...&#39;</span>
 </code></pre></div>
 </blockquote>
 </div>

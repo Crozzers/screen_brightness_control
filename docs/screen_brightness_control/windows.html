@@ -74,9 +74,6 @@
                                 <a class="function" href="#VCP.get_display_info">get_display_info</a>
                         </li>
                         <li>
-                                <a class="function" href="#VCP.get_monitor_caps">get_monitor_caps</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#VCP.get_brightness">get_brightness</a>
                         </li>
                         <li>
@@ -100,7 +97,7 @@
                     <ul class="memberlist" id="docver_links">
                     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
                     <script>
-                        var docver_path_inline = "../../../docver_links_inline.html";
+                        var docver_path_inline = "../../../docver_links_inline2.html";
                         $("#docver_links").load(docver_path_inline,
                             function(resp_txt, txt_status, xmlhttp_req){
                                 if (txt_status=="success"){
@@ -146,7 +143,6 @@
 <span class="kn">from</span> <span class="nn">ctypes.wintypes</span> <span class="kn">import</span> <span class="n">BOOL</span><span class="p">,</span> <span class="n">HMONITOR</span><span class="p">,</span> <span class="n">HDC</span><span class="p">,</span> <span class="n">RECT</span><span class="p">,</span> <span class="n">LPARAM</span><span class="p">,</span> <span class="n">DWORD</span><span class="p">,</span> <span class="n">BYTE</span><span class="p">,</span> <span class="n">WCHAR</span><span class="p">,</span> <span class="n">HANDLE</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">EDID</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 <span class="c1"># a bunch of typing classes were deprecated in Python 3.9</span>
 <span class="c1"># in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)</span>
 <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">platform</span><span class="o">.</span><span class="n">python_version_tuple</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">:</span>
@@ -232,10 +228,11 @@
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">edid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
                         <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">monitor</span><span class="o">.</span><span class="n">WmiGetMonitorRawEEdidV1Block</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
-                            <span class="n">char</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">char</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
-                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">char</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                                <span class="n">char</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span> <span class="o">+</span> <span class="n">char</span>
-                            <span class="n">edid</span> <span class="o">+=</span> <span class="n">char</span>
+                            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                                <span class="c1"># hex values less than 16 get represented as single char</span>
+                                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                                <span class="n">edid</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+                            <span class="n">edid</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent num as hex str</span>
                     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                         <span class="n">edid</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -520,42 +517,6 @@
             <span class="n">info</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">info</span>
 
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">:</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">wintypes</span><span class="o">.</span><span class="n">HANDLE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Fetches and returns the VCP capabilities string of a monitor.</span>
-<span class="sd">        This function takes anywhere from 1-2 seconds to run</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            monitor: a monitor handle as returned by `VCP.iter_physical_monitors()`</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            str: a string of the monitor&#39;s capabilities</span>
-
-<span class="sd">        Examples:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
-                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
-            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
-        <span class="p">)</span>
-        <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
-            <span class="k">return</span>
-        <span class="n">caps_string</span> <span class="o">=</span> <span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span> <span class="o">*</span> <span class="n">caps_string_length</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">CapabilitiesRequestAndCapabilitiesReply</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">caps_string</span><span class="p">,</span> <span class="n">caps_string_length</span><span class="p">):</span>
-            <span class="k">return</span>
-        <span class="k">return</span> <span class="n">caps_string</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ASCII&#39;</span><span class="p">)</span>
-
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -791,10 +752,11 @@
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">edid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
                         <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">monitor</span><span class="o">.</span><span class="n">WmiGetMonitorRawEEdidV1Block</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
-                            <span class="n">char</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">char</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
-                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">char</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                                <span class="n">char</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span> <span class="o">+</span> <span class="n">char</span>
-                            <span class="n">edid</span> <span class="o">+=</span> <span class="n">char</span>
+                            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                                <span class="c1"># hex values less than 16 get represented as single char</span>
+                                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                                <span class="n">edid</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+                            <span class="n">edid</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent num as hex str</span>
                     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                         <span class="n">edid</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -1409,42 +1371,6 @@ Pass in the serial number, name, model, edid or index</li>
             <span class="n">info</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">info</span>
 
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">:</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">wintypes</span><span class="o">.</span><span class="n">HANDLE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Fetches and returns the VCP capabilities string of a monitor.</span>
-<span class="sd">        This function takes anywhere from 1-2 seconds to run</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            monitor: a monitor handle as returned by `VCP.iter_physical_monitors()`</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            str: a string of the monitor&#39;s capabilities</span>
-
-<span class="sd">        Examples:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
-                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
-            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
-        <span class="p">)</span>
-        <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
-            <span class="k">return</span>
-        <span class="n">caps_string</span> <span class="o">=</span> <span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span> <span class="o">*</span> <span class="n">caps_string_length</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">CapabilitiesRequestAndCapabilitiesReply</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">caps_string</span><span class="p">,</span> <span class="n">caps_string_length</span><span class="p">):</span>
-            <span class="k">return</span>
-        <span class="k">return</span> <span class="n">caps_string</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ASCII&#39;</span><span class="p">)</span>
-
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -1736,86 +1662,6 @@ Pass in the serial number, name, model, edid or index</li>
 <span class="c1"># get information about a monitor with this specific model</span>
 <span class="n">bnq_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="s1">&#39;GL2450H&#39;</span><span class="p">)</span>
 <span class="c1"># EG output: {&#39;name&#39;: &#39;BenQ GL2450H&#39;, &#39;model&#39;: &#39;GL2450H&#39;, ... }</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                            </div>
-                            <div id="VCP.get_monitor_caps" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#VCP.get_monitor_caps">#&nbsp;&nbsp</a>
-
-                <div class="decorator">@staticmethod</div>
-
-            <span class="def">def</span>
-            <span class="name">get_monitor_caps</span><span class="signature">(monitor: ctypes.c_void_p) -&gt; str</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">:</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">wintypes</span><span class="o">.</span><span class="n">HANDLE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        **DEPRECATED**.</span>
-<span class="sd">        Fetches and returns the VCP capabilities string of a monitor.</span>
-<span class="sd">        This function takes anywhere from 1-2 seconds to run</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            monitor: a monitor handle as returned by `VCP.iter_physical_monitors()`</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            str: a string of the monitor&#39;s capabilities</span>
-
-<span class="sd">        Examples:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            # EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
-<span class="sd">            ```</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">warn</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="s1">&#39;screen_brightness_control.windows.VCP.get_monitor_caps is&#39;</span>
-                <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
-            <span class="p">),</span> <span class="ne">DeprecationWarning</span>
-        <span class="p">)</span>
-        <span class="n">caps_string_length</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetCapabilitiesStringLength</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">byref</span><span class="p">(</span><span class="n">caps_string_length</span><span class="p">)):</span>
-            <span class="k">return</span>
-        <span class="n">caps_string</span> <span class="o">=</span> <span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span> <span class="o">*</span> <span class="n">caps_string_length</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">CapabilitiesRequestAndCapabilitiesReply</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">caps_string</span><span class="p">,</span> <span class="n">caps_string_length</span><span class="p">):</span>
-            <span class="k">return</span>
-        <span class="k">return</span> <span class="n">caps_string</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ASCII&#39;</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Fetches and returns the VCP capabilities string of a monitor.
-This function takes anywhere from 1-2 seconds to run</p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>monitor:</strong>  a monitor handle as returned by <code><a href="#VCP.iter_physical_monitors">VCP.iter_physical_monitors()</a></code></li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>str:</strong>  a string of the monitor's capabilities</li>
-</ul>
-
-<h6 id="examples">Examples</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">))</span>
-<span class="c1"># EG output: &#39;(prot(monitor)type(LCD)model(GL2450HM)cmds(01 02 03 07 0C F3)vcp(02...)&#39;</span>
 </code></pre></div>
 </blockquote>
 </div>

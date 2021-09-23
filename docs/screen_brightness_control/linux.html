@@ -41,6 +41,24 @@
                     <h2>API Documentation</h2>
                         <ul class="memberlist">
             <li>
+                    <a class="class" href="#SysFiles">SysFiles</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#SysFiles.__init__">SysFiles</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SysFiles.get_display_info">get_display_info</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SysFiles.get_brightness">get_brightness</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#SysFiles.set_brightness">set_brightness</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#Light">Light</a>
                             <ul class="memberlist">
                         <li>
@@ -130,9 +148,6 @@
             <li>
                     <a class="function" href="#list_monitors_info">list_monitors_info</a>
             </li>
-            <li>
-                    <a class="function" href="#get_brightness_from_sysfiles">get_brightness_from_sysfiles</a>
-            </li>
     </ul>
 
 
@@ -145,7 +160,7 @@
                     <ul class="memberlist" id="docver_links">
                     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
                     <script>
-                        var docver_path_inline = "../../../docver_links_inline.html";
+                        var docver_path_inline = "../../../docver_links_inline2.html";
                         $("#docver_links").load(docver_path_inline,
                             function(resp_txt, txt_status, xmlhttp_req){
                                 if (txt_status=="success"){
@@ -185,7 +200,179 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">EDID</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
+
+
+<span class="k">class</span> <span class="nc">SysFiles</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A way of getting display information and adjusting the brightness</span>
+<span class="sd">    that does not rely on any 3rd party software.</span>
+
+<span class="sd">    This class works with displays that show up in the `/sys/class/backlight`</span>
+<span class="sd">    directory (so usually laptop displays).</span>
+
+<span class="sd">    To set the brightness, your user will need write permissions for</span>
+<span class="sd">    `/sys/class/backlight/*/brightness` or you will need to run the program</span>
+<span class="sd">    as root.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns information about detected displays by reading files from the</span>
+<span class="sd">        `/sys/class/backlight` directory</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
+<span class="sd">                Pass in the serial number, name, model, interface, edid or index.</span>
+<span class="sd">                This is passed to `filter_monitors`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of dicts</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get info about all monitors</span>
+<span class="sd">            info = sbc.linux.SysFiles.get_display_info()</span>
+<span class="sd">            # EG output: [{&#39;name&#39;: &#39;edp-backlight&#39;, &#39;path&#39;: &#39;/sys/class/backlight/edp-backlight&#39;, edid&#39;: &#39;00ffff...&#39;}]</span>
+
+<span class="sd">            # get info about the primary monitor</span>
+<span class="sd">            primary_info = sbc.linux.SysFiles.get_display_info(0)[0]</span>
+
+<span class="sd">            # get info about a monitor called &#39;edp-backlight&#39;</span>
+<span class="sd">            edp_info = sbc.linux.SysFiles.get_display_info(&#39;edp-backlight&#39;)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">displays</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;/sys/class/backlight&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">folder</span><span class="p">,</span>
+                    <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
+                    <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
+                    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="n">EDID</span><span class="o">.</span><span class="n">hexdump</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;scale&#39;</span><span class="p">:</span> <span class="kc">None</span>
+                <span class="p">}</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># try to get resolution of brightness settings</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;max_brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span> <span class="o">/</span> <span class="mi">100</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                    <span class="c1"># if the scale cannot be figured out then exclude the display</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># now check for duplicate displays</span>
+                <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">displays</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+                        <span class="ow">or</span> <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                    <span class="p">):</span>
+                        <span class="c1"># if there is a duplicate display, pick the display with</span>
+                        <span class="c1"># a scale equal to 1 or the display with the highest scale.</span>
+                        <span class="c1"># Reduces rounding errrors when converting percentages</span>
+                        <span class="c1"># to &#39;actual&#39; values</span>
+                        <span class="k">continue</span>
+
+                <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="p">,</span> <span class="n">serial</span>
+
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span>
+
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">displays</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">displays</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">displays</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the brightness for a display by reading the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of ints (0 to 100)</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get the current display brightness</span>
+<span class="sd">            current_brightness = sbc.linux.SysFiles.get_brightness()</span>
+
+<span class="sd">            # get the brightness of the primary display</span>
+<span class="sd">            primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]</span>
+
+<span class="sd">            # get the brightness of the secondary display</span>
+<span class="sd">            edp_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">brightness</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">brightness</span> <span class="o">/</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Sets the brightness for a display by writing to the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`.</span>
+<span class="sd">        This function requires permission to write to these files which is</span>
+<span class="sd">        usually provided when it&#39;s run as root.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (int): Sets the brightness to this value</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # set the brightness to 50%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(50)</span>
+
+<span class="sd">            # set the primary display brightness to 75%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 0)</span>
+
+<span class="sd">            # set the secondary display brightness to 25%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 1)</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span> <span class="o">*</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">])))</span>
 
 
 <span class="k">class</span> <span class="nc">Light</span><span class="p">:</span>
@@ -197,7 +384,10 @@
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Returns information about detected displays as reported by Light</span>
+<span class="sd">        Returns information about detected displays as reported by Light.</span>
+
+<span class="sd">        It works by taking the output of `SysFiles.get_display_info` and</span>
+<span class="sd">        filtering out any displays that aren&#39;t supported by Light</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
@@ -222,52 +412,20 @@
 <span class="sd">            edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)[0]</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">light_output</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="n">displays</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">&#39;backlight&#39;</span> <span class="ow">in</span> <span class="n">r</span> <span class="ow">and</span> <span class="s1">&#39;sysfs/backlight/auto&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
-                <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;backlight/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:]</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
-                    <span class="n">tmp</span> <span class="o">=</span> <span class="p">{</span>
-                        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">r</span><span class="p">,</span>
-                        <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;light_path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;sysfs/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
-                        <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
-                        <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="kc">None</span>
-                    <span class="p">}</span>
-                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
-                            <span class="p">[</span><span class="s1">&#39;hexdump&#39;</span><span class="p">,</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/device/edid&#39;</span><span class="p">],</span>
-                            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span>
-                        <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                        <span class="c1"># either the hexdump reports each hex char backwards (ff00 instead of 00ff)</span>
-                        <span class="c1"># or both xrandr and ddcutil do. So I swap these bits around</span>
-                        <span class="n">edid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
-                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">):</span>
-                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-                                    <span class="n">edid</span> <span class="o">+=</span> <span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span> <span class="n">i</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edid</span>
-                        <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">edid</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serial</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                        <span class="k">pass</span>
-                    <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">():</span>
+            <span class="c1"># SysFiles scrapes info from the same place that Light used to</span>
+            <span class="c1"># so it makes sense to use that output</span>
+            <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">light_output</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;light_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+                <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;light_path&#39;</span><span class="p">])</span>
@@ -306,7 +464,7 @@
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Sets the brightness for a display using the light executable</span>
+<span class="sd">        Gets the brightness for a display using the light executable</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
@@ -724,7 +882,7 @@
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
                     <span class="p">[</span>
@@ -734,7 +892,7 @@
                         <span class="sa">f</span><span class="s1">&#39;--sleep-multiplier=</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">sleep_multiplier</span><span class="si">}</span><span class="s1">&#39;</span>
                     <span class="p">]</span>
                 <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -815,11 +973,14 @@
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">info</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;linux_monitors_info&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">allow_duplicates</span><span class="o">=</span><span class="n">allow_duplicates</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">XRandr</span><span class="p">,</span> <span class="n">DDCUtil</span><span class="p">,</span> <span class="n">Light</span><span class="p">]</span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">XRandr</span><span class="p">,</span> <span class="n">DDCUtil</span><span class="p">,</span> <span class="n">Light</span><span class="p">,</span> <span class="n">SysFiles</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;xrandr&#39;</span><span class="p">,</span> <span class="s1">&#39;ddcutil&#39;</span><span class="p">,</span> <span class="s1">&#39;light&#39;</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;method must be </span><span class="se">\&#39;</span><span class="s1">xrandr</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">ddcutil</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">light</span><span class="se">\&#39;</span><span class="s1"> to get monitor information&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;xrandr&#39;</span><span class="p">,</span> <span class="s1">&#39;ddcutil&#39;</span><span class="p">,</span> <span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfiles&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span>
+                    <span class="s1">&#39;method must be &quot;xrandr&quot; or &quot;ddcutil&quot; or &quot;light&quot;&#39;</span>
+                    <span class="s1">&#39; or &quot;sysfiles&quot; to get monitor information&#39;</span>
+                <span class="p">))</span>
 
         <span class="n">info</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">edids</span> <span class="o">=</span> <span class="p">[]</span>
@@ -837,73 +998,525 @@
                             <span class="n">info</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
         <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;linux_monitors_info&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">allow_duplicates</span><span class="o">=</span><span class="n">allow_duplicates</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">info</span>
-
-
-<span class="k">def</span> <span class="nf">get_brightness_from_sysfiles</span><span class="p">(</span><span class="n">display</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the current display brightness by reading files from `/sys/class/backlight`</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int): The index of the display you wish to query</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        int: from 0 to 100</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        Exception: if no values could be obtained from reading `/sys/class/backlight`</span>
-<span class="sd">        FileNotFoundError: if the `/sys/class/backlight` directory doesn&#39;t exist or it is empty</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        brightness = sbc.linux.get_brightness_from_sysfiles()</span>
-<span class="sd">        # Eg Output: 100</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn</span><span class="p">(</span>
-        <span class="p">(</span>
-            <span class="s1">&#39;screen_brightness_control.linux.get_brightness_from_sysfiles is&#39;</span>
-            <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
-        <span class="p">),</span> <span class="ne">DeprecationWarning</span>
-    <span class="p">)</span>
-    <span class="n">backlight_dir</span> <span class="o">=</span> <span class="s1">&#39;/sys/class/backlight/&#39;</span>
-    <span class="n">error</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="c1"># if function has not returned yet try reading the brightness file</span>
-    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="o">!=</span> <span class="p">[]:</span>
-        <span class="c1"># if the backlight dir exists and is not empty</span>
-        <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dir</span> <span class="k">for</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="nb">dir</span><span class="p">))]</span>
-        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="n">folders</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
-        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># try to read the brightness value in the file</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                    <span class="n">brightness_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))))</span>
-
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># try open the max_brightness file to calculate the value to set the brightness file to</span>
-                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="s1">&#39;max_brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                        <span class="n">max_brightness</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))))</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="c1"># if the file does not exist we cannot calculate the brightness</span>
-                    <span class="k">return</span> <span class="kc">False</span>
-                <span class="n">brightness_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="n">brightness_value</span> <span class="o">/</span> <span class="n">max_brightness</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-                <span class="k">return</span> <span class="n">brightness_value</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">error</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="ne">Exception</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-        <span class="c1"># if function hasn&#39;t returned, it failed</span>
-        <span class="n">exc</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to get brightness from </span><span class="si">{</span><span class="n">backlight_dir</span><span class="si">}</span><span class="s1">:&#39;</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">error</span><span class="p">:</span>
-            <span class="n">exc</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Backlight directory </span><span class="si">{</span><span class="n">backlight_dir</span><span class="si">}</span><span class="s1"> not found&#39;</span><span class="p">)</span>
 </pre></div>
 
         </details>
 
             </section>
+                <section id="SysFiles">
+                                <div class="attr class">
+        <a class="headerlink" href="#SysFiles">#&nbsp;&nbsp</a>
+
+        
+        <span class="def">class</span>
+        <span class="name">SysFiles</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">SysFiles</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A way of getting display information and adjusting the brightness</span>
+<span class="sd">    that does not rely on any 3rd party software.</span>
+
+<span class="sd">    This class works with displays that show up in the `/sys/class/backlight`</span>
+<span class="sd">    directory (so usually laptop displays).</span>
+
+<span class="sd">    To set the brightness, your user will need write permissions for</span>
+<span class="sd">    `/sys/class/backlight/*/brightness` or you will need to run the program</span>
+<span class="sd">    as root.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns information about detected displays by reading files from the</span>
+<span class="sd">        `/sys/class/backlight` directory</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
+<span class="sd">                Pass in the serial number, name, model, interface, edid or index.</span>
+<span class="sd">                This is passed to `filter_monitors`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of dicts</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get info about all monitors</span>
+<span class="sd">            info = sbc.linux.SysFiles.get_display_info()</span>
+<span class="sd">            # EG output: [{&#39;name&#39;: &#39;edp-backlight&#39;, &#39;path&#39;: &#39;/sys/class/backlight/edp-backlight&#39;, edid&#39;: &#39;00ffff...&#39;}]</span>
+
+<span class="sd">            # get info about the primary monitor</span>
+<span class="sd">            primary_info = sbc.linux.SysFiles.get_display_info(0)[0]</span>
+
+<span class="sd">            # get info about a monitor called &#39;edp-backlight&#39;</span>
+<span class="sd">            edp_info = sbc.linux.SysFiles.get_display_info(&#39;edp-backlight&#39;)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">displays</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;/sys/class/backlight&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">folder</span><span class="p">,</span>
+                    <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
+                    <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
+                    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="n">EDID</span><span class="o">.</span><span class="n">hexdump</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;scale&#39;</span><span class="p">:</span> <span class="kc">None</span>
+                <span class="p">}</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># try to get resolution of brightness settings</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;max_brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span> <span class="o">/</span> <span class="mi">100</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                    <span class="c1"># if the scale cannot be figured out then exclude the display</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># now check for duplicate displays</span>
+                <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">displays</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+                        <span class="ow">or</span> <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                    <span class="p">):</span>
+                        <span class="c1"># if there is a duplicate display, pick the display with</span>
+                        <span class="c1"># a scale equal to 1 or the display with the highest scale.</span>
+                        <span class="c1"># Reduces rounding errrors when converting percentages</span>
+                        <span class="c1"># to &#39;actual&#39; values</span>
+                        <span class="k">continue</span>
+
+                <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="p">,</span> <span class="n">serial</span>
+
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span>
+
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">displays</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">displays</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">displays</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the brightness for a display by reading the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of ints (0 to 100)</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get the current display brightness</span>
+<span class="sd">            current_brightness = sbc.linux.SysFiles.get_brightness()</span>
+
+<span class="sd">            # get the brightness of the primary display</span>
+<span class="sd">            primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]</span>
+
+<span class="sd">            # get the brightness of the secondary display</span>
+<span class="sd">            edp_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">brightness</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">brightness</span> <span class="o">/</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Sets the brightness for a display by writing to the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`.</span>
+<span class="sd">        This function requires permission to write to these files which is</span>
+<span class="sd">        usually provided when it&#39;s run as root.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (int): Sets the brightness to this value</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # set the brightness to 50%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(50)</span>
+
+<span class="sd">            # set the primary display brightness to 75%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 0)</span>
+
+<span class="sd">            # set the secondary display brightness to 25%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 1)</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span> <span class="o">*</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">])))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>A way of getting display information and adjusting the brightness
+that does not rely on any 3rd party software.</p>
+
+<p>This class works with displays that show up in the <code>/sys/class/backlight</code>
+directory (so usually laptop displays).</p>
+
+<p>To set the brightness, your user will need write permissions for
+<code>/sys/class/backlight/*/brightness</code> or you will need to run the program
+as root.</p>
+</div>
+
+
+                            <div id="SysFiles.__init__" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#SysFiles.__init__">#&nbsp;&nbsp</a>
+
+        
+            <span class="name">SysFiles</span><span class="signature">()</span>
+    </div>
+
+        
+    
+
+                            </div>
+                            <div id="SysFiles.get_display_info" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#SysFiles.get_display_info">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@classmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">get_display_info</span><span class="signature">(cls, display: Union[str, int, NoneType] = None) -&gt; List[dict]</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns information about detected displays by reading files from the</span>
+<span class="sd">        `/sys/class/backlight` directory</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
+<span class="sd">                Pass in the serial number, name, model, interface, edid or index.</span>
+<span class="sd">                This is passed to `filter_monitors`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of dicts</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get info about all monitors</span>
+<span class="sd">            info = sbc.linux.SysFiles.get_display_info()</span>
+<span class="sd">            # EG output: [{&#39;name&#39;: &#39;edp-backlight&#39;, &#39;path&#39;: &#39;/sys/class/backlight/edp-backlight&#39;, edid&#39;: &#39;00ffff...&#39;}]</span>
+
+<span class="sd">            # get info about the primary monitor</span>
+<span class="sd">            primary_info = sbc.linux.SysFiles.get_display_info(0)[0]</span>
+
+<span class="sd">            # get info about a monitor called &#39;edp-backlight&#39;</span>
+<span class="sd">            edp_info = sbc.linux.SysFiles.get_display_info(&#39;edp-backlight&#39;)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">displays</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;/sys/class/backlight&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">folder</span><span class="p">,</span>
+                    <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
+                    <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
+                    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="n">EDID</span><span class="o">.</span><span class="n">hexdump</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;scale&#39;</span><span class="p">:</span> <span class="kc">None</span>
+                <span class="p">}</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># try to get resolution of brightness settings</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;max_brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span> <span class="o">/</span> <span class="mi">100</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                    <span class="c1"># if the scale cannot be figured out then exclude the display</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># now check for duplicate displays</span>
+                <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">displays</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+                        <span class="ow">or</span> <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]][</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                    <span class="p">):</span>
+                        <span class="c1"># if there is a duplicate display, pick the display with</span>
+                        <span class="c1"># a scale equal to 1 or the display with the highest scale.</span>
+                        <span class="c1"># Reduces rounding errrors when converting percentages</span>
+                        <span class="c1"># to &#39;actual&#39; values</span>
+                        <span class="k">continue</span>
+
+                <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="p">,</span> <span class="n">serial</span>
+
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">manufacturer_id</span><span class="p">,</span> <span class="n">manufacturer</span>
+
+                    <span class="n">device</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="n">displays</span><span class="p">[</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">displays</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">displays</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">displays</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Returns information about detected displays by reading files from the
+<code>/sys/class/backlight</code> directory</p>
+
+<h6 id="args">Args</h6>
+
+<ul>
+<li><strong>display (str or int):</strong>  [<em>Optional</em>] The monitor to return info about.
+Pass in the serial number, name, model, interface, edid or index.
+This is passed to <code>filter_monitors</code></li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>list:</strong>  list of dicts</li>
+</ul>
+
+<h6 id="example">Example</h6>
+
+<blockquote>
+  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
+
+<span class="c1"># get info about all monitors</span>
+<span class="n">info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+<span class="c1"># EG output: [{&#39;name&#39;: &#39;edp-backlight&#39;, &#39;path&#39;: &#39;/sys/class/backlight/edp-backlight&#39;, edid&#39;: &#39;00ffff...&#39;}]</span>
+
+<span class="c1"># get info about the primary monitor</span>
+<span class="n">primary_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># get info about a monitor called &#39;edp-backlight&#39;</span>
+<span class="n">edp_info</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">(</span><span class="s1">&#39;edp-backlight&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="SysFiles.get_brightness" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#SysFiles.get_brightness">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@classmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">get_brightness</span><span class="signature">(cls, display: Optional[int] = None) -&gt; List[int]</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the brightness for a display by reading the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of ints (0 to 100)</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # get the current display brightness</span>
+<span class="sd">            current_brightness = sbc.linux.SysFiles.get_brightness()</span>
+
+<span class="sd">            # get the brightness of the primary display</span>
+<span class="sd">            primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]</span>
+
+<span class="sd">            # get the brightness of the secondary display</span>
+<span class="sd">            edp_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">brightness</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">brightness</span> <span class="o">/</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Gets the brightness for a display by reading the brightness files
+stored in <code>/sys/class/backlight/*/brightness</code></p>
+
+<h6 id="args">Args</h6>
+
+<ul>
+<li><strong>display (int):</strong>  The specific display you wish to query.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>list:</strong>  list of ints (0 to 100)</li>
+</ul>
+
+<h6 id="example">Example</h6>
+
+<blockquote>
+  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
+
+<span class="c1"># get the current display brightness</span>
+<span class="n">current_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
+
+<span class="c1"># get the brightness of the primary display</span>
+<span class="n">primary_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># get the brightness of the secondary display</span>
+<span class="n">edp_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="SysFiles.set_brightness" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#SysFiles.set_brightness">#&nbsp;&nbsp</a>
+
+                <div class="decorator">@classmethod</div>
+
+            <span class="def">def</span>
+            <span class="name">set_brightness</span><span class="signature">(cls, value: int, display: Optional[int] = None)</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Sets the brightness for a display by writing to the brightness files</span>
+<span class="sd">        stored in `/sys/class/backlight/*/brightness`.</span>
+<span class="sd">        This function requires permission to write to these files which is</span>
+<span class="sd">        usually provided when it&#39;s run as root.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (int): Sets the brightness to this value</span>
+<span class="sd">            display (int): The specific display you wish to query.</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            ```python</span>
+<span class="sd">            import screen_brightness_control as sbc</span>
+
+<span class="sd">            # set the brightness to 50%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(50)</span>
+
+<span class="sd">            # set the primary display brightness to 75%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 0)</span>
+
+<span class="sd">            # set the secondary display brightness to 25%</span>
+<span class="sd">            sbc.linux.SysFiles.set_brightness(75, display = 1)</span>
+<span class="sd">            ```</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">],</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span> <span class="o">*</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">])))</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Sets the brightness for a display by writing to the brightness files
+stored in <code>/sys/class/backlight/*/brightness</code>.
+This function requires permission to write to these files which is
+usually provided when it's run as root.</p>
+
+<h6 id="args">Args</h6>
+
+<ul>
+<li><strong>value (int):</strong>  Sets the brightness to this value</li>
+<li><strong>display (int):</strong>  The specific display you wish to query.</li>
+</ul>
+
+<h6 id="example">Example</h6>
+
+<blockquote>
+  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
+
+<span class="c1"># set the brightness to 50%</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="c1"># set the primary display brightness to 75%</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># set the secondary display brightness to 25%</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">SysFiles</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">display</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+</blockquote>
+</div>
+
+
+                            </div>
+                </section>
                 <section id="Light">
                                 <div class="attr class">
         <a class="headerlink" href="#Light">#&nbsp;&nbsp</a>
@@ -924,7 +1537,10 @@
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Returns information about detected displays as reported by Light</span>
+<span class="sd">        Returns information about detected displays as reported by Light.</span>
+
+<span class="sd">        It works by taking the output of `SysFiles.get_display_info` and</span>
+<span class="sd">        filtering out any displays that aren&#39;t supported by Light</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
@@ -949,52 +1565,20 @@
 <span class="sd">            edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)[0]</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">light_output</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="n">displays</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">&#39;backlight&#39;</span> <span class="ow">in</span> <span class="n">r</span> <span class="ow">and</span> <span class="s1">&#39;sysfs/backlight/auto&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
-                <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;backlight/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:]</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
-                    <span class="n">tmp</span> <span class="o">=</span> <span class="p">{</span>
-                        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">r</span><span class="p">,</span>
-                        <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;light_path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;sysfs/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
-                        <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
-                        <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="kc">None</span>
-                    <span class="p">}</span>
-                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
-                            <span class="p">[</span><span class="s1">&#39;hexdump&#39;</span><span class="p">,</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/device/edid&#39;</span><span class="p">],</span>
-                            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span>
-                        <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                        <span class="c1"># either the hexdump reports each hex char backwards (ff00 instead of 00ff)</span>
-                        <span class="c1"># or both xrandr and ddcutil do. So I swap these bits around</span>
-                        <span class="n">edid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
-                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">):</span>
-                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-                                    <span class="n">edid</span> <span class="o">+=</span> <span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span> <span class="n">i</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edid</span>
-                        <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">edid</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serial</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                        <span class="k">pass</span>
-                    <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">():</span>
+            <span class="c1"># SysFiles scrapes info from the same place that Light used to</span>
+            <span class="c1"># so it makes sense to use that output</span>
+            <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">light_output</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;light_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+                <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;light_path&#39;</span><span class="p">])</span>
@@ -1033,7 +1617,7 @@
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Sets the brightness for a display using the light executable</span>
+<span class="sd">        Gets the brightness for a display using the light executable</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
@@ -1114,7 +1698,10 @@
             <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Returns information about detected displays as reported by Light</span>
+<span class="sd">        Returns information about detected displays as reported by Light.</span>
+
+<span class="sd">        It works by taking the output of `SysFiles.get_display_info` and</span>
+<span class="sd">        filtering out any displays that aren&#39;t supported by Light</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (str or int): [*Optional*] The monitor to return info about.</span>
@@ -1139,52 +1726,20 @@
 <span class="sd">            edp_info = sbc.linux.Light.get_display_info(&#39;edp-backlight&#39;)[0]</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">light_output</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="bp">cls</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s1">&#39;-L&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="n">displays</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">&#39;backlight&#39;</span> <span class="ow">in</span> <span class="n">r</span> <span class="ow">and</span> <span class="s1">&#39;sysfs/backlight/auto&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
-                <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;backlight/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:]</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">/device/edid&#39;</span><span class="p">):</span>
-                    <span class="n">tmp</span> <span class="o">=</span> <span class="p">{</span>
-                        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">r</span><span class="p">,</span>
-                        <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;/sys/class/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;light_path&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;sysfs/backlight/</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="p">,</span>
-                        <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
-                        <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;serial&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;manufacturer_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                        <span class="s1">&#39;edid&#39;</span><span class="p">:</span> <span class="kc">None</span>
-                    <span class="p">}</span>
-                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
-                            <span class="p">[</span><span class="s1">&#39;hexdump&#39;</span><span class="p">,</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/device/edid&#39;</span><span class="p">],</span>
-                            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span>
-                        <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                        <span class="c1"># either the hexdump reports each hex char backwards (ff00 instead of 00ff)</span>
-                        <span class="c1"># or both xrandr and ddcutil do. So I swap these bits around</span>
-                        <span class="n">edid</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
-                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">):</span>
-                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-                                    <span class="n">edid</span> <span class="o">+=</span> <span class="n">i</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span> <span class="n">i</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edid</span>
-                        <span class="n">name</span><span class="p">,</span> <span class="n">serial</span> <span class="o">=</span> <span class="n">EDID</span><span class="o">.</span><span class="n">parse_edid</span><span class="p">(</span><span class="n">edid</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serial</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">],</span> <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_monitor_brand_lookup</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;manufacturer_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                        <span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                        <span class="k">pass</span>
-                    <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">SysFiles</span><span class="o">.</span><span class="n">get_display_info</span><span class="p">():</span>
+            <span class="c1"># SysFiles scrapes info from the same place that Light used to</span>
+            <span class="c1"># so it makes sense to use that output</span>
+            <span class="k">if</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">light_output</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;light_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">device</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/sys/class&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfs&#39;</span><span class="p">)</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+                <span class="n">device</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+                <span class="n">displays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">displays</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">haystack</span><span class="o">=</span><span class="n">displays</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;light_path&#39;</span><span class="p">])</span>
@@ -1193,7 +1748,10 @@
 
         </details>
 
-            <div class="docstring"><p>Returns information about detected displays as reported by Light</p>
+            <div class="docstring"><p>Returns information about detected displays as reported by Light.</p>
+
+<p>It works by taking the output of <code><a href="#SysFiles.get_display_info">SysFiles.get_display_info</a></code> and
+filtering out any displays that aren't supported by Light</p>
 
 <h6 id="args">Args</h6>
 
@@ -1315,7 +1873,7 @@ This is passed to <code>filter_monitors</code></li>
             <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Sets the brightness for a display using the light executable</span>
+<span class="sd">        Gets the brightness for a display using the light executable</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
@@ -1356,7 +1914,7 @@ This is passed to <code>filter_monitors</code></li>
 
         </details>
 
-            <div class="docstring"><p>Sets the brightness for a display using the light executable</p>
+            <div class="docstring"><p>Gets the brightness for a display using the light executable</p>
 
 <h6 id="args">Args</h6>
 
@@ -2321,7 +2879,7 @@ in the returned info</li>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
                     <span class="p">[</span>
@@ -2331,7 +2889,7 @@ in the returned info</li>
                         <span class="sa">f</span><span class="s1">&#39;--sleep-multiplier=</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">sleep_multiplier</span><span class="si">}</span><span class="s1">&#39;</span>
                     <span class="p">]</span>
                 <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -2619,7 +3177,7 @@ This is passed to <code>filter_monitors</code></li>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
                     <span class="p">[</span>
@@ -2629,7 +3187,7 @@ This is passed to <code>filter_monitors</code></li>
                         <span class="sa">f</span><span class="s1">&#39;--sleep-multiplier=</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">sleep_multiplier</span><span class="si">}</span><span class="s1">&#39;</span>
                     <span class="p">]</span>
                 <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;ddcutil_&#39;</span> <span class="o">+</span> <span class="n">m</span><span class="p">[</span><span class="s1">&#39;edid&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_brightness&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+                <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ddcutil_brightness_</span><span class="si">{</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -2795,11 +3353,14 @@ This is passed to <code>filter_monitors</code></li>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">info</span> <span class="o">=</span> <span class="n">__cache__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;linux_monitors_info&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">allow_duplicates</span><span class="o">=</span><span class="n">allow_duplicates</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">XRandr</span><span class="p">,</span> <span class="n">DDCUtil</span><span class="p">,</span> <span class="n">Light</span><span class="p">]</span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">XRandr</span><span class="p">,</span> <span class="n">DDCUtil</span><span class="p">,</span> <span class="n">Light</span><span class="p">,</span> <span class="n">SysFiles</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;xrandr&#39;</span><span class="p">,</span> <span class="s1">&#39;ddcutil&#39;</span><span class="p">,</span> <span class="s1">&#39;light&#39;</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;method must be </span><span class="se">\&#39;</span><span class="s1">xrandr</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">ddcutil</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">light</span><span class="se">\&#39;</span><span class="s1"> to get monitor information&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;xrandr&#39;</span><span class="p">,</span> <span class="s1">&#39;ddcutil&#39;</span><span class="p">,</span> <span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="s1">&#39;sysfiles&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span>
+                    <span class="s1">&#39;method must be &quot;xrandr&quot; or &quot;ddcutil&quot; or &quot;light&quot;&#39;</span>
+                    <span class="s1">&#39; or &quot;sysfiles&quot; to get monitor information&#39;</span>
+                <span class="p">))</span>
 
         <span class="n">info</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">edids</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2864,115 +3425,6 @@ This is passed to <code>filter_monitors</code></li>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Index:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">])</span>
     <span class="c1"># the method this monitor can be addressed by</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Method:&#39;</span><span class="p">,</span> <span class="n">monitor</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">])</span>
-</code></pre></div>
-</blockquote>
-</div>
-
-
-                </section>
-                <section id="get_brightness_from_sysfiles">
-                            <div class="attr function"><a class="headerlink" href="#get_brightness_from_sysfiles">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">get_brightness_from_sysfiles</span><span class="signature">(display: int = None) -&gt; int</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_brightness_from_sysfiles</span><span class="p">(</span><span class="n">display</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    **DEPRECATED**.</span>
-<span class="sd">    Returns the current display brightness by reading files from `/sys/class/backlight`</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        display (int): The index of the display you wish to query</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        int: from 0 to 100</span>
-
-<span class="sd">    Raises:</span>
-<span class="sd">        Exception: if no values could be obtained from reading `/sys/class/backlight`</span>
-<span class="sd">        FileNotFoundError: if the `/sys/class/backlight` directory doesn&#39;t exist or it is empty</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        import screen_brightness_control as sbc</span>
-
-<span class="sd">        brightness = sbc.linux.get_brightness_from_sysfiles()</span>
-<span class="sd">        # Eg Output: 100</span>
-<span class="sd">        ```</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">warn</span><span class="p">(</span>
-        <span class="p">(</span>
-            <span class="s1">&#39;screen_brightness_control.linux.get_brightness_from_sysfiles is&#39;</span>
-            <span class="s1">&#39; deprecated and will be removed in the next update&#39;</span>
-        <span class="p">),</span> <span class="ne">DeprecationWarning</span>
-    <span class="p">)</span>
-    <span class="n">backlight_dir</span> <span class="o">=</span> <span class="s1">&#39;/sys/class/backlight/&#39;</span>
-    <span class="n">error</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="c1"># if function has not returned yet try reading the brightness file</span>
-    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="o">!=</span> <span class="p">[]:</span>
-        <span class="c1"># if the backlight dir exists and is not empty</span>
-        <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dir</span> <span class="k">for</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="nb">dir</span><span class="p">))]</span>
-        <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="n">folders</span><span class="p">[</span><span class="n">display</span><span class="p">]]</span>
-        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># try to read the brightness value in the file</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="s1">&#39;brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                    <span class="n">brightness_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))))</span>
-
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># try open the max_brightness file to calculate the value to set the brightness file to</span>
-                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backlight_dir</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="s1">&#39;max_brightness&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                        <span class="n">max_brightness</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))))</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="c1"># if the file does not exist we cannot calculate the brightness</span>
-                    <span class="k">return</span> <span class="kc">False</span>
-                <span class="n">brightness_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="n">brightness_value</span> <span class="o">/</span> <span class="n">max_brightness</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-                <span class="k">return</span> <span class="n">brightness_value</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">error</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="ne">Exception</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">])</span>
-        <span class="c1"># if function hasn&#39;t returned, it failed</span>
-        <span class="n">exc</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to get brightness from </span><span class="si">{</span><span class="n">backlight_dir</span><span class="si">}</span><span class="s1">:&#39;</span>
-        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">error</span><span class="p">:</span>
-            <span class="n">exc</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Backlight directory </span><span class="si">{</span><span class="n">backlight_dir</span><span class="si">}</span><span class="s1"> not found&#39;</span><span class="p">)</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p><strong>DEPRECATED</strong>.
-Returns the current display brightness by reading files from <code>/sys/class/backlight</code></p>
-
-<h6 id="args">Args</h6>
-
-<ul>
-<li><strong>display (int):</strong>  The index of the display you wish to query</li>
-</ul>
-
-<h6 id="returns">Returns</h6>
-
-<ul>
-<li><strong>int:</strong>  from 0 to 100</li>
-</ul>
-
-<h6 id="raises">Raises</h6>
-
-<ul>
-<li><strong>Exception:</strong>  if no values could be obtained from reading <code>/sys/class/backlight</code></li>
-<li><strong>FileNotFoundError:</strong>  if the <code>/sys/class/backlight</code> directory doesn't exist or it is empty</li>
-</ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">get_brightness_from_sysfiles</span><span class="p">()</span>
-<span class="c1"># Eg Output: 100</span>
 </code></pre></div>
 </blockquote>
 </div>
