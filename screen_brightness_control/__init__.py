@@ -427,10 +427,11 @@ class EDID:
 
         hex_str = ''
         for char in data:
-            char = str(hex(char))[2:]
-            if len(char) == 1:
+            if char < 16:
+                # hex values less than 16 get represented as single char
+                # eg: 15 -> 'f' instead of '0f'
                 hex_str += '0'
-            hex_str += char
+            hex_str += f'{char:x}'  # represent binary as hex string
 
         return hex_str
 

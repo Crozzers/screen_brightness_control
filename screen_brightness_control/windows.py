@@ -93,10 +93,11 @@ def get_display_info() -> List[dict]:
                     try:
                         edid = ''
                         for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0]:
-                            char = hex(char)[2:]
-                            if len(char) == 1:
-                                char = '0' + char
-                            edid += char
+                            if char < 16:
+                                # hex values less than 16 get represented as single char
+                                # eg: 15 -> 'f' instead of '0f'
+                                edid += '0'
+                            edid += f'{char:x}'  # represent num as hex str
                     except Exception:
                         edid = None
 
