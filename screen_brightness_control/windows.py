@@ -1,13 +1,17 @@
-import wmi
+import ctypes
 import threading
+import time
+from ctypes import POINTER, WINFUNCTYPE, Structure, WinError, byref, windll
+from ctypes.wintypes import (BOOL, BYTE, DWORD, HANDLE, HDC, HMONITOR, LPARAM,
+                             RECT, WCHAR)
+from typing import List, Optional, Union
+
 import pythoncom
 import win32api
-import time
-import ctypes
-from ctypes import windll, byref, Structure, WinError, POINTER, WINFUNCTYPE
-from ctypes.wintypes import BOOL, HMONITOR, HDC, RECT, LPARAM, DWORD, BYTE, WCHAR, HANDLE
-from . import _monitor_brand_lookup, filter_monitors, __cache__, platform, EDID
-from typing import List, Union, Optional
+import wmi
+
+from . import EDID, __cache__, _monitor_brand_lookup, filter_monitors, platform
+
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
 if int(platform.python_version_tuple()[1]) < 9:
@@ -21,8 +25,7 @@ def _wmi_init():
     # WMI calls don't work in new threads so we have to run this check
     if threading.current_thread() != threading.main_thread():
         pythoncom.CoInitialize()
-    instance = wmi.WMI(namespace='wmi')
-    return instance
+    return wmi.WMI(namespace='wmi')
 
 
 def get_display_info() -> List[dict]:
@@ -116,17 +119,17 @@ def get_display_info() -> List[dict]:
                         manufacturer, model = name.rsplit(' ', 1)
                         try:
                             man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                        except Exception:
+                        except TypeError:
                             man_id, manufacturer = None, manufacturer.lower().capitalize()
                     except Exception:
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
                         man_id = devid[1][:3]
                         model = devid[3]
-                        del(devid)
+                        del devid
                         try:
                             man_id, manufacturer = _monitor_brand_lookup(man_id)
-                        except Exception:
+                        except TypeError:
                             manufacturer = None
 
                     if (serial, model) != (None, None):
@@ -319,7 +322,7 @@ class VCP:
                 print(sbc.windows.VCP.get_monitor_caps(monitor))
             ```
         '''
-        def callback(hmonitor, hdc, lprect, lparam):
+        def callback(hmonitor, *_):
             monitors.append(HMONITOR(hmonitor))
             return True
 
@@ -422,9 +425,8 @@ class VCP:
                     if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(handle, code, None, byref(cur_out), None):
                         current = cur_out.value
                         break
-                    else:
-                        current = None
-                        time.sleep(0.02)
+                    current = None
+                    time.sleep(0.02)
 
             if current is not None:
                 __cache__.store(f'vcp_brightness_{index}', current, expires=0.1)
@@ -471,8 +473,7 @@ class VCP:
                 for _ in range(10):
                     if windll.dxva2.SetVCPFeature(handle, code, value):
                         break
-                    else:
-                        time.sleep(0.02)
+                    time.sleep(0.02)
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
