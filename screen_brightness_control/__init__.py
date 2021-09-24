@@ -1003,39 +1003,31 @@ class __Cache(dict):
 
     def get(self, key, *args, **kwargs):
         if not self.enabled:
-            return None
+            return
 
         try:
-            value, expires, orig_args, orig_kwargs = super().__getitem__(key)
+            value, expires, orig_args, orig_kwargs = self[key]
             if time.time() < expires:
                 if orig_args == args and orig_kwargs == kwargs:
                     return value
             else:
-                super().__delitem__(key)
+                del self[key]
         except KeyError:
             pass
 
     def store(self, key, value, *args, expires=1, **kwargs):
-        super().__setitem__(key, (value, expires + time.time(), args, kwargs))
+        self[key] = (value, expires + time.time(), args, kwargs)
 
-    def expire(self, key=None, startswith=None, endswith=None):
+    def expire(self, key=None, startswith=None):
         if key is not None:
             try:
-                super().__delitem__(key)
+                del self[key]
             except Exception:
                 pass
-        else:
+        elif startswith is not None:
             for i in tuple(self.keys()):
-                cond1 = startswith is not None and i.startswith(startswith)
-                cond2 = endswith is not None and i.endswith(endswith)
-                if cond1 and cond2:
-                    super().__delitem__(i)
-                elif cond1:
-                    super().__delitem__(i)
-                elif cond2:
-                    super().__delitem__(i)
-                else:
-                    pass
+                if i.startswith(startswith):
+                    del self[i]
 
 
 __cache__ = __Cache()
