@@ -578,87 +578,93 @@ class DDCUtil:
             benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
-        def check_tmp(tmp):
-            if tmp != {} and 'Invalid display' not in tmp['tmp']:
-                if 'tmp' in tmp:
-                    del tmp['tmp']
+        def check_display(tmp_display):
+            if tmp_display and 'Invalid display' not in tmp_display['line']:
+                del tmp_display['line']
                 return True
             return False
 
-        data = __cache__.get('ddcutil_monitors_info')
-        if data is None:
-            out = []
-            # Use -v to get EDID string but this means output cannot be decoded.
-            # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
-            # Use str()[2:-1] workaround
-            cmd_out = str(
+        valid_displays = __cache__.get('ddcutil_monitors_info')
+        if valid_displays is None:
+            raw_ddcutil_output = str(
                 subprocess.check_output(
                     [
-                        cls.executable,
-                        'detect', '-v',
+                        cls.executable, 'detect', '-v',
                         f'--sleep-multiplier={cls.sleep_multiplier}'
                     ], stderr=subprocess.DEVNULL
                 )
             )[2:-1].split('\\n')
+            # Use -v to get EDID string but this means output cannot be decoded.
+            # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
+            # Use str()[2:-1] workaround
 
-            for line in cmd_out:
-                if line != '' and line.startswith(('Invalid display', 'Display', '\t', ' ')):
-                    out.append(line)
-            data = []
-            tmp = {}
-            count = 0
-            for i, line in enumerate(out):
+            # include "Invalid display" sections because they tell us where one displays metadata ends
+            # and another begins. We filter out invalid displays later on
+            ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
+            valid_displays = []
+            tmp_display = {}
+            display_count = 0
+
+            for line_index, line in enumerate(ddcutil_output):
                 if not line.startswith(('\t', ' ')):
-                    if check_tmp(tmp):
-                        data.append(tmp)
-                    tmp = {
-                        'tmp': line,
+                    if check_display(tmp_display):
+                        valid_displays.append(tmp_display)
+
+                    tmp_display = {
+                        'line': line,
                         'method': cls,
-                        'index': count,
+                        'index': display_count,
                         'model': None,
                         'serial': None,
                         'manufacturer': None,
                         'manufacturer_id': None,
                         'edid': None
                     }
-                    count += 1
-                else:
-                    if 'I2C bus' in line:
-                        tmp['i2c_bus'] = line[line.index('/'):]
-                        tmp['bus_number'] = int(tmp['i2c_bus'].replace('/dev/i2c-', ''))
-                    elif 'Mfg id' in line:
-                        tmp['manufacturer_id'] = line.replace('Mfg id:', '').replace('\t', '').replace(' ', '')
-                        try:
-                            tmp['manufacturer_id'], tmp['manufacturer'] = _monitor_brand_lookup(tmp['manufacturer_id'])
-                        except TypeError:
-                            pass
-                    elif 'Model' in line:
-                        name = [i for i in line.replace('Model:', '').replace('\t', '').split(' ') if i != '']
-                        try:
-                            name[0] = name[0].lower().capitalize()
-                        except IndexError:
-                            pass
-                        tmp['name'] = ' '.join(name)
-                        try:
-                            tmp['model'] = name[1]
-                        except IndexError:
-                            pass
-                    elif 'Serial number' in line:
-                        tmp['serial'] = line.replace('Serial number:', '').replace('\t', '').replace(' ', '')
-                    elif 'EDID hex dump:' in line:
-                        try:
-                            tmp['edid'] = ''.join(
-                                j[j.index('+0') + 8: j.index('+0') + 55].replace(' ', '') for j in out[i + 2: i + 10]
-                            )
-                        except Exception:
-                            pass
-            if check_tmp(tmp):
-                data.append(tmp)
-            __cache__.store('ddcutil_monitors_info', data)
+                    display_count += 1
+
+                elif 'I2C bus' in line:
+                    tmp_display['i2c_bus'] = line[line.index('/'):]
+                    tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
+
+                elif 'Mfg id' in line:
+                    tmp_display['manufacturer_id'] = line.replace('Mfg id:', '').replace(' ', '')
+                    try:
+                        (
+                            tmp_display['manufacturer_id'],
+                            tmp_display['manufacturer']
+                        ) = _monitor_brand_lookup(tmp_display['manufacturer_id'])
+                    except TypeError:
+                        pass
+
+                elif 'Model' in line:
+                    # the split() removes extra spaces
+                    name = line.replace('Model:', '').split()
+                    try:
+                        # EG: DELL U2211H -> Dell U2211H
+                        name[0] = name[0].lower().capitalize()
+                        tmp_display['model'] = name[1]
+                    except IndexError:
+                        pass
+                    tmp_display['name'] = ' '.join(name)
+
+                elif 'Serial number' in line:
+                    tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '')
+
+                elif 'EDID hex dump:' in line:
+                    try:
+                        tmp_display['edid'] = ''.join(
+                            ''.join(i.split()[1:17]) for i in ddcutil_output[line_index + 2: line_index + 10]
+                        )
+                    except Exception:
+                        pass
+
+            if check_display(tmp_display):
+                valid_displays.append(tmp_display)
+            __cache__.store('ddcutil_monitors_info', valid_displays)
 
         if display is not None:
-            data = filter_monitors(display=display, haystack=data, include=['i2c_bus'])
-        return data
+            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['i2c_bus'])
+        return valid_displays
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
