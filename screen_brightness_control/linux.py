@@ -426,11 +426,9 @@ class XRandr:
                 display_count += 1
 
             elif 'EDID:' in line:
-                # get the chunk of the output that will contain the EDID
-                edid_chunk = xrandr_output[xrandr_output.index(tmp_display['line']):]
-                # extract the edid from said chunk
+                # extract the edid from the chunk of the output that will contain the edid
                 edid = ''.join(
-                    i.replace('\t', '') for i in edid_chunk[line_index: line_index + 8]
+                    i.replace('\t', '') for i in xrandr_output[line_index + 1: line_index + 9]
                 )
                 tmp_display['edid'] = edid
 
