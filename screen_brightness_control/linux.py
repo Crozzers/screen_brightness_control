@@ -702,7 +702,7 @@ class DDCUtil:
                         'getvcp', '10', '-t',
                         '-b', str(monitor['bus_number']),
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ]
+                    ], stderr=subprocess.DEVNULL
                 ).decode().split(' ')[-2]
                 __cache__.store(f'ddcutil_brightness_{monitor["index"]}', out, expires=0.5)
             try:
@@ -742,7 +742,7 @@ class DDCUtil:
                     cls.executable, 'setvcp', '10', str(value),
                     '-b', str(monitor['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ]
+                ], stderr=subprocess.DEVNULL
             )
 
 
