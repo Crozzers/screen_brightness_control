@@ -725,7 +725,7 @@ class DDCUtil:
         if display is not None:
             monitors = [monitors[display]]
 
-        __cache__.expire(startswith='ddcutil_', endswith='_brightness')
+        __cache__.expire(startswith='ddcutil_brightness_')
         for m in monitors:
             subprocess.run(
                 [
