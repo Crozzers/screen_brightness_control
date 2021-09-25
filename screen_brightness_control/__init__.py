@@ -92,7 +92,7 @@ def set_brightness(
         sbc.set_brightness(50, display=0)
         ```
     '''
-    if type(value) == str and ('+' in value or '-' in value):
+    if isinstance(value, str) and ('+' in value or '-' in value):
         value = int(float(value))
         monitors = filter_monitors(display=display, method=method)
         if len(monitors) > 1:
@@ -110,8 +110,8 @@ def set_brightness(
                 )
             output = flatten_list(output)
             return output[0] if len(output) == 1 else output
-        else:
-            value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])
+
+        value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])
     else:
         value = int(float(str(value)))
 
@@ -183,11 +183,13 @@ def fade_brightness(
 
         if monitor.get_brightness() != finish:
             monitor.set_brightness(finish, no_return=True)
-        return
+
+    def err_msg(e):
+        return f'\n\tfilter_monitors -> {type(e).__name__}: {e}'
 
     threads = []
-    if 'verbose_error' in kwargs.keys():
-        del(kwargs['verbose_error'])
+    if 'verbose_error' in kwargs:
+        del kwargs['verbose_error']
 
     try:
         # make sure only compatible kwargs are passed to filter_monitors
@@ -197,19 +199,19 @@ def fade_brightness(
             )}
         )
     except (IndexError, LookupError) as e:
-        if type(e) == LookupError and platform.system() == 'Linux' and method is None:
+        if isinstance(e, LookupError) and platform.system() == 'Linux' and method is None:
             # if a user ONLY has XBacklight installed and no method was specified
             # then filter_monitors will raise a LookupError
             available_monitors = [method.XBacklight]
         else:
-            raise ScreenBrightnessError(f'\n\tfilter_monitors -> {type(e).__name__}: {e}')
+            raise ScreenBrightnessError(err_msg(e)) from e
     except ValueError as e:
         if platform.system() == 'Linux' and (str(kwargs.get('method', '')).lower() == 'xbacklight'):
             available_monitors = [method.XBacklight]
         else:
-            raise ScreenBrightnessError(e)
+            raise ScreenBrightnessError(err_msg(e)) from e
     except Exception as e:
-        raise ScreenBrightnessError(e)
+        raise ScreenBrightnessError(err_msg(e)) from e
 
     for i in available_monitors:
         try:
@@ -220,6 +222,7 @@ def fade_brightness(
                 monitor = i
             else:
                 monitor = Monitor(i)
+
             # same effect as monitor.is_active()
             current = monitor.get_brightness()
             st, fi = start, finish
@@ -244,10 +247,10 @@ def fade_brightness(
 
     if not blocking:
         return threads
-    else:
-        for t in threads:
-            t.join()
-        return get_brightness(**kwargs)
+
+    for t in threads:
+        t.join()
+    return get_brightness(**kwargs)
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
@@ -676,7 +679,7 @@ class Monitor():
         value = max(0, min(value, 100))
         self.method.set_brightness(value, display=self.index)
         if no_return:
-            return
+            return None
         return self.get_brightness()
 
     def get_brightness(self) -> int:
@@ -733,12 +736,12 @@ class Monitor():
         # call directly to the method so they don't need this step
         kwargs['method'] = self.method.__name__.lower()
 
-        b = fade_brightness(*args, **kwargs)
+        brightness = fade_brightness(*args, **kwargs)
         # fade_brightness will call the top-level get_brightness
         # function, which will return list OR int
-        if isinstance(b, list):
-            return b[0]
-        return b
+        if isinstance(brightness, list):
+            return brightness[0]
+        return brightness
 
     def get_info(self, refresh: bool = True) -> dict:
         '''
@@ -857,7 +860,7 @@ def filter_monitors(
                 # check we haven't already added the monitor
                 if monitor[identifier] not in unique_identifiers:
                     # check if the display kwarg (if str) matches this monitor
-                    if type(display) != str or (type(display) == str and monitor[identifier] == display):
+                    if monitor[identifier] == display or not isinstance(display, str):
                         # if valid and monitor[identifier] not in unique_identifiers:
                         if not added:
                             monitors.append(monitor)
@@ -865,7 +868,7 @@ def filter_monitors(
                             added = True
 
                         # if the display kwarg is an integer and we are currently at that index
-                        if type(display) is int and len(monitors) - 1 == display:
+                        if isinstance(display, int) and len(monitors) - 1 == display:
                             return [monitor]
                         if added:
                             break
@@ -877,7 +880,7 @@ def filter_monitors(
 
     # if no monitors matched the query OR if display kwarg was an int
     # if the latter and we made it this far then the int was out of range
-    if monitors == [] or type(display) is int:
+    if monitors == [] or isinstance(display, int):
         msg = 'no monitors found'
         if display is not None:
             msg += f' with name/serial/model/edid/index of {repr(display)}'
@@ -908,7 +911,7 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
     '''
     flat_list = []
     for item in thick_list:
-        if type(item) == list:
+        if isinstance(item, list):
             flat_list += flatten_list(item)
         else:
             flat_list.append(item)
@@ -929,7 +932,7 @@ def __brightness(
 
     output = []
     errors = []
-    method = method.lower() if type(method) == str else method
+    method = method.lower() if isinstance(method, str) else method
 
     try:
         monitors = filter_monitors(display=display, method=method)
@@ -974,14 +977,14 @@ def __brightness(
             )
         ):
             if no_return:
-                return
+                return None
             return output[0] if len(output) == 1 else output
 
     # if the function hasn't returned then it has failed
     msg = '\n'
     if errors:
         for monitor, exc_name, exc in errors:
-            if type(monitor) == str:
+            if isinstance(monitor, str):
                 msg += f'\t{monitor}'
             else:
                 msg += f'\t{monitor["name"]} ({monitor["serial"]})'
@@ -1001,7 +1004,7 @@ class __Cache(dict):
 
     def get(self, key, *args, **kwargs):
         if not self.enabled:
-            return
+            return None
 
         try:
             value, expires, orig_args, orig_kwargs = self[key]
@@ -1020,7 +1023,7 @@ class __Cache(dict):
         if key is not None:
             try:
                 del self[key]
-            except Exception:
+            except KeyError:
                 pass
         elif startswith is not None:
             for i in tuple(self.keys()):
@@ -1040,7 +1043,7 @@ elif plat == 'Darwin':
     raise NotImplementedError('MAC is not yet supported')
 else:
     raise NotImplementedError(f'{plat} is not yet supported')
-del(plat)
+del plat
 
 __version__ = '0.11.0'
 __author__ = 'Crozzers'
