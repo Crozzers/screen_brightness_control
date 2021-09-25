@@ -80,7 +80,7 @@
     Removed search bar because the search index needs some work
     -->
     <main class="pdoc">
-        <h1>screen_brightness_control 0.10.1</h1>
+        <h1>screen_brightness_control 0.11.1</h1>
         <p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  </p>
 <h1>Installation</h1>
 <h4>Pip:</h4>
@@ -91,27 +91,27 @@ cd screen_brightness_control
 pip3 install .
 </code></pre>
 <h4>Note:</h4>
-<p>For running on Linux you will need to install one of these programs: xrandr, ddcutil, <a href="https://github.com/haikarainen/light">light</a> or xbacklight.<br />
+<p>For running on Linux you may need to install one of these programs: xrandr, ddcutil, <a href="https://github.com/haikarainen/light">light</a> or xbacklight. If you do not wish to install any 3rd party programs you will have to run this module as root.<br />
 Here is a quick outline of each program:</p>
 <table>
 <thead>
 <tr>
 <th>Program</th>
-<th>Is it Fast</th>
-<th>Works with laptop displays</th>
-<th>Works with external monitors</th>
+<th>Works on laptop displays</th>
+<th>Works on external monitors</th>
 <th>Multi-display support</th>
 <th>Requires RandR support</th>
+<th>Requires Root</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>ddcutil</td>
 <td>No</td>
+<td>Yes (slow)</td>
+<td>Yes</td>
 <td>No</td>
 <td>Yes</td>
-<td>Yes</td>
-<td>No</td>
 </tr>
 <tr>
 <td>xrandr</td>
@@ -119,23 +119,31 @@ Here is a quick outline of each program:</p>
 <td>Yes</td>
 <td>Yes</td>
 <td>Yes</td>
-<td>Yes</td>
+<td>No</td>
 </tr>
 <tr>
 <td>xbacklight</td>
 <td>Yes</td>
-<td>Yes</td>
 <td>No</td>
 <td>Yes but not individually controllable</td>
 <td>Yes</td>
+<td>No</td>
 </tr>
 <tr>
 <td>light</td>
 <td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>[No program]</td>
 <td>Yes</td>
 <td>No</td>
 <td>Yes</td>
 <td>No</td>
+<td>Yes</td>
 </tr>
 </tbody>
 </table>
@@ -188,7 +196,7 @@ Raises <code>ScreenBrightnessError</code> upon failure</p>
 <p><strong>Arguments:</strong></p>
 <ul>
 <li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
 </ul>
 <p><strong>Usage:</strong>  </p>
@@ -211,7 +219,7 @@ Raises <code>ScreenBrightnessError</code> upon failure</p>
 <ul>
 <li><code>value</code> - the level to set the brightness to. Can either be an integer or a string.</li>
 <li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
 <li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
 <li><code>no_return</code> - boolean value, whether this function should return <code>None</code> or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return <code>None</code> by default.</li>
@@ -270,7 +278,7 @@ sbc.fade_brightness(100, blocking=False)
 Returns a list of the names of all detected monitors</p>
 <p><strong>Arguments:</strong></p>
 <ul>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code> or <code>'xbacklight'</code></li>
+<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
 </ul>
 <p><strong>Usage:</strong>  </p>
 <pre><code class="language-python">import screen_brightness_control as sbc
@@ -286,24 +294,28 @@ monitor_names = sbc.list_monitors()
 <p><strong>Why this happens:</strong><br />
 The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
 The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
-If none of these programs can be called a <code>ScreenBrightnessError</code> is raised</p>
+If none of these programs are installed then it attempts to read/write to files located in the <code>/sys/class/backlight</code>
+directory, which will require root permissions.</p>
+<p>If none of methods succeed, a <code>ScreenBrightnessError</code> is raised.</p>
 <p><strong>How to fix it:</strong><br />
-Install <code>xrandr</code>, <code>ddcutil</code>, <code>light</code>, or <code>xbacklight</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.</p>
+Install <code>xrandr</code>, <code>ddcutil</code>, <code>light</code>, or <code>xbacklight</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.
+Or run the module as root if you do not wish to install 3rd party software.</p>
 <h3>I call <code>set_brightness()</code> and nothing happens (Linux)</h3>
 <p><strong>Why this happens:</strong><br />
 Light requires root access to run, which is usually provided when you manually install it using you package manager.
 If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
-If you installed ddcutil, this requires root access to run for every query.</p>
+If you installed ddcutil or have none of the recommended 3rd party softwares installed,
+you require root access to run for every query.</p>
 <p><strong>How to fix it:</strong> <br />
 If you installed <code>xrandr</code> or <code>xbacklight</code>: make sure your graphics drivers support RandR.<br />
-If you installed <code>ddcutil</code>: make sure to run the script with root permissions.<br />
+If you installed <code>ddcutil</code> or none of the recommended 3rd party softwares: make sure to run the script with root permissions.<br />
 If you installed <code>light</code>: follow <a href="https://github.com/haikarainen/light#installation">these steps</a> making sure to run the install as sudo or re-compile from source (requires <code>autoconf</code> to be installed):</p>
 <pre><code>git clone https://github.com/haikarainen/light &amp;&amp; cd light
 sh autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; sudo make install
 </code></pre>
 <h3>Using the <code>display</code> kwarg does nothing/creates exceptions (Linux)</h3>
 <p><strong>Why this happens:</strong><br />
-The <code>display</code> kwarg is only supported by the <code>Light</code>, <code>XRandr</code> and <code>DDCUtil</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
+The <code>display</code> kwarg is only supported by the <code>Light</code>, <code>XRandr</code>, <code>DDCUtil</code> and <code>SysFiles</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
 <p><strong>How to fix it:</strong><br />
 Install <code>xrandr</code> or <code>ddcutil</code> or <code>light</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.</p>
 <h3>The model of my monitor/display is not what the program says it is (Windows)</h3>
