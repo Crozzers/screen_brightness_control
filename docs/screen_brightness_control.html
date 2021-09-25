@@ -278,7 +278,7 @@ screen_brightness_control    </h1>
 <span class="sd">        sbc.set_brightness(50, display=0)</span>
 <span class="sd">        ```</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;+&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s1">&#39;-&#39;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;+&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s1">&#39;-&#39;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
         <span class="n">monitors</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -296,8 +296,8 @@ screen_brightness_control    </h1>
                 <span class="p">)</span>
             <span class="n">output</span> <span class="o">=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">output</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">+=</span> <span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">Monitor</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">monitors</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">value</span> <span class="o">+=</span> <span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">Monitor</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">monitors</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
 
@@ -369,11 +369,13 @@ screen_brightness_control    </h1>
 
         <span class="k">if</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span> <span class="o">!=</span> <span class="n">finish</span><span class="p">:</span>
             <span class="n">monitor</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">finish</span><span class="p">,</span> <span class="n">no_return</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span>
 
     <span class="n">threads</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">if</span> <span class="s1">&#39;verbose_error&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="k">del</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;verbose_error&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s1">&#39;verbose_error&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;verbose_error&#39;</span><span class="p">]</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># make sure only compatible kwargs are passed to filter_monitors</span>
@@ -383,19 +385,19 @@ screen_brightness_control    </h1>
             <span class="p">)}</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="ne">LookupError</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># if a user ONLY has XBacklight installed and no method was specified</span>
             <span class="c1"># then filter_monitors will raise a LookupError</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">):</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">available_monitors</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -406,6 +408,7 @@ screen_brightness_control    </h1>
                 <span class="n">monitor</span> <span class="o">=</span> <span class="n">i</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">monitor</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
             <span class="c1"># same effect as monitor.is_active()</span>
             <span class="n">current</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
             <span class="n">st</span><span class="p">,</span> <span class="n">fi</span> <span class="o">=</span> <span class="n">start</span><span class="p">,</span> <span class="n">finish</span>
@@ -430,10 +433,10 @@ screen_brightness_control    </h1>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">threads</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
-            <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">allow_duplicates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -608,16 +611,14 @@ screen_brightness_control    </h1>
 <span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-
         <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
-                <span class="c1"># hex values less than 16 get represented as single char</span>
-                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
-                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
-            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                    <span class="c1"># hex values less than 16 get represented as single char</span>
+                    <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                    <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
 
         <span class="k">return</span> <span class="n">hex_str</span>
 
@@ -864,7 +865,7 @@ screen_brightness_control    </h1>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
-            <span class="k">return</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -921,12 +922,12 @@ screen_brightness_control    </h1>
         <span class="c1"># call directly to the method so they don&#39;t need this step</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
-        <span class="n">b</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">brightness</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># fade_brightness will call the top-level get_brightness</span>
         <span class="c1"># function, which will return list OR int</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">b</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">brightness</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">brightness</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">brightness</span>
 
     <span class="k">def</span> <span class="nf">get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -1045,7 +1046,7 @@ screen_brightness_control    </h1>
                 <span class="c1"># check we haven&#39;t already added the monitor</span>
                 <span class="k">if</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unique_identifiers</span><span class="p">:</span>
                     <span class="c1"># check if the display kwarg (if str) matches this monitor</span>
-                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">str</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="ow">and</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="o">==</span> <span class="n">display</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="o">==</span> <span class="n">display</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                         <span class="c1"># if valid and monitor[identifier] not in unique_identifiers:</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">added</span><span class="p">:</span>
                             <span class="n">monitors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
@@ -1053,7 +1054,7 @@ screen_brightness_control    </h1>
                             <span class="n">added</span> <span class="o">=</span> <span class="kc">True</span>
 
                         <span class="c1"># if the display kwarg is an integer and we are currently at that index</span>
-                        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">display</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">display</span><span class="p">:</span>
                             <span class="k">return</span> <span class="p">[</span><span class="n">monitor</span><span class="p">]</span>
                         <span class="k">if</span> <span class="n">added</span><span class="p">:</span>
                             <span class="k">break</span>
@@ -1065,7 +1066,7 @@ screen_brightness_control    </h1>
 
     <span class="c1"># if no monitors matched the query OR if display kwarg was an int</span>
     <span class="c1"># if the latter and we made it this far then the int was out of range</span>
-    <span class="k">if</span> <span class="n">monitors</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">monitors</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;no monitors found&#39;</span>
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; with name/serial/model/edid/index of </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">display</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
@@ -1096,7 +1097,7 @@ screen_brightness_control    </h1>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">flat_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">thick_list</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="n">flat_list</span> <span class="o">+=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">flat_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
@@ -1117,7 +1118,7 @@ screen_brightness_control    </h1>
 
     <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">method</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="k">else</span> <span class="n">method</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">method</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">monitors</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
@@ -1162,14 +1163,14 @@ screen_brightness_control    </h1>
             <span class="p">)</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
-                <span class="k">return</span>
+                <span class="k">return</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">output</span>
 
     <span class="c1"># if the function hasn&#39;t returned then it has failed</span>
     <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
     <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">monitor</span><span class="p">,</span> <span class="n">exc_name</span><span class="p">,</span> <span class="n">exc</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                 <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">monitor</span><span class="si">}</span><span class="s1">&#39;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="si">{</span><span class="n">monitor</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="n">monitor</span><span class="p">[</span><span class="s2">&quot;serial&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span>
@@ -1192,36 +1193,28 @@ screen_brightness_control    </h1>
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">value</span><span class="p">,</span> <span class="n">expires</span><span class="p">,</span> <span class="n">orig_args</span><span class="p">,</span> <span class="n">orig_kwargs</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">value</span><span class="p">,</span> <span class="n">expires</span><span class="p">,</span> <span class="n">orig_args</span><span class="p">,</span> <span class="n">orig_kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">expires</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">orig_args</span> <span class="o">==</span> <span class="n">args</span> <span class="ow">and</span> <span class="n">orig_kwargs</span> <span class="o">==</span> <span class="n">kwargs</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">value</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">expires</span> <span class="o">+</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">expires</span> <span class="o">+</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">expire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">startswith</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">endswith</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">expire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">startswith</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
                 <span class="k">pass</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">startswith</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
-                <span class="n">cond1</span> <span class="o">=</span> <span class="n">startswith</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">startswith</span><span class="p">)</span>
-                <span class="n">cond2</span> <span class="o">=</span> <span class="n">endswith</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">endswith</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">cond1</span> <span class="ow">and</span> <span class="n">cond2</span><span class="p">:</span>
-                    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">cond1</span><span class="p">:</span>
-                    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">cond2</span><span class="p">:</span>
-                    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__delitem__</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">pass</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">startswith</span><span class="p">):</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
 
 <span class="n">__cache__</span> <span class="o">=</span> <span class="n">__Cache</span><span class="p">()</span>
@@ -1236,9 +1229,9 @@ screen_brightness_control    </h1>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;MAC is not yet supported&#39;</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">plat</span><span class="si">}</span><span class="s1"> is not yet supported&#39;</span><span class="p">)</span>
-<span class="k">del</span><span class="p">(</span><span class="n">plat</span><span class="p">)</span>
+<span class="k">del</span> <span class="n">plat</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.11.0&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.11.1&#39;</span>
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
 </pre></div>
 
@@ -1401,7 +1394,7 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
 <span class="sd">        sbc.set_brightness(50, display=0)</span>
 <span class="sd">        ```</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;+&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s1">&#39;-&#39;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;+&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s1">&#39;-&#39;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
         <span class="n">monitors</span> <span class="o">=</span> <span class="n">filter_monitors</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">display</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1419,8 +1412,8 @@ On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.</li>
                 <span class="p">)</span>
             <span class="n">output</span> <span class="o">=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">output</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">+=</span> <span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">Monitor</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">monitors</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">value</span> <span class="o">+=</span> <span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="n">Monitor</span><span class="o">.</span><span class="n">get_identifier</span><span class="p">(</span><span class="n">monitors</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
 
@@ -1562,11 +1555,13 @@ If True, this function returns None (default behaviour).</li>
 
         <span class="k">if</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span> <span class="o">!=</span> <span class="n">finish</span><span class="p">:</span>
             <span class="n">monitor</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">finish</span><span class="p">,</span> <span class="n">no_return</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span>
 
     <span class="n">threads</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">if</span> <span class="s1">&#39;verbose_error&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="k">del</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;verbose_error&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s1">&#39;verbose_error&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;verbose_error&#39;</span><span class="p">]</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># make sure only compatible kwargs are passed to filter_monitors</span>
@@ -1576,19 +1571,19 @@ If True, this function returns None (default behaviour).</li>
             <span class="p">)}</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="ne">LookupError</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">)</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># if a user ONLY has XBacklight installed and no method was specified</span>
             <span class="c1"># then filter_monitors will raise a LookupError</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n\t</span><span class="s1">filter_monitors -&gt; </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;xbacklight&#39;</span><span class="p">):</span>
             <span class="n">available_monitors</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">XBacklight</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">ScreenBrightnessError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">e</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">available_monitors</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -1599,6 +1594,7 @@ If True, this function returns None (default behaviour).</li>
                 <span class="n">monitor</span> <span class="o">=</span> <span class="n">i</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">monitor</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
             <span class="c1"># same effect as monitor.is_active()</span>
             <span class="n">current</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
             <span class="n">st</span><span class="p">,</span> <span class="n">fi</span> <span class="o">=</span> <span class="n">start</span><span class="p">,</span> <span class="n">finish</span>
@@ -1623,10 +1619,10 @@ If True, this function returns None (default behaviour).</li>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">threads</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
-            <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">get_brightness</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -1962,16 +1958,14 @@ On Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil
 <span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-
         <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
-                <span class="c1"># hex values less than 16 get represented as single char</span>
-                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
-                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
-            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                    <span class="c1"># hex values less than 16 get represented as single char</span>
+                    <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                    <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
 
         <span class="k">return</span> <span class="n">hex_str</span>
 </pre></div>
@@ -2140,16 +2134,14 @@ failed to extract the serial correctly.</li>
 <span class="sd">            # &#39;00ffffffffffff00...&#39;</span>
 <span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-
         <span class="n">hex_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
-                <span class="c1"># hex values less than 16 get represented as single char</span>
-                <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
-                <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
-            <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">char</span> <span class="o">&lt;</span> <span class="mi">16</span><span class="p">:</span>
+                    <span class="c1"># hex values less than 16 get represented as single char</span>
+                    <span class="c1"># eg: 15 -&gt; &#39;f&#39; instead of &#39;0f&#39;</span>
+                    <span class="n">hex_str</span> <span class="o">+=</span> <span class="s1">&#39;0&#39;</span>
+                <span class="n">hex_str</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">char</span><span class="si">:</span><span class="s1">x</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># represent binary as hex string</span>
 
         <span class="k">return</span> <span class="n">hex_str</span>
 </pre></div>
@@ -2409,7 +2401,7 @@ Raised when the brightness cannot be set/retrieved.</p>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
-            <span class="k">return</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -2466,12 +2458,12 @@ Raised when the brightness cannot be set/retrieved.</p>
         <span class="c1"># call directly to the method so they don&#39;t need this step</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
-        <span class="n">b</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">brightness</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># fade_brightness will call the top-level get_brightness</span>
         <span class="c1"># function, which will return list OR int</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">b</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">brightness</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">brightness</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">brightness</span>
 
     <span class="k">def</span> <span class="nf">get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="sd">&#39;&#39;&#39;</span>
@@ -2866,7 +2858,7 @@ EG: <code>('serial', '123abc...')</code> or <code>('name', 'BenQ GL2450H')</code
         <span class="n">value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">no_return</span><span class="p">:</span>
-            <span class="k">return</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
 </pre></div>
 
@@ -3002,12 +2994,12 @@ Otherwise it returns the result of <code><a href="#Monitor.get_brightness">Monit
         <span class="c1"># call directly to the method so they don&#39;t need this step</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
-        <span class="n">b</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">brightness</span> <span class="o">=</span> <span class="n">fade_brightness</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># fade_brightness will call the top-level get_brightness</span>
         <span class="c1"># function, which will return list OR int</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">b</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">brightness</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">brightness</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">brightness</span>
 </pre></div>
 
         </details>
@@ -3254,7 +3246,7 @@ or to return the cached version</li>
                 <span class="c1"># check we haven&#39;t already added the monitor</span>
                 <span class="k">if</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unique_identifiers</span><span class="p">:</span>
                     <span class="c1"># check if the display kwarg (if str) matches this monitor</span>
-                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">str</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="ow">and</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="o">==</span> <span class="n">display</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">monitor</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="o">==</span> <span class="n">display</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                         <span class="c1"># if valid and monitor[identifier] not in unique_identifiers:</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">added</span><span class="p">:</span>
                             <span class="n">monitors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
@@ -3262,7 +3254,7 @@ or to return the cached version</li>
                             <span class="n">added</span> <span class="o">=</span> <span class="kc">True</span>
 
                         <span class="c1"># if the display kwarg is an integer and we are currently at that index</span>
-                        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">display</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">monitors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">display</span><span class="p">:</span>
                             <span class="k">return</span> <span class="p">[</span><span class="n">monitor</span><span class="p">]</span>
                         <span class="k">if</span> <span class="n">added</span><span class="p">:</span>
                             <span class="k">break</span>
@@ -3274,7 +3266,7 @@ or to return the cached version</li>
 
     <span class="c1"># if no monitors matched the query OR if display kwarg was an int</span>
     <span class="c1"># if the latter and we made it this far then the int was out of range</span>
-    <span class="k">if</span> <span class="n">monitors</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">display</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">monitors</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;no monitors found&#39;</span>
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; with name/serial/model/edid/index of </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">display</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
@@ -3360,7 +3352,7 @@ If this isn't set it defaults to the return of <code><a href="#list_monitors_inf
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">flat_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">thick_list</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="n">flat_list</span> <span class="o">+=</span> <span class="n">flatten_list</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">flat_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>

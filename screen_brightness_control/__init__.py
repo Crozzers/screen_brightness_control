@@ -1045,5 +1045,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del plat
 
-__version__ = '0.11.0'
+__version__ = '0.11.1'
 __author__ = 'Crozzers'
