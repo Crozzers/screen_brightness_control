@@ -86,8 +86,7 @@ def get_display_info() -> List[dict]:
 
             extras, desktop, laptop = [], 0, 0
             uid_keys = list(monitor_uids.keys())
-            monitors = wmi.WmiMonitorDescriptorMethods()
-            for monitor in monitors:
+            for monitor in wmi.WmiMonitorDescriptorMethods():
                 try:
                     model, serial, manufacturer, man_id, edid = None, None, None, None, None
                     instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
@@ -173,11 +172,7 @@ def get_display_info() -> List[dict]:
         __cache__.store('windows_monitors_info_raw', info)
 
         # return info only which has correct data
-        valid_info = []
-        for i in info:
-            if isinstance(i, dict):
-                valid_info.append(i)
-        info = valid_info
+        info = [i for i in info if isinstance(i, dict)]
 
     return info
 
