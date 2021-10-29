@@ -169,10 +169,11 @@ def get_display_info() -> List[dict]:
                         count += 1
         except Exception:
             pass
-        __cache__.store('windows_monitors_info_raw', info)
 
         # return info only which has correct data
         info = [i for i in info if isinstance(i, dict)]
+
+        __cache__.store('windows_monitors_info_raw', info)
 
     return info
 
