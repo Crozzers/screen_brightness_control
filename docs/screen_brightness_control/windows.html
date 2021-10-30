@@ -304,6 +304,10 @@
                         <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">pass</span>
+
+        <span class="c1"># return info only which has correct data</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">info</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)]</span>
+
         <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;windows_monitors_info_raw&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">info</span>
@@ -448,14 +452,6 @@
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ctypes.WinError: upon failure to enumerate through the monitors</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
             <span class="n">monitors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HMONITOR</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">))</span>
@@ -826,6 +822,10 @@
                         <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">pass</span>
+
+        <span class="c1"># return info only which has correct data</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">info</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)]</span>
+
         <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="s1">&#39;windows_monitors_info_raw&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">info</span>
@@ -1300,14 +1300,6 @@ Pass in the serial number, name, model, edid or index</li>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ctypes.WinError: upon failure to enumerate through the monitors</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
             <span class="n">monitors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HMONITOR</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">))</span>
@@ -1509,14 +1501,6 @@ Pass in the serial number, name, model, edid or index</li>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ctypes.WinError: upon failure to enumerate through the monitors</span>
-
-<span class="sd">        Example:</span>
-<span class="sd">            ```python</span>
-<span class="sd">            import screen_brightness_control as sbc</span>
-
-<span class="sd">            for monitor in sbc.windows.VCP.iter_physical_monitors():</span>
-<span class="sd">                print(sbc.windows.VCP.get_monitor_caps(monitor))</span>
-<span class="sd">            ```</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
             <span class="n">monitors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HMONITOR</span><span class="p">(</span><span class="n">hmonitor</span><span class="p">))</span>
@@ -1571,16 +1555,6 @@ It is not recommended to use this function unless you are familiar with <code>ct
 <ul>
 <li><strong>ctypes.WinError:</strong>  upon failure to enumerate through the monitors</li>
 </ul>
-
-<h6 id="example">Example</h6>
-
-<blockquote>
-  <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">iter_physical_monitors</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">sbc</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">VCP</span><span class="o">.</span><span class="n">get_monitor_caps</span><span class="p">(</span><span class="n">monitor</span><span class="p">))</span>
-</code></pre></div>
-</blockquote>
 </div>
 
 
