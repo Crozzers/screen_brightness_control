@@ -317,14 +317,6 @@ class VCP:
 
         Raises:
             ctypes.WinError: upon failure to enumerate through the monitors
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            for monitor in sbc.windows.VCP.iter_physical_monitors():
-                print(sbc.windows.VCP.get_monitor_caps(monitor))
-            ```
         '''
         def callback(hmonitor, *_):
             monitors.append(HMONITOR(hmonitor))
