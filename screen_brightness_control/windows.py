@@ -336,10 +336,10 @@ class VCP:
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
                     raise WinError()
                 for item in physical_array:
-                    if not display_devices[monitor_index].StateFlags & win32con.DISPLAY_DEVICE_MIRRORING_DRIVER:
+                    if display_devices[monitor_index].StateFlags & win32con.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP:
                         # check that the monitor is not a pseudo monitor by
                         # checking it's StateFlags for the
-                        # win32con DISPLAY_DEVICE_MIRRORING_DRIVER flag
+                        # win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag
                         if not (start and user_index != start):
                             yield item.handle
                         # increment user index as a valid monitor was found
