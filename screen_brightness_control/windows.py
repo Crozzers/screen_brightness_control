@@ -382,12 +382,14 @@ class VCP:
         return info
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None, max_tries: int = 50) -> List[int]:
         '''
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
         Args:
             display (int): The specific display you wish to query.
+            max_tries (int): the maximum allowed number of attempts to
+                read the VCP output from the monitor
 
         Returns:
             list: list of ints (0 to 100)
@@ -417,12 +419,12 @@ class VCP:
             if current is None:
                 cur_out = DWORD()
                 handle = HANDLE(monitor)
-                for _ in range(10):
+                for attempt in range(max_tries):
                     if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(handle, code, None, byref(cur_out), None):
                         current = cur_out.value
                         break
                     current = None
-                    time.sleep(0.02)
+                    time.sleep(0.02 if attempt < 20 else 0.1)
 
             if current is not None:
                 __cache__.store(f'vcp_brightness_{index}', current, expires=0.1)
@@ -436,12 +438,14 @@ class VCP:
         return values
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: int, display: Optional[int] = None, max_tries: int = 50):
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
             display (int): The specific display you wish to query.
+            max_tries (int): the maximum allowed number of attempts to
+                send the VCP input to the monitor
 
         Examples:
             ```python
@@ -466,10 +470,10 @@ class VCP:
         ):
             if display is None or display == index:
                 handle = HANDLE(monitor)
-                for _ in range(10):
+                for attempt in range(max_tries):
                     if windll.dxva2.SetVCPFeature(handle, code, value):
                         break
-                    time.sleep(0.02)
+                    time.sleep(0.02 if attempt < 20 else 0.1)
 
 
 def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
