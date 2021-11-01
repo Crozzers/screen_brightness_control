@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 
 import pythoncom
 import win32api
+import win32con
 import wmi
 
 from . import EDID, __cache__, _monitor_brand_lookup, filter_monitors, platform
@@ -26,6 +27,20 @@ def _wmi_init():
     if threading.current_thread() != threading.main_thread():
         pythoncom.CoInitialize()
     return wmi.WMI(namespace='wmi')
+
+
+def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, None]:
+    for monitor_enum in win32api.EnumDisplayMonitors():
+        pyhandle = monitor_enum[0]
+        monitor_info = win32api.GetMonitorInfo(pyhandle)
+        for adaptor_index in range(5):
+            try:
+                device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
+            except Exception:
+                pass
+            else:
+                yield device
+                break
 
 
 def get_display_info() -> List[dict]:
@@ -49,30 +64,8 @@ def get_display_info() -> List[dict]:
         try:
             # collect all monitor UIDs (derived from DeviceID)
             monitor_uids = {}
-            last_good = 0
-            for i in win32api.EnumDisplayMonitors():
-                tmp = win32api.GetMonitorInfo(i[0])
-                try:
-                    # If a user has all displays plugged into display adapter 4 then
-                    # this statement would be tried for each adapter (0-4) per monitor
-                    # meaning 4 tries per monitor, 12 tries total.
-                    # By trying the "last good" adapter first, only the first display will
-                    # be tried 4 times. All the others will be tried once
-                    device = win32api.EnumDisplayDevices(tmp['Device'], last_good, 1)
-                    monitor_uids[device.DeviceID.split('#')[2]] = device
-                except Exception:
-                    # iterate up to 4 display adapters
-                    for j in range(5):
-                        try:
-                            # last_good is tried just above here. No point trying it again
-                            if j != last_good:
-                                # i have no idea what this 3rd parameter does but the code doesn't work without it
-                                device = win32api.EnumDisplayDevices(tmp['Device'], j, 1)
-                                monitor_uids[device.DeviceID.split('#')[2]] = device
-                                last_good = j
-                                break
-                        except Exception:
-                            continue
+            for device in enum_display_devices():
+                monitor_uids[device.DeviceID.split('#')[2]] = device
 
             # gather list of laptop displays to check against later
             wmi = _wmi_init()
@@ -326,7 +319,11 @@ class VCP:
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
             raise WinError('EnumDisplayMonitors failed')
 
-        index = 0
+        # user index keeps track of valid monitors
+        user_index = 0
+        # monitor index keeps track of valid and pseudo monitors
+        monitor_index = 0
+        display_devices = list(enum_display_devices())
 
         for monitor in monitors:
             # Get physical monitor count
@@ -334,18 +331,22 @@ class VCP:
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
                 raise WinError()
             if count.value > 0:
-                if start and index + count.value < start:
-                    index += count.value
-                    continue
                 # Get physical monitor handles
                 physical_array = (cls._PHYSICAL_MONITOR * count.value)()
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
                     raise WinError()
                 for item in physical_array:
-                    if not (start and index != start):
-                        yield item.handle
+                    if not display_devices[monitor_index].StateFlags & win32con.DISPLAY_DEVICE_MIRRORING_DRIVER:
+                        # check that the monitor is not a pseudo monitor by
+                        # checking it's StateFlags for the
+                        # win32con DISPLAY_DEVICE_MIRRORING_DRIVER flag
+                        if not (start and user_index != start):
+                            yield item.handle
+                        # increment user index as a valid monitor was found
+                        user_index += 1
+                    # increment monitor index
+                    monitor_index += 1
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
-                    index += 1
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
