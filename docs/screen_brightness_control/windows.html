@@ -41,6 +41,9 @@
                     <h2>API Documentation</h2>
                         <ul class="memberlist">
             <li>
+                    <a class="function" href="#enum_display_devices">enum_display_devices</a>
+            </li>
+            <li>
                     <a class="function" href="#get_display_info">get_display_info</a>
             </li>
             <li>
@@ -143,6 +146,7 @@
 
 <span class="kn">import</span> <span class="nn">pythoncom</span>
 <span class="kn">import</span> <span class="nn">win32api</span>
+<span class="kn">import</span> <span class="nn">win32con</span>
 <span class="kn">import</span> <span class="nn">wmi</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">EDID</span><span class="p">,</span> <span class="n">__cache__</span><span class="p">,</span> <span class="n">_monitor_brand_lookup</span><span class="p">,</span> <span class="n">filter_monitors</span><span class="p">,</span> <span class="n">platform</span>
@@ -161,6 +165,26 @@
     <span class="k">if</span> <span class="n">threading</span><span class="o">.</span><span class="n">current_thread</span><span class="p">()</span> <span class="o">!=</span> <span class="n">threading</span><span class="o">.</span><span class="n">main_thread</span><span class="p">():</span>
         <span class="n">pythoncom</span><span class="o">.</span><span class="n">CoInitialize</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">wmi</span><span class="o">.</span><span class="n">WMI</span><span class="p">(</span><span class="n">namespace</span><span class="o">=</span><span class="s1">&#39;wmi&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">enum_display_devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">win32api</span><span class="o">.</span><span class="n">PyDISPLAY_DEVICEType</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Yields all display devices connected to the computer</span>
+
+<span class="sd">    Yields:</span>
+<span class="sd">        win32api.PyDISPLAY_DEVICEType</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">monitor_enum</span> <span class="ow">in</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">():</span>
+        <span class="n">pyhandle</span> <span class="o">=</span> <span class="n">monitor_enum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">monitor_info</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">GetMonitorInfo</span><span class="p">(</span><span class="n">pyhandle</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">adaptor_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">monitor_info</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">adaptor_index</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">device</span>
+                <span class="k">break</span>
 
 
 <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -184,30 +208,8 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="c1"># collect all monitor UIDs (derived from DeviceID)</span>
             <span class="n">monitor_uids</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">last_good</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">():</span>
-                <span class="n">tmp</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">GetMonitorInfo</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># If a user has all displays plugged into display adapter 4 then</span>
-                    <span class="c1"># this statement would be tried for each adapter (0-4) per monitor</span>
-                    <span class="c1"># meaning 4 tries per monitor, 12 tries total.</span>
-                    <span class="c1"># By trying the &quot;last good&quot; adapter first, only the first display will</span>
-                    <span class="c1"># be tried 4 times. All the others will be tried once</span>
-                    <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">last_good</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                    <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="c1"># iterate up to 4 display adapters</span>
-                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="c1"># last_good is tried just above here. No point trying it again</span>
-                            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">last_good</span><span class="p">:</span>
-                                <span class="c1"># i have no idea what this 3rd parameter does but the code doesn&#39;t work without it</span>
-                                <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">j</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                                <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
-                                <span class="n">last_good</span> <span class="o">=</span> <span class="n">j</span>
-                                <span class="k">break</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                            <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">enum_display_devices</span><span class="p">():</span>
+                <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
 
             <span class="c1"># gather list of laptop displays to check against later</span>
             <span class="n">wmi</span> <span class="o">=</span> <span class="n">_wmi_init</span><span class="p">()</span>
@@ -461,7 +463,20 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">user32</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_MONITORENUMPROC</span><span class="p">(</span><span class="n">callback</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">WinError</span><span class="p">(</span><span class="s1">&#39;EnumDisplayMonitors failed&#39;</span><span class="p">)</span>
 
-        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># user index keeps track of valid monitors</span>
+        <span class="n">user_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># monitor index keeps track of valid and pseudo monitors</span>
+        <span class="n">monitor_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">display_devices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">enum_display_devices</span><span class="p">())</span>
+
+        <span class="n">wmi</span> <span class="o">=</span> <span class="n">_wmi_init</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">InstanceName</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_0&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">wmi</span><span class="o">.</span><span class="n">WmiMonitorBrightness</span><span class="p">()</span>
+            <span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
             <span class="c1"># Get physical monitor count</span>
@@ -469,18 +484,24 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetNumberOfPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">count</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">+</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span>
-                    <span class="k">continue</span>
                 <span class="c1"># Get physical monitor handles</span>
                 <span class="n">physical_array</span> <span class="o">=</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_PHYSICAL_MONITOR</span> <span class="o">*</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">physical_array</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">physical_array</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
-                        <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                    <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">StateFlags</span> <span class="o">&amp;</span> <span class="n">win32con</span><span class="o">.</span><span class="n">DISPLAY_DEVICE_ATTACHED_TO_DESKTOP</span><span class="p">:</span>
+                        <span class="c1"># check that the monitor is not a pseudo monitor by</span>
+                        <span class="c1"># checking it&#39;s StateFlags for the</span>
+                        <span class="c1"># win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag</span>
+                        <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">laptop_displays</span><span class="p">:</span>
+                            <span class="c1"># check if monitor is actually a laptop display</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">user_index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
+                                <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                            <span class="c1"># increment user index as a valid monitor was found</span>
+                            <span class="n">user_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># increment monitor index</span>
+                    <span class="n">monitor_index</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">DestroyPhysicalMonitor</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">handle</span><span class="p">)</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -517,12 +538,14 @@
         <span class="k">return</span> <span class="n">info</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Retrieve the brightness of all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                read the VCP output from the monitor</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list: list of ints (0 to 100)</span>
@@ -552,12 +575,12 @@
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">cur_out</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetVCPFeatureAndVCPFeatureReply</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">cur_out</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
                         <span class="n">current</span> <span class="o">=</span> <span class="n">cur_out</span><span class="o">.</span><span class="n">value</span>
                         <span class="k">break</span>
                     <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;vcp_brightness_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
@@ -571,12 +594,14 @@
         <span class="k">return</span> <span class="n">values</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                send the VCP input to the monitor</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            ```python</span>
@@ -601,10 +626,10 @@
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">list_monitors_info</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">allow_duplicates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -671,6 +696,49 @@
         </details>
 
             </section>
+                <section id="enum_display_devices">
+                            <div class="attr function"><a class="headerlink" href="#enum_display_devices">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">enum_display_devices</span><span class="signature">() -&gt; collections.abc.Generator[PyDISPLAY_DEVICE, None, None]</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">enum_display_devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">win32api</span><span class="o">.</span><span class="n">PyDISPLAY_DEVICEType</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Yields all display devices connected to the computer</span>
+
+<span class="sd">    Yields:</span>
+<span class="sd">        win32api.PyDISPLAY_DEVICEType</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">monitor_enum</span> <span class="ow">in</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">():</span>
+        <span class="n">pyhandle</span> <span class="o">=</span> <span class="n">monitor_enum</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">monitor_info</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">GetMonitorInfo</span><span class="p">(</span><span class="n">pyhandle</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">adaptor_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">monitor_info</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">adaptor_index</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">device</span>
+                <span class="k">break</span>
+</pre></div>
+
+        </details>
+
+            <div class="docstring"><p>Yields all display devices connected to the computer</p>
+
+<h6 id="yields">Yields</h6>
+
+<ul>
+<li>win32api.PyDISPLAY_DEVICEType</li>
+</ul>
+</div>
+
+
+                </section>
                 <section id="get_display_info">
                             <div class="attr function"><a class="headerlink" href="#get_display_info">#&nbsp;&nbsp</a>
 
@@ -702,30 +770,8 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="c1"># collect all monitor UIDs (derived from DeviceID)</span>
             <span class="n">monitor_uids</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">last_good</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">():</span>
-                <span class="n">tmp</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">GetMonitorInfo</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># If a user has all displays plugged into display adapter 4 then</span>
-                    <span class="c1"># this statement would be tried for each adapter (0-4) per monitor</span>
-                    <span class="c1"># meaning 4 tries per monitor, 12 tries total.</span>
-                    <span class="c1"># By trying the &quot;last good&quot; adapter first, only the first display will</span>
-                    <span class="c1"># be tried 4 times. All the others will be tried once</span>
-                    <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">last_good</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                    <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="c1"># iterate up to 4 display adapters</span>
-                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="c1"># last_good is tried just above here. No point trying it again</span>
-                            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">last_good</span><span class="p">:</span>
-                                <span class="c1"># i have no idea what this 3rd parameter does but the code doesn&#39;t work without it</span>
-                                <span class="n">device</span> <span class="o">=</span> <span class="n">win32api</span><span class="o">.</span><span class="n">EnumDisplayDevices</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s1">&#39;Device&#39;</span><span class="p">],</span> <span class="n">j</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                                <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
-                                <span class="n">last_good</span> <span class="o">=</span> <span class="n">j</span>
-                                <span class="k">break</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                            <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">enum_display_devices</span><span class="p">():</span>
+                <span class="n">monitor_uids</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">device</span>
 
             <span class="c1"># gather list of laptop displays to check against later</span>
             <span class="n">wmi</span> <span class="o">=</span> <span class="n">_wmi_init</span><span class="p">()</span>
@@ -1309,7 +1355,20 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">user32</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_MONITORENUMPROC</span><span class="p">(</span><span class="n">callback</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">WinError</span><span class="p">(</span><span class="s1">&#39;EnumDisplayMonitors failed&#39;</span><span class="p">)</span>
 
-        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># user index keeps track of valid monitors</span>
+        <span class="n">user_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># monitor index keeps track of valid and pseudo monitors</span>
+        <span class="n">monitor_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">display_devices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">enum_display_devices</span><span class="p">())</span>
+
+        <span class="n">wmi</span> <span class="o">=</span> <span class="n">_wmi_init</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">InstanceName</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_0&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">wmi</span><span class="o">.</span><span class="n">WmiMonitorBrightness</span><span class="p">()</span>
+            <span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
             <span class="c1"># Get physical monitor count</span>
@@ -1317,18 +1376,24 @@ Pass in the serial number, name, model, edid or index</li>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetNumberOfPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">count</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">+</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span>
-                    <span class="k">continue</span>
                 <span class="c1"># Get physical monitor handles</span>
                 <span class="n">physical_array</span> <span class="o">=</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_PHYSICAL_MONITOR</span> <span class="o">*</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">physical_array</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">physical_array</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
-                        <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                    <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">StateFlags</span> <span class="o">&amp;</span> <span class="n">win32con</span><span class="o">.</span><span class="n">DISPLAY_DEVICE_ATTACHED_TO_DESKTOP</span><span class="p">:</span>
+                        <span class="c1"># check that the monitor is not a pseudo monitor by</span>
+                        <span class="c1"># checking it&#39;s StateFlags for the</span>
+                        <span class="c1"># win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag</span>
+                        <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">laptop_displays</span><span class="p">:</span>
+                            <span class="c1"># check if monitor is actually a laptop display</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">user_index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
+                                <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                            <span class="c1"># increment user index as a valid monitor was found</span>
+                            <span class="n">user_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># increment monitor index</span>
+                    <span class="n">monitor_index</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">DestroyPhysicalMonitor</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">handle</span><span class="p">)</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_display_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -1365,12 +1430,14 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="k">return</span> <span class="n">info</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Retrieve the brightness of all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                read the VCP output from the monitor</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list: list of ints (0 to 100)</span>
@@ -1400,12 +1467,12 @@ Pass in the serial number, name, model, edid or index</li>
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">cur_out</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetVCPFeatureAndVCPFeatureReply</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">cur_out</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
                         <span class="n">current</span> <span class="o">=</span> <span class="n">cur_out</span><span class="o">.</span><span class="n">value</span>
                         <span class="k">break</span>
                     <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;vcp_brightness_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
@@ -1419,12 +1486,14 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="k">return</span> <span class="n">values</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                send the VCP input to the monitor</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            ```python</span>
@@ -1449,10 +1518,10 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -1510,7 +1579,20 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">user32</span><span class="o">.</span><span class="n">EnumDisplayMonitors</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_MONITORENUMPROC</span><span class="p">(</span><span class="n">callback</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">WinError</span><span class="p">(</span><span class="s1">&#39;EnumDisplayMonitors failed&#39;</span><span class="p">)</span>
 
-        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># user index keeps track of valid monitors</span>
+        <span class="n">user_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># monitor index keeps track of valid and pseudo monitors</span>
+        <span class="n">monitor_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">display_devices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">enum_display_devices</span><span class="p">())</span>
+
+        <span class="n">wmi</span> <span class="o">=</span> <span class="n">_wmi_init</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">InstanceName</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_0&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">wmi</span><span class="o">.</span><span class="n">WmiMonitorBrightness</span><span class="p">()</span>
+            <span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">laptop_displays</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="k">for</span> <span class="n">monitor</span> <span class="ow">in</span> <span class="n">monitors</span><span class="p">:</span>
             <span class="c1"># Get physical monitor count</span>
@@ -1518,18 +1600,24 @@ Pass in the serial number, name, model, edid or index</li>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetNumberOfPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">count</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">+</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span>
-                    <span class="k">continue</span>
                 <span class="c1"># Get physical monitor handles</span>
                 <span class="n">physical_array</span> <span class="o">=</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_PHYSICAL_MONITOR</span> <span class="o">*</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">)()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetPhysicalMonitorsFromHMONITOR</span><span class="p">(</span><span class="n">monitor</span><span class="p">,</span> <span class="n">count</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">physical_array</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="n">WinError</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">physical_array</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
-                        <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                    <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">StateFlags</span> <span class="o">&amp;</span> <span class="n">win32con</span><span class="o">.</span><span class="n">DISPLAY_DEVICE_ATTACHED_TO_DESKTOP</span><span class="p">:</span>
+                        <span class="c1"># check that the monitor is not a pseudo monitor by</span>
+                        <span class="c1"># checking it&#39;s StateFlags for the</span>
+                        <span class="c1"># win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag</span>
+                        <span class="k">if</span> <span class="n">display_devices</span><span class="p">[</span><span class="n">monitor_index</span><span class="p">]</span><span class="o">.</span><span class="n">DeviceID</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">laptop_displays</span><span class="p">:</span>
+                            <span class="c1"># check if monitor is actually a laptop display</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">user_index</span> <span class="o">!=</span> <span class="n">start</span><span class="p">):</span>
+                                <span class="k">yield</span> <span class="n">item</span><span class="o">.</span><span class="n">handle</span>
+                            <span class="c1"># increment user index as a valid monitor was found</span>
+                            <span class="n">user_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># increment monitor index</span>
+                    <span class="n">monitor_index</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">DestroyPhysicalMonitor</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">handle</span><span class="p">)</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
 </pre></div>
 
         </details>
@@ -1647,18 +1735,20 @@ Pass in the serial number, name, model, edid or index</li>
                 <div class="decorator">@classmethod</div>
 
             <span class="def">def</span>
-            <span class="name">get_brightness</span><span class="signature">(cls, display: Optional[int] = None) -&gt; List[int]</span>:
+            <span class="name">get_brightness</span><span class="signature">(cls, display: Optional[int] = None, max_tries: int = 50) -&gt; List[int]</span>:
     </div>
 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">get_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Retrieve the brightness of all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                read the VCP output from the monitor</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list: list of ints (0 to 100)</span>
@@ -1688,12 +1778,12 @@ Pass in the serial number, name, model, edid or index</li>
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">cur_out</span> <span class="o">=</span> <span class="n">DWORD</span><span class="p">()</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">GetVCPFeatureAndVCPFeatureReply</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">cur_out</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
                         <span class="n">current</span> <span class="o">=</span> <span class="n">cur_out</span><span class="o">.</span><span class="n">value</span>
                         <span class="k">break</span>
                     <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">__cache__</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;vcp_brightness_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
@@ -1715,6 +1805,8 @@ Pass in the serial number, name, model, edid or index</li>
 
 <ul>
 <li><strong>display (int):</strong>  The specific display you wish to query.</li>
+<li><strong>max_tries (int):</strong>  the maximum allowed number of attempts to
+read the VCP output from the monitor</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -1749,18 +1841,20 @@ Pass in the serial number, name, model, edid or index</li>
                 <div class="decorator">@classmethod</div>
 
             <span class="def">def</span>
-            <span class="name">set_brightness</span><span class="signature">(cls, value: int, display: Optional[int] = None)</span>:
+            <span class="name">set_brightness</span><span class="signature">(cls, value: int, display: Optional[int] = None, max_tries: int = 50)</span>:
     </div>
 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">set_brightness</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Sets the brightness for all connected displays using the `ctypes.windll` API</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            display (int): The specific display you wish to query.</span>
+<span class="sd">            max_tries (int): the maximum allowed number of attempts to</span>
+<span class="sd">                send the VCP input to the monitor</span>
 
 <span class="sd">        Examples:</span>
 <span class="sd">            ```python</span>
@@ -1785,10 +1879,10 @@ Pass in the serial number, name, model, edid or index</li>
         <span class="p">):</span>
             <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
                 <span class="n">handle</span> <span class="o">=</span> <span class="n">HANDLE</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">windll</span><span class="o">.</span><span class="n">dxva2</span><span class="o">.</span><span class="n">SetVCPFeature</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
                         <span class="k">break</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.02</span> <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="k">else</span> <span class="mf">0.1</span><span class="p">)</span>
 </pre></div>
 
         </details>
@@ -1799,6 +1893,8 @@ Pass in the serial number, name, model, edid or index</li>
 
 <ul>
 <li><strong>display (int):</strong>  The specific display you wish to query.</li>
+<li><strong>max_tries (int):</strong>  the maximum allowed number of attempts to
+send the VCP input to the monitor</li>
 </ul>
 
 <h6 id="examples">Examples</h6>
