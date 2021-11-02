@@ -325,6 +325,15 @@ class VCP:
         monitor_index = 0
         display_devices = list(enum_display_devices())
 
+        wmi = _wmi_init()
+        try:
+            laptop_displays = [
+                i.InstanceName.replace('_0', '').split('\\')[2]
+                for i in wmi.WmiMonitorBrightness()
+            ]
+        except Exception:
+            laptop_displays = []
+
         for monitor in monitors:
             # Get physical monitor count
             count = DWORD()
@@ -340,10 +349,12 @@ class VCP:
                         # check that the monitor is not a pseudo monitor by
                         # checking it's StateFlags for the
                         # win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag
-                        if not (start and user_index != start):
-                            yield item.handle
-                        # increment user index as a valid monitor was found
-                        user_index += 1
+                        if display_devices[monitor_index].DeviceID.split('#')[2] not in laptop_displays:
+                            # check if monitor is actually a laptop display
+                            if not (start and user_index != start):
+                                yield item.handle
+                            # increment user index as a valid monitor was found
+                            user_index += 1
                     # increment monitor index
                     monitor_index += 1
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
