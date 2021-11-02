@@ -41,8 +41,9 @@ class TestVCP(BasicMethodTest, unittest.TestCase):
         monitors = list(self.method.iter_physical_monitors())
         self.assertEqual(len(monitors), len(self.method.get_display_info()))
 
-        # check that the start kwarg does indeed skip handles correctly
-        self.assertGreater(len(monitors), len(list(self.method.iter_physical_monitors(start=1))))
+        if len(monitors) > 0:
+            # check that the start kwarg does indeed skip handles correctly
+            self.assertGreater(len(monitors), len(list(self.method.iter_physical_monitors(start=1))))
 
     def tearDownClass():
         if windows.VCP.get_display_info():
