@@ -30,6 +30,12 @@ def _wmi_init():
 
 
 def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, None]:
+    '''
+    Yields all display devices connected to the computer
+
+    Yields:
+        win32api.PyDISPLAY_DEVICEType
+    '''
     for monitor_enum in win32api.EnumDisplayMonitors():
         pyhandle = monitor_enum[0]
         monitor_info = win32api.GetMonitorInfo(pyhandle)

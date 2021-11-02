@@ -1,10 +1,19 @@
 import os
 import sys
 import unittest
-from helpers import get_methods, get_method_names, BasicMethodTest
+
+import win32api
+
+from helpers import BasicMethodTest, get_method_names, get_methods
 
 sys.path.insert(0, os.path.abspath('./'))
 from screen_brightness_control import windows  # noqa: E402
+
+
+class TestEnumDisplayDevices(unittest.TestCase):
+    def test_normal(self):
+        for device in windows.enum_display_devices():
+            self.assertIsInstance(device, win32api.PyDISPLAY_DEVICEType)
 
 
 class TestGetDisplayInfo(unittest.TestCase):
