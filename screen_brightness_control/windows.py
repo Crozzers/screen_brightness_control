@@ -67,6 +67,7 @@ def get_display_info() -> List[dict]:
     '''
     info = __cache__.get('windows_monitors_info_raw')
     if info is None:
+        info = []
         try:
             # collect all monitor UIDs (derived from DeviceID)
             monitor_uids = {}
