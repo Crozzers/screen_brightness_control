@@ -1,0 +1,77 @@
+{% extends "default/module.html.jinja2" %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        #togglestate {
+            display: none;
+        }
+    </style>
+
+    {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] != "0" %}
+        <style>
+            div#custom-version-navigation ul .navigation {
+                font-family: monospace;
+                padding: 0px;
+            }
+        </style>
+
+        <script type="text/javascript">
+            function get_version_navigation_base_url(){
+                if (window.location.href.indexOf("screen_brightness_control.html") !== -1){
+                    // we are in the "top level" of the docs
+                    // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
+                    return new URL("../..", window.location.href);
+                }
+                // in the lowest docs level
+                // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
+                return new URL("../..", window.location.href);
+            }
+        </script>
+    {% endif %}
+
+    {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] == "1" %}
+        <script type="text/javascript">
+            {% include "version_navigator_loader.js" %}
+        </script>
+    {% endif %}
+
+{% endblock %}
+
+{% block module_list_link %}
+    <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
+        {% include "resources/box-arrow-in-left.svg" %}
+        &nbsp;
+        Back to homepage
+    </a>
+    {{ super() }}
+{% endblock %}
+
+{% block nav_footer %}
+
+    <div id="custom-version-navigation">
+
+        {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] == "2" %}
+            <script type="text/javascript">
+                {% include "version_navigator.js" %}
+            </script>
+        {% endif %}
+
+    </div>
+
+    <h2>
+        <a href="https://github.com/Crozzers/screen_brightness_control">GitHub</a>
+    </h2>
+    <ul>
+        <li><a href="https://github.com/Crozzers/screen_brightness_control/releases">Releases</a></li>
+        <li><a href="https://github.com/Crozzers/screen_brightness_control/issues">Issue Tracker</a></li>
+        <li><a href="https://github.com/Crozzers/screen_brightness_control/pulls">Pull Requests</a></li>
+    </ul>
+    <h2>
+        <a href="https://pypi.org/project/screen-brightness-control/">PyPI</a>
+    </h2>
+    <h2>
+        <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
+    </h2>
+    {{ super() }}
+{% endblock %}
