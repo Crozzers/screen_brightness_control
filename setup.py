@@ -1,8 +1,14 @@
+import os
+import sys
+
 from setuptools import setup
+
+sys.path.insert(0, os.getcwd())
+from screen_brightness_control import __version__  # noqa: E402
 
 setup(
     name='screen_brightness_control',
-    version='0.11.3',
+    version=__version__,
     url='https://github.com/Crozzers/screen_brightness_control',
     project_urls={
         'Documentation': 'https://crozzers.github.io/screen_brightness_control',

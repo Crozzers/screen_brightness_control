@@ -566,7 +566,7 @@ class Monitor():
 
             # check if the benq monitor is the primary one
             if primary.serial == benq_monitor.serial:
-                print('BenQ GL2450HM is the primary display')
+                print('BenQ GL2450H is the primary display')
             else:
                 print('The primary display is', primary.name)
 
@@ -1045,5 +1045,5 @@ else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del plat
 
-__version__ = '0.11.3'
+__version__ = '0.11.3'  # imported by setup.py
 __author__ = 'Crozzers'
