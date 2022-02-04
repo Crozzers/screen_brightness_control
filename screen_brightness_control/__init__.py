@@ -6,6 +6,8 @@ import traceback
 from functools import lru_cache
 from typing import Any, List, Optional, Tuple, Union
 
+from ._version import __author__, __version__  # noqa: F401
+
 
 def get_brightness(
     display: Optional[Union[int, str]] = None,
@@ -1044,6 +1046,3 @@ elif plat == 'Darwin':
 else:
     raise NotImplementedError(f'{plat} is not yet supported')
 del plat
-
-__version__ = '0.11.3'  # imported by setup.py
-__author__ = 'Crozzers'
