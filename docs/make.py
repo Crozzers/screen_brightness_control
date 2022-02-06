@@ -1,7 +1,11 @@
 #!/bin/python
+# flake8: noqa: E501
 '''Script to generate documentation for this project.'''
+import argparse
+import glob
 import os
 import sys
+import shutil
 from pathlib import Path
 
 import pdoc
@@ -11,33 +15,64 @@ HERE = Path(__file__).parent
 TEMPLATES = HERE / 'templates'
 OUTPUT_DIR = HERE / 'docs'
 
-if os.path.isfile(HERE / '..' / 'screen_brightness_control' / '_version.py'):
-    sys.path.insert(0, str(HERE / '..' / 'screen_brightness_control'))
-    from _version import __version__  # noqa: E402
-else:
-    sys.path.insert(0, str(HERE / '..'))
-    from screen_brightness_control import __version__
 
+def makedir(path: Path, destroy=False):
+    if destroy:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+
+    os.makedirs(path, exist_ok=True)
+
+
+def get_directory_version(path: Path):
+    if os.path.isfile(path / '_version.py'):
+        with open(path / '_version.py', 'r') as f:
+            contents = f.read()
+    else:
+        with open(path / '__init__.py', 'r') as f:
+            contents = f.read()
+
+    line = [i for i in contents.split('\n') if '__version__=' in i.replace(' ', '')][0]
+    v = line.replace(' ', '').replace('__version__=', '').replace("'", "")
+
+    return v
+
+
+def configure_pdoc(**kwargs):
+    pdoc.render.configure(**{**PDOC_CONFIG, **kwargs})
+
+
+def run_pdoc(source, output):
+    pdoc.pdoc(source, output_directory=output, format='html')
+
+
+__version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
 
 pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
-pdoc.render.configure(docformat='google', template_directory=TEMPLATES, footer_text=f'screen_brightness_control v{__version__}')  # noqa: E501
-
-
-def generate(source, output_dir):
-    pdoc.pdoc(source, output_directory=Path(output_dir), format='html')
+PDOC_CONFIG = dict(docformat='google', template_directory=TEMPLATES, footer_text=f'screen_brightness_control v{__version__}')
+configure_pdoc()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--path', help='Generate documentation for this path', default=str(HERE / '..' / 'screen_brightness_control'))
+    parser.add_argument('--clean', help='Remove any existing documentation of any version', action='store_true')
+    args = parser.parse_args()
+
     # generate top level documentation
+    makedir(OUTPUT_DIR, destroy=args.clean)
     os.environ['BUILD_DOCS_TOPLEVEL'] = '1'
-    # pdoc.render.configure(search=False)
-    pdoc.pdoc(HERE / 'source', output_directory=Path(OUTPUT_DIR), format='html')
+    run_pdoc(HERE / 'source', OUTPUT_DIR)
     os.environ['BUILD_DOCS_TOPLEVEL'] = '0'
 
-    # generate current version documentation
     os.makedirs(OUTPUT_DIR / 'docs', exist_ok=True)
-    # pdoc.render.configure(search=True)
-    pdoc.pdoc(HERE / '..' / 'screen_brightness_control', output_directory=Path(OUTPUT_DIR / 'docs' / __version__), format='html')  # noqa: E501
+
+    # generate documentation for specified path
+    args.path = Path(args.path)
+    path_version = get_directory_version(args.path)
+    makedir(OUTPUT_DIR / 'docs' / path_version)
+    configure_pdoc(footer_text=f'screen_brightness_control v{path_version}')
+    run_pdoc(args.path, OUTPUT_DIR / 'docs' / path_version)
 
     # read version switcher js
     with open(TEMPLATES / 'version_navigator.js', 'r') as f:
