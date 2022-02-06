@@ -8,55 +8,53 @@
         }
     </style>
 
-    {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] != "0" %}
+    {% filter minify_css %}
         <style>
             div#custom-version-navigation ul .navigation {
                 font-family: monospace;
                 padding: 0px;
             }
         </style>
+    {% endfilter %}
 
-        <script type="text/javascript">
-            function get_version_navigation_base_url(){
-                if (window.location.href.indexOf("screen_brightness_control.html") !== -1){
+    <script type="text/javascript">
+        function get_version_navigation_base_url(){
+            {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+                // the root_module_name section here gets filled in by Jinja
+                if (window.location.href.indexOf("{{ root_module_name }}.html") !== -1){
                     // we are in the "top level" of the docs
                     // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
-                    return new URL("../..", window.location.href);
+                    return new URL("./../..", window.location.href);
                 }
                 // in the lowest docs level
                 // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
-                return new URL("../..", window.location.href);
-            }
-        </script>
-    {% endif %}
+                return new URL("./../../..", window.location.href);
+            {% else %}
+            // absolute top level
+            // eg: crozzers.github.io/screen_brightness_control/
+                return new URL('./', window.location.href);
+            {% endif %}
+        }
 
-    {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] == "1" %}
-        <script type="text/javascript">
-            {% include "version_navigator_loader.js" %}
-        </script>
-    {% endif %}
+        {% include "version_navigator_loader.js" %}
+    </script>
 
 {% endblock %}
 
 {% block module_list_link %}
-    <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
-        {% include "resources/box-arrow-in-left.svg" %}
-        &nbsp;
-        Back to homepage
-    </a>
+    {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+        <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
+            {% include "resources/box-arrow-in-left.svg" %}
+            &nbsp;
+            Back to homepage
+        </a>
+    {% endif %}
     {{ super() }}
 {% endblock %}
 
 {% block nav_footer %}
 
     <div id="custom-version-navigation">
-
-        {% if env["DOCS_INCLUDE_VERSION_SWITCHER"] == "2" %}
-            <script type="text/javascript">
-                {% include "version_navigator.js" %}
-            </script>
-        {% endif %}
-
     </div>
 
     <h2>
@@ -74,4 +72,18 @@
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
     {{ super() }}
+{% endblock %}
+
+{% block module_info %}
+    <section>
+        {% block edit_button %}
+            {{ super() }}
+        {% endblock %}
+
+        {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+            {{ module_name() }}
+        {% endif %}
+        {{ docstring(module) }}
+        {{ view_source(module) }}
+    </section>
 {% endblock %}
