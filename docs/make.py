@@ -7,12 +7,18 @@ from pathlib import Path
 import pdoc
 from packaging import version
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../screen_brightness_control'))
-from _version import __version__  # noqa: E402
-
 HERE = Path(__file__).parent
 TEMPLATES = HERE / 'templates'
 OUTPUT_DIR = HERE / 'docs'
+
+if os.path.isfile(HERE / '..' / 'screen_brightness_control' / '_version.py'):
+    sys.path.insert(0, str(HERE / '..' / 'screen_brightness_control'))
+    from _version import __version__  # noqa: E402
+else:
+    sys.path.insert(0, str(HERE / '..'))
+    from screen_brightness_control import __version__
+
+
 pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
 pdoc.render.configure(docformat='google', template_directory=TEMPLATES, footer_text=f'screen_brightness_control v{__version__}')  # noqa: E501
 
