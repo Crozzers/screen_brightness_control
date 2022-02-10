@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="pdoc 9.0.1" />
-    <title>source API documentation</title>
+    <title>screen_brightness_control._version API documentation</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%2244.5%202.5%2015%2015%22%3E%3Cpath%20d%3D%22M49.351%2021.041c-.233-.721-.546-2.408-.772-4.076-.042-.09-.067-.187-.046-.288-.166-1.347-.277-2.625-.241-3.351-1.378-1.008-2.271-2.586-2.271-4.362%200-.976.272-1.935.788-2.774.057-.094.122-.18.184-.268-.033-.167-.052-.339-.052-.516%200-1.477%201.202-2.679%202.679-2.679.791%200%201.496.352%201.987.9a6.3%206.3%200%200%201%201.001.029c.492-.564%201.207-.929%202.012-.929%201.477%200%202.679%201.202%202.679%202.679a2.65%202.65%200%200%201-.269%201.148c.383.747.595%201.572.595%202.41%200%202.311-1.507%204.29-3.635%205.107.037.699.147%202.27.423%203.294l.137.461c.156%202.136-4.612%205.166-5.199%203.215zm.127-4.919a4.78%204.78%200%200%200%20.775-.584c-.172-.115-.505-.254-.88-.378zm.331%202.302l.828-.502c-.202-.143-.576-.328-.984-.49zm.45%202.157l.701-.403c-.214-.115-.536-.249-.891-.376l.19.779zM49.13%204.141c0%20.152.123.276.276.276s.275-.124.275-.276-.123-.276-.276-.276-.275.124-.275.276zm.735-.389a1.15%201.15%200%200%201%20.314.783%201.16%201.16%200%200%201-1.162%201.162c-.457%200-.842-.27-1.032-.653-.026.117-.042.238-.042.362a1.68%201.68%200%200%200%201.679%201.679%201.68%201.68%200%200%200%201.679-1.679c0-.843-.626-1.535-1.436-1.654zm3.076%201.654a1.68%201.68%200%200%200%201.679%201.679%201.68%201.68%200%200%200%201.679-1.679c0-.037-.009-.072-.011-.109-.21.3-.541.508-.935.508a1.16%201.16%200%200%201-1.162-1.162%201.14%201.14%200%200%201%20.474-.912c-.015%200-.03-.005-.045-.005-.926.001-1.679.754-1.679%201.68zm1.861-1.265c0%20.152.123.276.276.276s.275-.124.275-.276-.123-.276-.276-.276-.275.124-.275.276zm1.823%204.823c0-.52-.103-1.035-.288-1.52-.466.394-1.06.64-1.717.64-1.144%200-2.116-.725-2.499-1.738-.383%201.012-1.355%201.738-2.499%201.738-.867%200-1.631-.421-2.121-1.062-.307.605-.478%201.267-.478%201.942%200%202.486%202.153%204.51%204.801%204.51s4.801-2.023%204.801-4.51zm-3.032%209.156l-.146-.492c-.276-1.02-.395-2.457-.444-3.268a6.11%206.11%200%200%201-1.18.115%206.01%206.01%200%200%201-2.536-.562l.006.175c.802.215%201.848.612%202.021%201.25.079.295-.021.601-.274.837l-.598.501c.667.304%201.243.698%201.311%201.179.02.144.022.507-.393.787l-.564.365c1.285.521%201.361.96%201.381%201.126.018.142.011.496-.427.746l-.854.489c.064-1.19%201.985-2.585%202.697-3.248zM49.34%209.925c0-.667%201-.667%201%200%200%20.653.818%201.205%201.787%201.205s1.787-.552%201.787-1.205c0-.667%201-.667%201%200%200%201.216-1.25%202.205-2.787%202.205s-2.787-.989-2.787-2.205zm-.887-7.633c-.093.077-.205.114-.317.114a.5.5%200%200%201-.318-.886L49.183.397a.5.5%200%200%201%20.703.068.5.5%200%200%201-.069.703zm7.661-.065c-.086%200-.173-.022-.253-.068l-1.523-.893c-.575-.337-.069-1.2.506-.863l1.523.892a.5.5%200%200%201%20.179.685c-.094.158-.261.247-.432.247z%22%20fill%3D%22%233bb300%22/%3E%3C/svg%3E"/>
 
     
@@ -18,9 +18,15 @@
 <style>div#custom-version-navigation ul .navigation{font-family:monospace;padding:0px;}</style>
     <script type="text/javascript">
         function get_version_navigation_base_url(){
-            // absolute top level
-            // eg: crozzers.github.io/screen_brightness_control/
-                return new URL('./', window.location.href);
+                // the root_module_name section here gets filled in by Jinja
+                if (window.location.href.indexOf("screen_brightness_control.html") !== -1){
+                    // we are in the "top level" of the docs
+                    // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
+                    return new URL("./../..", window.location.href);
+                }
+                // in the lowest docs level
+                // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
+                return new URL("./../../..", window.location.href);
         }
 
 var url = new URL("version_navigator.js", get_version_navigation_base_url());
@@ -41,20 +47,23 @@ window.onload = function(){
             <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
             <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
             <div>
-    
+        <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>            &nbsp;
+            Back to homepage
+        </a>
+                            <a class="pdoc-button module-list-button" href="../screen_brightness_control.html">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>                            &nbsp;screen_brightness_control</a>
 
 
 
-                    <h2>Contents</h2>
-                    <ul>
-  <li><a href="#screen_brightness_control">screen_brightness_control</a></li>
-  <li><a href="#installation">Installation</a></li>
-  <li><a href="#command-line-usage">Command Line Usage</a></li>
-  <li><a href="#quick-start">Quick Start</a></li>
-  <li><a href="#faq">FAQ</a></li>
-  <li><a href="#things-to-note">Things to note:</a></li>
-  <li><a href="#links">Links</a></li>
-</ul>
+                        <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
+                               pattern=".+" required>
 
 
 
@@ -91,346 +100,200 @@ window.onload = function(){
     <section>
             
 
-                <div class="docstring"><h1 id="screen_brightness_control">screen_brightness_control</h1>
+                <h1 class="modulename">
+<a href="./../screen_brightness_control.html">screen_brightness_control</a><wbr>._version    </h1>
 
-<p>A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  </p>
-
-<h1 id="installation">Installation</h1>
-
-<h4 id="pip">Pip:</h4>
-
-<p><code>pip3 install screen-brightness-control</code></p>
-
-<h4 id="github">GitHub:</h4>
-
-<pre><code>git clone https://github.com/Crozzers/screen_brightness_control
-cd screen_brightness_control
-pip3 install .
-</code></pre>
-
-<h4 id="note">Note:</h4>
-
-<p>For running on Linux you may need to install one of these programs: xrandr, ddcutil, <a href="https://github.com/haikarainen/light">light</a> or xbacklight. If you do not wish to install any 3rd party programs you will have to run this module as root. <br />
-Here is a quick outline of each program:</p>
-
-<table>
-<thead>
-<tr>
-  <th>Program</th>
-  <th>Works on laptop displays</th>
-  <th>Works on external monitors</th>
-  <th>Multi-display support</th>
-  <th>Requires RandR support</th>
-  <th>Requires Root</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>ddcutil</td>
-  <td>No</td>
-  <td>Yes (slow)</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes</td>
-</tr>
-<tr>
-  <td>xrandr</td>
-  <td>Yes</td>
-  <td>Yes</td>
-  <td>Yes</td>
-  <td>Yes</td>
-  <td>No</td>
-</tr>
-<tr>
-  <td>xbacklight</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes but not individually controllable</td>
-  <td>Yes</td>
-  <td>No</td>
-</tr>
-<tr>
-  <td>light</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>No</td>
-</tr>
-<tr>
-  <td>[No program]</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes</td>
-</tr>
-</tbody>
-</table>
-
-<p>Something to be aware of is that xrandr does not change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
-
-<p>To install:</p>
-
-<ul>
-<li>Arch
-<ul>
-<li><code>sudo pacman -S xorg-xrandr</code></li>
-<li><code>sudo pacman -S ddcutil</code></li>
-<li><code>sudo pacman -S light-git</code></li>
-<li><code>sudo pacman -S xorg-xbacklight</code></li>
-</ul></li>
-<li>Debian/Ubuntu
-<ul>
-<li><code>sudo apt install x11-xserver-utils</code></li>
-<li><code>sudo apt install ddcutil</code></li>
-<li><code>sudo apt install light</code></li>
-<li><code>sudo apt install xbacklight</code></li>
-</ul></li>
-<li>Fedora
-<ul>
-<li><code>sudo dnf install libXrandr</code></li>
-<li><code>sudo dnf install light</code></li>
-<li><code>sudo dnf install xbacklight</code></li>
-</ul></li>
-</ul>
-
-<h1 id="command-line-usage">Command Line Usage</h1>
-
-<p>You can call this module from your command line or use it as a python library (see the documentation section below).</p>
-
-<pre><code>python -m screen_brightness_control --help
-&gt; usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-v]
-&gt;
-&gt; optional arguments:
-&gt;   -h, --help                         show this help message and exit
-&gt;   -d DISPLAY, --display DISPLAY      the display to be used
-&gt;   -s VALUE, --set VALUE              set the brightness to this value
-&gt;   -g, --get                          get the current screen brightness
-&gt;   -f VALUE, --fade VALUE             fade the brightness to this value
-&gt;   -m METHOD, --method METHOD         specify which method to use
-&gt;   -l, --list                         list all monitors
-&gt;   -v, --verbose                      some messages will be more detailed
-&gt;   -V, --version                      print the current version
-</code></pre>
-
-<h1 id="quick-start">Quick Start</h1>
-
-<p>You can read <a href="https://crozzers.github.io/screen_brightness_control">the full documentation</a> for this project for more details but here are the basics.</p>
-
-<h3 id="get_brightnessdisplaynone-methodnone-verbose_errorfalse">get_brightness(<code>display=None, method=None, verbose_error=False</code>)</h3>
-
-<p><strong>Summary:</strong> <br />
-Returns the current screen brightness as a percentage. It may return a list of values if you have multiple, brightness adjustable monitors. <br />
-Raises <code>ScreenBrightnessError</code> upon failure</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
-<li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># get the current screen brightness (for all detected displays)</span>
-<span class="n">all_screens_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
-<span class="c1"># get the brightness of the primary display</span>
-<span class="n">primary_display_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="c1"># get the brightness of the secondary display (if connected)</span>
-<span class="n">secondary_display_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="c1"># get the brightness for a named monitor</span>
-<span class="n">benq_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="s1">&#39;BenQ GL2450H&#39;</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="set_brightnessvalue-displaynone-methodnone-forcefalse-verbose_errorfalse-no_returnfalse">set_brightness(<code>value, display=None, method=None, force=False, verbose_error=False, no_return=False</code>)</h3>
-
-<p><strong>Summary:</strong> <br />
-Sets the brightness to <code>value</code>. If <code>value</code> is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
-Raises <code>ScreenBrightnessError</code> upon failure</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>value</code> - the level to set the brightness to. Can either be an integer or a string.</li>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
-<li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
-<li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-<li><code>no_return</code> - boolean value, whether this function should return <code>None</code> or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return <code>None</code> by default.</li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1">#set brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1">#set brightness to 0%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1">#increase brightness by 25%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="s1">&#39;+25&#39;</span><span class="p">)</span>
-
-<span class="c1">#decrease brightness by 30%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="s1">&#39;-30&#39;</span><span class="p">)</span>
-
-<span class="c1">#set the brightness of display 0 to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs</code>)</h3>
-
-<p><strong>Summary:</strong> <br />
-Fades the brightness from <code>start</code> to <code>finish</code> in steps of <code>increment</code>, pausing for <code>interval</code> seconds between each step.
-If it runs in the main thread it will return the final brightness upon success, <code>ScreenBrightnessError</code> upon failure. Otherwise it returns the list of thread objects that the process is running in</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>finish</code> - The brightness value to fade to</li>
-<li><code>start</code> - The value to start from. If not specified it defaults to the current brightness</li>
-<li><code>interval</code> - The time interval between each step in brightness</li>
-<li><code>increment</code> - The amount to change the brightness by each step in percent.</li>
-<li><code>blocking</code> - If set to <code>False</code> it fades the brightness in a new thread</li>
-<li><code>kwargs</code> - passed to <code>set_brightness</code></li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1">#fade brightness from the current brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from 25% to 75%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from the current value to 100% in steps of 10%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">increment</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from 100% to 90% with time intervals of 0.1 seconds</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness to 100% in a new thread</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="list_monitorsmethodnone">list_monitors(<code>method=None</code>)</h3>
-
-<p><strong>Summary:</strong> <br />
-Returns a list of the names of all detected monitors</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>method</code> - the OS specific method to use. On Windows this can be <code>'wmi'</code> or <code>'vcp'</code> and on Linux this can be <code>'light'</code>, <code>'xrandr'</code>, <code>'ddcutil'</code>, <code>'sysfiles'</code> or <code>'xbacklight'</code></li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-<span class="n">monitor_names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">()</span>
-<span class="c1"># eg: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-</code></pre></div>
-
-<h1 id="faq">FAQ</h1>
-
-<h3 id="why-do-i-always-get-screenbrightnesserror-linux">Why do I always get <code>ScreenBrightnessError</code> (Linux)?</h3>
-
-<p><strong>Why this happens:</strong> <br />
-The way brightness is adjusted on Linux is the program tries to run shell commands to adjust the brightness.
-The programs it attempts to call are "light", "xrandr", "ddcutil" and "xbacklight".
-If none of these programs are installed then it attempts to read/write to files located in the <code>/sys/class/backlight</code>
-directory, which will require root permissions.</p>
-
-<p>If none of methods succeed, a <code>ScreenBrightnessError</code> is raised.</p>
-
-<p><strong>How to fix it:</strong> <br />
-Install <code>xrandr</code>, <code>ddcutil</code>, <code>light</code>, or <code>xbacklight</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.
-Or run the module as root if you do not wish to install 3rd party software.</p>
-
-<h3 id="i-call-set_brightness-and-nothing-happens-linux">I call <code>set_brightness()</code> and nothing happens (Linux)</h3>
-
-<p><strong>Why this happens:</strong> <br />
-Light requires root access to run, which is usually provided when you manually install it using you package manager.
-If you installed xrandr or xbacklight, it only supports graphics drivers that support RandR.
-If you installed ddcutil or have none of the recommended 3rd party softwares installed,
-you require root access to run for every query.</p>
-
-<p><strong>How to fix it:</strong> <br />
-If you installed <code>xrandr</code> or <code>xbacklight</code>: make sure your graphics drivers support RandR. <br />
-If you installed <code>ddcutil</code> or none of the recommended 3rd party softwares: make sure to run the script with root permissions. <br />
-If you installed <code>light</code>: follow <a href="https://github.com/haikarainen/light#installation">these steps</a> making sure to run the install as sudo or re-compile from source (requires <code>autoconf</code> to be installed):</p>
-
-<pre><code>git clone https://github.com/haikarainen/light &amp;&amp; cd light
-sh autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; sudo make install
-</code></pre>
-
-<h3 id="using-the-display-kwarg-does-nothingcreates-exceptions-linux">Using the <code>display</code> kwarg does nothing/creates exceptions (Linux)</h3>
-
-<p><strong>Why this happens:</strong> <br />
-The <code>display</code> kwarg is only supported by the <code>Light</code>, <code>XRandr</code>, <code>DDCUtil</code> and <code>SysFiles</code> classes, not by <code>XBacklight</code>. So if you only have <code>xbacklight</code> installed on your system this kwarg will not work</p>
-
-<p><strong>How to fix it:</strong> <br />
-Install <code>xrandr</code> or <code>ddcutil</code> or <code>light</code> using your system package manager. See the installation section at the top of this document for instructions on how to do so.</p>
-
-<h3 id="the-model-of-my-monitordisplay-is-not-what-the-program-says-it-is-windows">The model of my monitor/display is not what the program says it is (Windows)</h3>
-
-<p>If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
-If you know how this might be done, feel free to <a href="https://github.com/Crozzers/screen_brightness_control/pulls">create a pull request</a> or to ping me an email <a href="mailto:captaincrozzers@gmail.com">captaincrozzers@gmail.com</a></p>
-
-<h3 id="when-i-call-get_brightness-the-returned-value-isnt-what-i-set-it-to-windows">When I call <code>get_brightness()</code> the returned value isn't what I set it to (Windows)</h3>
-
-<p>Not all monitors can set the brightness for every value between 0 and 100. Some of them have a number of 'levels' that they can be set to.
-You can likely see this if you open your display settings and very slowly move the brightness slider. <br />
-You can find out your brightness 'levels' by running the following python code:</p>
-
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">wmi</span>
-<span class="n">monitor</span> <span class="o">=</span> <span class="n">wmi</span><span class="o">.</span><span class="n">WMI</span><span class="p">(</span><span class="n">namespace</span><span class="o">=</span><span class="s1">&#39;wmi&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">WmiMonitorBrightness</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="c1">#the number of levels the monitor can be set to</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">monitor</span><span class="o">.</span><span class="n">Levels</span><span class="p">)</span>
-<span class="c1">#the actual brightness values your monitor can be set to</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">monitor</span><span class="o">.</span><span class="n">Level</span><span class="p">)</span>
-</code></pre></div>
-
-<h1 id="things-to-note">Things to note:</h1>
-
-<ul>
-<li>If you encounter any issues or bugs with this software please do not hesitate to <a href="https://github.com/Crozzers/screen_brightness_control/issues">raise an issue</a> or to email me <a href="mailto:captaincrozzers@gmail.com">captaincrozzers@gmail.com</a></li>
-<li>It is unlikely that this project will support MAC in the foreseeable future for 3 reasons.
-<ol>
-<li>I do not own a (working) MAC.</li>
-<li>I do not intend to buy a MAC</li>
-<li>From what I have found it is even less straight-forward to adjust the screen brightness from python on MAC</li>
-</ol></li>
-<li>If you own a MAC an you happen to know how to adjust the brightness in python then feel free to contribute</li>
-</ul>
-
-<h1 id="links">Links</h1>
-
-<ul>
-<li><a href="https://github.com/Crozzers/screen_brightness_control">GitHub</a></li>
-<li><a href="https://crozzers.github.io/screen_brightness_control">Documentation</a></li>
-<li><a href="https://pypi.org/project/screen-brightness-control/">PyPi</a></li>
-</ul>
+                <div class="docstring"><p>Short file to provide version and author information for this package</p>
 </div>
 
                 <details>
             <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">.. include:: ../../README.md</span>
-<span class="sd">&#39;&#39;&#39;</span>
-<span class="n">__docformat__</span> <span class="o">=</span> <span class="s1">&#39;restructuredtext&#39;</span>
+            <div class="codehilite"><pre><span></span><span class="sd">&#39;&#39;&#39;Short file to provide version and author information for this package&#39;&#39;&#39;</span>
+
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.11.5&#39;</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
 </pre></div>
 
         </details>
 
     </section>
     </main>
-</body>
+<script>
+    function escapeHTML(html) {
+        return document.createElement('div').appendChild(document.createTextNode(html)).parentNode.innerHTML;
+    }
+
+    const originalContent = document.querySelector("main.pdoc");
+    let currentContent = originalContent;
+
+    function setContent(innerHTML) {
+        let elem;
+        if (innerHTML) {
+            elem = document.createElement("main");
+            elem.classList.add("pdoc");
+            elem.innerHTML = innerHTML;
+        } else {
+            elem = originalContent;
+        }
+        if (currentContent !== elem) {
+            currentContent.replaceWith(elem);
+            currentContent = elem;
+        }
+    }
+
+    function getSearchTerm() {
+        return (new URL(window.location)).searchParams.get("search");
+    }
+
+    const searchBox = document.querySelector(".pdoc input[type=search]");
+    searchBox.addEventListener("input", function () {
+        let url = new URL(window.location);
+        if (searchBox.value.trim()) {
+            url.hash = "";
+            url.searchParams.set("search", searchBox.value);
+        } else {
+            url.searchParams.delete("search");
+        }
+        history.replaceState("", "", url.toString());
+        onInput();
+    });
+    window.addEventListener("popstate", onInput);
+
+
+    let search, searchErr;
+
+    async function initialize() {
+        try {
+            search = await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.type = "text/javascript";
+                script.async = true;
+                script.onload = () => resolve(window.pdocSearch);
+                script.onerror = (e) => reject(e);
+                script.src = "../search.js";
+                document.getElementsByTagName("head")[0].appendChild(script);
+            });
+        } catch (e) {
+            console.error("Cannot fetch pdoc search index");
+            searchErr = "Cannot fetch search index.";
+        }
+        onInput();
+
+        document.querySelector("nav.pdoc").addEventListener("click", e => {
+            if (e.target.hash) {
+                searchBox.value = "";
+                searchBox.dispatchEvent(new Event("input"));
+            }
+        });
+    }
+
+    function onInput() {
+        setContent((() => {
+            const term = getSearchTerm();
+            if (!term) {
+                return null
+            }
+            if (searchErr) {
+                return `<h3>Error: ${searchErr}</h3>`
+            }
+            if (!search) {
+                return "<h3>Searching...</h3>"
+            }
+
+            window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+
+            const results = search(term);
+
+            let html;
+            if (results.length === 0) {
+                html = `No search results for '${escapeHTML(term)}'.`
+            } else {
+                html = `<h4>${results.length} search result${results.length > 1 ? "s" : ""} for '${escapeHTML(term)}'.</h4>`;
+            }
+            for (let result of results.slice(0, 10)) {
+                let doc = result.doc;
+                let url = `../${doc.modulename.replaceAll(".", "/")}.html`;
+                if (doc.qualname) {
+                    url += `#${doc.qualname}`;
+                }
+
+                let heading;
+                switch (result.doc.type) {
+                    case "function":
+                        heading = `<span class="def">${doc.funcdef}</span> <span class="name">${doc.fullname}</span><span class="signature">${doc.signature}:</span>`;
+                        break;
+                    case "class":
+                        heading = `<span class="def">class</span> <span class="name">${doc.fullname}</span>`;
+                        if (doc.bases)
+                            heading += `<wbr>(<span class="base">${doc.bases}</span>)`;
+                        heading += `:`;
+                        break;
+                    case "variable":
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        if (doc.annotation)
+                            heading += `<span class="annotation">${doc.annotation}</span>`;
+                        if (doc.default_value)
+                            heading += `<span class="default_value">${doc.default_value}</span>`;
+                        break;
+                    default:
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        break;
+                }
+                html += `
+                        <section class="search-result">
+                        <a href="${url}" class="attr ${doc.type}">${heading}</a>
+                        <div class="docstring">${doc.doc}</div>
+                        </section>
+                    `;
+
+            }
+            return html;
+        })());
+    }
+
+    if (getSearchTerm()) {
+        initialize();
+        searchBox.value = getSearchTerm();
+        onInput();
+    } else {
+        searchBox.addEventListener("focus", initialize, {once: true});
+    }
+
+    searchBox.addEventListener("keydown", e => {
+        if (["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+            let focused = currentContent.querySelector(".search-result.focused");
+            if (!focused) {
+                currentContent.querySelector(".search-result").classList.add("focused");
+            } else if (
+                e.key === "ArrowDown"
+                && focused.nextElementSibling
+                && focused.nextElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.nextElementSibling.classList.add("focused");
+                focused.nextElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "ArrowUp"
+                && focused.previousElementSibling
+                && focused.previousElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.previousElementSibling.classList.add("focused");
+                focused.previousElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "Enter"
+            ) {
+                focused.querySelector("a").click();
+            }
+        }
+    });
+</script></body>
 </html>
