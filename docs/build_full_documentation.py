@@ -15,6 +15,7 @@ temp = here / 'temp'
 os.makedirs(temp, exist_ok=True)
 
 # get list of all versions from git tag
+subprocess.check_output(['git', 'pull', '--tags'])
 all_versions = subprocess.check_output(['git', 'tag', '-l']).decode().rstrip('\n').split('\n')
 
 # download any versions after v0.5.0
