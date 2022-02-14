@@ -1,8 +1,12 @@
 {% extends "default/module.html.jinja2" %}
 
-{% if env["BUILD_DOCS_TOPLEVEL"] == "1" %}
-    {% block title %}screen_brightness_control Documentation{% endblock %}
-{% endif %}
+{% block title %}
+    {% if env["BUILD_DOCS_TOPLEVEL"] == "1" %}
+screen_brightness_control Documentation
+    {% else %}
+{{ super() }}
+    {% endif %}
+{% endblock %}
 
 {% block head %}
     {{ super() }}
