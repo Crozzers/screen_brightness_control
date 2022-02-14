@@ -8,6 +8,7 @@ import sys
 import json
 import shutil
 from pathlib import Path
+from jsmin import jsmin as minify_js
 
 import pdoc
 from packaging import version
@@ -72,6 +73,7 @@ __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
 pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
 PDOC_CONFIG = dict(docformat='google', template_directory=TEMPLATES, footer_text=f'screen_brightness_control v{__version__}')
 configure_pdoc()
+pdoc.render.env.filters["minify_js"] = minify_js
 
 
 if __name__ == '__main__':
@@ -105,7 +107,7 @@ if __name__ == '__main__':
 
     # write to gh-pages dir
     with open(OUTPUT_DIR / 'version_navigator.js', 'w') as f:
-        f.write(js_code)
+        f.write(minify_js(js_code))
 
     # remove top-level search.js as it is not used
     if os.path.isfile(OUTPUT_DIR / 'search.js'):

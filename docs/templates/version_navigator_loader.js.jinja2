@@ -1,26 +1,28 @@
-function get_version_navigation_base_url(){
-    {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
-        // the root_module_name section here gets filled in by Jinja
-        if (window.location.href.indexOf("{{ root_module_name }}.html") !== -1){
-            // we are in the "top level" of the docs
-            // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
-            return new URL("./../..", window.location.href);
-        }
-        // in the lowest docs level
-        // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
-        return new URL("./../../..", window.location.href);
-    {% else %}
-        // absolute top level
-        // eg: crozzers.github.io/screen_brightness_control/
-        return new URL('./', window.location.href);
-    {% endif %}
-}
+{% filter minify_js %}
+    function get_version_navigation_base_url(){
+        {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+            // the root_module_name section here gets filled in by Jinja
+            if (window.location.href.indexOf("{{ root_module_name }}.html") !== -1){
+                // we are in the "top level" of the docs
+                // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
+                return new URL("./../..", window.location.href);
+            }
+            // in the lowest docs level
+            // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
+            return new URL("./../../..", window.location.href);
+        {% else %}
+            // absolute top level
+            // eg: crozzers.github.io/screen_brightness_control/
+            return new URL('./', window.location.href);
+        {% endif %}
+    }
 
-var url = new URL("version_navigator.js", get_version_navigation_base_url());
+    var url = new URL("version_navigator.js", get_version_navigation_base_url());
 
-window.onload = function(){
-    var s = document.createElement("script");
-    s.type = "text/javascript";
-    s.src = url;
-    document.getElementById("custom-version-navigation").appendChild(s);
-}
+    window.onload = function(){
+        var s = document.createElement("script");
+        s.type = "text/javascript";
+        s.src = url;
+        document.getElementById("custom-version-navigation").appendChild(s);
+    }
+{% endfilter %}
