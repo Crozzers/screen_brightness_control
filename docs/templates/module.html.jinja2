@@ -1,5 +1,9 @@
 {% extends "default/module.html.jinja2" %}
 
+{% if env["BUILD_DOCS_TOPLEVEL"] == "1" %}
+    {% block title %}screen_brightness_control Documentation{% endblock %}
+{% endif %}
+
 {% block head %}
     {{ super() }}
     {% filter minify_css %}
