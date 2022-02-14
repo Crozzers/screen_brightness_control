@@ -34,25 +34,7 @@
     {% endfilter %}
 
     <script type="text/javascript">
-        function get_version_navigation_base_url(){
-            {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
-                // the root_module_name section here gets filled in by Jinja
-                if (window.location.href.indexOf("{{ root_module_name }}.html") !== -1){
-                    // we are in the "top level" of the docs
-                    // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control.html
-                    return new URL("./../..", window.location.href);
-                }
-                // in the lowest docs level
-                // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
-                return new URL("./../../..", window.location.href);
-            {% else %}
-                // absolute top level
-                // eg: crozzers.github.io/screen_brightness_control/
-                return new URL('./', window.location.href);
-            {% endif %}
-        }
-
-        {% include "version_navigator_loader.js" %}
+        {% include "version_navigator_loader.js.jinja2" %}
     </script>
 
 {% endblock %}
