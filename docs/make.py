@@ -3,15 +3,16 @@
 '''Script to generate documentation for this project.'''
 import argparse
 import glob
-import os
-import sys
 import json
+import os
 import shutil
+import sys
 from pathlib import Path
-from jsmin import jsmin as minify_js
 
 import pdoc
+from jsmin import jsmin as minify_js
 from packaging import version
+from pdoc.render_helpers import minify_css
 
 HERE = Path(__file__).parent
 TEMPLATES = HERE / 'templates'
@@ -108,6 +109,12 @@ if __name__ == '__main__':
     # write to gh-pages dir
     with open(OUTPUT_DIR / 'version_navigator.js', 'w') as f:
         f.write(minify_js(js_code))
+
+    # copy over css file
+    with open(TEMPLATES / 'version_navigator.css', 'r') as f:
+        # write to gh-pages dir
+        with open(OUTPUT_DIR / 'version_navigator.css', 'w') as g:
+            g.write(minify_css(f.read()))
 
     # remove top-level search.js as it is not used
     if os.path.isfile(OUTPUT_DIR / 'search.js'):

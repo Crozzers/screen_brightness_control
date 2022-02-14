@@ -17,12 +17,19 @@
         {% endif %}
     }
 
-    var url = new URL("version_navigator.js", get_version_navigation_base_url());
+    var css_url = new URL("version_navigator.css", get_version_navigation_base_url());
+    var js_url = new URL("version_navigator.js", get_version_navigation_base_url());
+
+    // load extra CSS for version navigator
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = css_url;
+    document.getElementsByTagName("head")[0].appendChild(link);
 
     window.onload = function(){
         var s = document.createElement("script");
         s.type = "text/javascript";
-        s.src = url;
+        s.src = js_url;
         document.getElementById("custom-version-navigation").appendChild(s);
     }
 {% endfilter %}
