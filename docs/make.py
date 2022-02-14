@@ -5,6 +5,7 @@ import argparse
 import glob
 import os
 import sys
+import json
 import shutil
 from pathlib import Path
 
@@ -46,6 +47,26 @@ def run_pdoc(source, output):
     pdoc.pdoc(source, output_directory=output, format='html')
 
 
+def get_documentation_versions(directory):
+    versions = [version.Version(i) for i in os.listdir(directory)]
+    versions.sort(reverse=True)
+    versions_grouped = {}
+
+    while versions:
+        item = versions.pop(0)
+        group = [item]
+        index = 0
+        while index < len(versions):
+            if versions[index].major == item.major and versions[index].minor == item.minor:
+                group.append(versions.pop(index))
+            else:
+                index += 1
+        group.sort()
+        versions_grouped[str(group[-1])] = [str(i) for i in reversed(group[:-1])]
+
+    return json.dumps(versions_grouped)
+
+
 __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
 
 pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
@@ -79,13 +100,13 @@ if __name__ == '__main__':
         js_code = f.read()
 
     # insert list of available versions
-    available_versions = sorted(os.listdir(OUTPUT_DIR / 'docs'), key=version.Version, reverse=True)
-    available_versions = [f'"{i}"' for i in available_versions]  # add quotes for embedding in JS
-    js_code = js_code.replace('var all_versions = [];', f'var all_versions = [{",".join(available_versions)}];')
+    available_versions = get_documentation_versions(OUTPUT_DIR / 'docs')
+    js_code = js_code.replace('var all_versions = {};', f'var all_versions = {available_versions};')
 
     # write to gh-pages dir
     with open(OUTPUT_DIR / 'version_navigator.js', 'w') as f:
         f.write(js_code)
 
     # remove top-level search.js as it is not used
-    os.remove(OUTPUT_DIR / 'search.js')
+    if os.path.isfile(OUTPUT_DIR / 'search.js'):
+        os.remove(OUTPUT_DIR / 'search.js')
