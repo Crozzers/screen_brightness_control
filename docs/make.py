@@ -73,16 +73,23 @@ def custom_navigation_links():
     links = {}
     links['API Version'] = get_documentation_versions(OUTPUT_DIR / 'docs')
 
-    links['Extras'] = []
-    for file in os.listdir(HERE / 'source'):
-        if not os.path.isfile(HERE / 'source' / file):
+    for directory in os.listdir(HERE / 'source'):
+        full_directory = HERE / 'source' / directory
+        if not os.path.isdir(full_directory):
             continue
-        if file.startswith('__'):
-            continue
-        file = file.rstrip('.py')
-        links['Extras'].append(str(HERE / 'source' / file) + '.html')
 
-    return json.dumps(links)
+        category = directory.capitalize()
+        links[category] = []
+        for file in os.listdir(full_directory):
+            if not os.path.isfile(full_directory / file):
+                continue
+            if file.startswith('__') or not file.endswith('.py'):
+                continue
+            links[category].append(f'{directory}/{file.rstrip(".py")}.html')
+        if not links[category]:
+            del links[category]
+
+    return links
 
 
 __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
@@ -107,17 +114,17 @@ if __name__ == '__main__':
 
     # generate documentation for everything else in top level
     os.environ['BUILD_DOCS_LEVEL'] = 'extras'
-    makedir(OUTPUT_DIR / 'source')
-    for file in os.listdir(HERE / 'source'):
-        if not os.path.isfile(HERE / 'source' / file):
+    for dirname, files in custom_navigation_links().items():
+        if dirname == 'API Version':
             continue
-        if file.startswith('__'):
-            continue
-        file = file.rstrip('.py')
-        module = pdoc.doc.Module.from_name(f'source.{file}')
-        out = pdoc.render.html_module(module, [])
-        with open(OUTPUT_DIR / 'source' / f'{file}.html', 'w') as f:
-            f.write(out)
+
+        makedir(OUTPUT_DIR / dirname.lower())
+        for file in files:
+            file = os.path.basename(file).replace('.html', '')
+            module = pdoc.doc.Module.from_name(f'source.{dirname.lower()}.{file}')
+            out = pdoc.render.html_module(module, [])
+            with open(OUTPUT_DIR / dirname.lower() / f'{file}.html', 'w') as f:
+                f.write(out)
 
     os.environ['BUILD_DOCS_LEVEL'] = 'api'
     configure_pdoc(search=True, show_source=True)
@@ -135,7 +142,7 @@ if __name__ == '__main__':
         js_code = f.read()
 
     # insert list of navigation links
-    navigation_links = custom_navigation_links()
+    navigation_links = json.dumps(custom_navigation_links())
     js_code = js_code.replace('var all_nav_links = {};', f'var all_nav_links = {navigation_links};')
 
     # write to gh-pages dir

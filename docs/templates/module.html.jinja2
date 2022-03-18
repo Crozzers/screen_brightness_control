@@ -18,14 +18,16 @@ screen_brightness_control - {{ module.modulename.split(".")[-1] }}
 {% endblock %}
 
 {% block module_list_link %}
-    {% if env["BUILD_DOCS_LEVEL"] == "api" %}
+    {% if env["BUILD_DOCS_LEVEL"] != "homepage" %}
         <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
             {% include "resources/box-arrow-in-left.svg" %}
             &nbsp;
             Back to homepage
         </a>
     {% endif %}
-    {{ super() }}
+    {% if env["BUILD_DOCS_LEVEL"] != "extras" %}
+        {{ super() }}
+    {% endif %}
 {% endblock %}
 
 {% block nav_footer %}
