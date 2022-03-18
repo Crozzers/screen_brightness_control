@@ -1,8 +1,10 @@
 {% extends "default/module.html.jinja2" %}
 
 {% block title %}
-    {% if env["BUILD_DOCS_TOPLEVEL"] == "1" %}
+    {% if env["BUILD_DOCS_LEVEL"] == "homepage" %}
 screen_brightness_control Documentation
+    {% elif env["BUILD_DOCS_LEVEL"] == "extras" %}
+screen_brightness_control - {{ module.modulename.split(".")[-1] }}
     {% else %}
 {{ super() }}
     {% endif %}
@@ -13,11 +15,10 @@ screen_brightness_control Documentation
     <script type="text/javascript">
         {% include "version_navigator_loader.js.jinja2" %}
     </script>
-
 {% endblock %}
 
 {% block module_list_link %}
-    {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+    {% if env["BUILD_DOCS_LEVEL"] == "api" %}
         <a class="pdoc-button module-list-button" href="https://crozzers.github.io/screen_brightness_control">
             {% include "resources/box-arrow-in-left.svg" %}
             &nbsp;
@@ -55,8 +56,12 @@ screen_brightness_control Documentation
             {{ super() }}
         {% endblock %}
 
-        {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+        {% if env["BUILD_DOCS_LEVEL"] == "api" %}
             {{ module_name() }}
+        {% elif env["BUILD_DOCS_LEVEL"] == "extras" %}
+            <h1 class="modulename">
+            {{ module.modulename.split(".")[-1] }}
+            </h1>
         {% endif %}
         {{ docstring(module) }}
         {{ view_source(module) }}

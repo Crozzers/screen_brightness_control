@@ -1,13 +1,13 @@
 // DO NOT ALTER THIS LINE
-var all_versions = {};
+var all_nav_links = {};
 // Used in gh-pages generation
 
-function create_nav_link(version, hidden=false){
+function create_nav_link(item, hidden=false){
     // create the hyperlink
     var link = document.createElement("a");
-    link.innerHTML = "v" + version;
+    link.innerHTML = item.split("/").slice(-1).pop().replace('.html', '');
     link.className = "navigation";
-    link.href = new URL("docs/" + version, get_version_navigation_base_url()).href;
+    link.href = new URL(item, get_version_navigation_base_url()).href;
 
     // create the list item and append link to it
     var item = document.createElement("li");
@@ -53,28 +53,40 @@ function create_dropdown_nav_link(version){
     return div;
 }
 
-if (Object.keys(all_versions).length > 0){
+function is_dict(v) {
+    return typeof v==='object' && v!==null && !(v instanceof Array);
+}
+
+if (Object.keys(all_nav_links).length > 0){
     const navigator_div = document.getElementById("custom-version-navigation");
 
-    // create header
-    var header = document.createElement('h2');
-    header.innerHTML = "Version";
-    navigator_div.appendChild(header);
+    for (const [category, nav_links] of Object.entries(all_nav_links)){
+        // create header
+        var header = document.createElement('h2');
+        header.innerHTML = category;
+        navigator_div.appendChild(header);
 
-    // create the navigation UL
-    const navigator = document.createElement("ul");
+        // create the navigation UL
+        const navigator = document.createElement("ul");
 
-    for (const [version, elders] of Object.entries(all_versions)){
-        if (elders.length === 0){
-            navigator.appendChild(create_nav_link(version));
-        } else {
-            var dropdown = create_dropdown_nav_link(version);
-            for (var i = 0; i < elders.length; i++){
-                dropdown.appendChild(create_nav_link(elders[i], true));
+        if (is_dict(nav_links)){
+            for (const [link, sub_links] of Object.entries(nav_links)){
+                if (sub_links.length === 0){
+                    navigator.appendChild(create_nav_link(link));
+                } else {
+                    var dropdown = create_dropdown_nav_link(link);
+                    for (var i = 0; i < sub_links.length; i++){
+                        dropdown.appendChild(create_nav_link(sub_links[i], true));
+                    }
+                    navigator.appendChild(dropdown);
+                }
             }
-            navigator.appendChild(dropdown);
+        }else{
+            for (var i = 0; i < nav_links.length; i++){
+                navigator.appendChild(create_nav_link(nav_links[i]));
+            }
         }
-    }
 
-    navigator_div.appendChild(navigator);
+        navigator_div.appendChild(navigator);
+    }
 }

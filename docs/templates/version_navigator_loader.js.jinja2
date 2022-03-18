@@ -1,6 +1,6 @@
 {% filter minify_js %}
     function get_version_navigation_base_url(){
-        {% if env["BUILD_DOCS_TOPLEVEL"] == "0" %}
+        {% if env["BUILD_DOCS_LEVEL"] == "api" %}
             // the root_module_name section here gets filled in by Jinja
             if (window.location.href.indexOf("{{ root_module_name }}.html") !== -1){
                 // we are in the "top level" of the docs
@@ -10,6 +10,9 @@
             // in the lowest docs level
             // eg: crozzers.github.io/screen_brightness_control/docs/0.11.3/screen_brightness_control/linux.html
             return new URL("./../../..", window.location.href);
+        {% elif env["BUILD_DOCS_LEVEL"] == "extras" %}
+            // top level extra docs
+            return new URL('./../', window.location.href);
         {% else %}
             // absolute top level
             // eg: crozzers.github.io/screen_brightness_control/

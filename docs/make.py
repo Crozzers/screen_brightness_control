@@ -64,9 +64,25 @@ def get_documentation_versions(directory):
             else:
                 index += 1
         group.sort()
-        versions_grouped[str(group[-1])] = [str(i) for i in reversed(group[:-1])]
+        versions_grouped['docs/' + str(group[-1])] = [f'docs/{str(i)}' for i in reversed(group[:-1])]
 
-    return json.dumps(versions_grouped)
+    return versions_grouped
+
+
+def custom_navigation_links():
+    links = {}
+    links['API Version'] = get_documentation_versions(OUTPUT_DIR / 'docs')
+
+    links['Extras'] = []
+    for file in os.listdir(HERE / 'source'):
+        if not os.path.isfile(HERE / 'source' / file):
+            continue
+        if file.startswith('__'):
+            continue
+        file = file.rstrip('.py')
+        links['Extras'].append(str(HERE / 'source' / file) + '.html')
+
+    return json.dumps(links)
 
 
 __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
@@ -85,10 +101,26 @@ if __name__ == '__main__':
 
     # generate top level documentation
     makedir(OUTPUT_DIR, destroy=args.clean)
-    os.environ['BUILD_DOCS_TOPLEVEL'] = '1'
+    os.environ['BUILD_DOCS_LEVEL'] = 'homepage'
+    configure_pdoc(search=False, show_source=False)
     run_pdoc(HERE / 'source', OUTPUT_DIR)
-    os.environ['BUILD_DOCS_TOPLEVEL'] = '0'
 
+    # generate documentation for everything else in top level
+    os.environ['BUILD_DOCS_LEVEL'] = 'extras'
+    makedir(OUTPUT_DIR / 'source')
+    for file in os.listdir(HERE / 'source'):
+        if not os.path.isfile(HERE / 'source' / file):
+            continue
+        if file.startswith('__'):
+            continue
+        file = file.rstrip('.py')
+        module = pdoc.doc.Module.from_name(f'source.{file}')
+        out = pdoc.render.html_module(module, [])
+        with open(OUTPUT_DIR / 'source' / f'{file}.html', 'w') as f:
+            f.write(out)
+
+    os.environ['BUILD_DOCS_LEVEL'] = 'api'
+    configure_pdoc(search=True, show_source=True)
     os.makedirs(OUTPUT_DIR / 'docs', exist_ok=True)
 
     # generate documentation for specified path
@@ -102,9 +134,9 @@ if __name__ == '__main__':
     with open(TEMPLATES / 'version_navigator.js', 'r') as f:
         js_code = f.read()
 
-    # insert list of available versions
-    available_versions = get_documentation_versions(OUTPUT_DIR / 'docs')
-    js_code = js_code.replace('var all_versions = {};', f'var all_versions = {available_versions};')
+    # insert list of navigation links
+    navigation_links = custom_navigation_links()
+    js_code = js_code.replace('var all_nav_links = {};', f'var all_nav_links = {navigation_links};')
 
     # write to gh-pages dir
     with open(OUTPUT_DIR / 'version_navigator.js', 'w') as f:
