@@ -9,8 +9,7 @@ directory, which will require root permissions.
 If none of methods succeed, a `ScreenBrightnessError` is raised.
 
 **How to fix it:**  
-Install `xrandr`, `ddcutil`, `light`, or `xbacklight` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
-Or run the module as root if you do not wish to install 3rd party software.
+Install `xrandr`, `ddcutil`, `light`, or `xbacklight` using your system package manager. See the [Installing on Linux](Installing On Linux.html) page for more details on this
 
 
 ## I call `set_brightness()` and nothing happens (Linux)
@@ -35,7 +34,7 @@ sh autogen.sh && ./configure && make && sudo make install
 The `display` kwarg is only supported by the `Light`, `XRandr`, `DDCUtil` and `SysFiles` classes, not by `XBacklight`. So if you only have `xbacklight` installed on your system this kwarg will not work
 
 **How to fix it:**  
-Install `xrandr` or `ddcutil` or `light` using your system package manager. See the installation section at the top of this document for instructions on how to do so.
+Install `xrandr` or `ddcutil` or `light` using your system package manager. See the [Installing on Linux](Installing On Linux.html) page for more details on this
 
 
 ## The model of my monitor/display is not what the program says it is (Windows)
