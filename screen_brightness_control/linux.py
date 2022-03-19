@@ -340,6 +340,9 @@ class XBacklight:
             int: from 0 to 100
             **kwargs: arbitrary keyword arguments. Ignored
 
+        Raises:
+            ValueError: if xbacklight does not produce any valid output
+
         Example:
             ```python
             import screen_brightness_control as sbc
