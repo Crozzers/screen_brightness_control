@@ -348,6 +348,8 @@ class XBacklight:
             ```
         '''
         result = subprocess.check_output([cls.executable, '-get']).decode()
+        if not result:
+            raise ValueError('no valid output was received from xbacklight')
         return int(round(float(str(result)), 0))
 
 
