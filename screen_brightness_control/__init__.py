@@ -13,7 +13,7 @@ def get_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     verbose_error: bool = False
-) -> Union[List[int], int]:
+) -> List[int]:
     '''
     Returns the current display brightness
 
@@ -25,8 +25,8 @@ def get_brightness(
         verbose_error (bool): controls the level of detail in the error messages
 
     Returns:
-        int: an integer from 0 to 100 if only one display is detected
-        list: if there a multiple displays connected it may return a list of integers (invalid monitors return `None`)
+        list: a list of integers (from 0 to 100), each integer being the
+            percentage brightness of a display (invalid displays may return None)
 
     Example:
         ```python
@@ -52,7 +52,7 @@ def set_brightness(
     force: bool = False,
     verbose_error: bool = False,
     no_return: bool = True
-) -> Union[None, List[int], int]:
+) -> Union[None, List[int]]:
     '''
     Sets the screen brightness
 
@@ -71,8 +71,8 @@ def set_brightness(
 
     Returns:
         None: if the `no_return` kwarg is `True`
-        list: list of ints (0 to 100) only if the `no_return` kwarg is `False`
-        int: if only one display is affected and the `no_return` kwarg is `False`
+        list: a list of integers (from 0 to 100), each integer being the
+            percentage brightness of a display (invalid displays may return None)
 
     Example:
         ```python
@@ -103,17 +103,16 @@ def set_brightness(
                 identifier = Monitor.get_identifier(monitor)[1]
                 output.append(
                     set_brightness(
-                        get_brightness(display=identifier) + value,
+                        get_brightness(display=identifier)[0] + value,
                         display=identifier,
                         force=force,
                         verbose_error=verbose_error,
                         no_return=no_return
                     )
                 )
-            output = flatten_list(output)
-            return output[0] if len(output) == 1 else output
+            return flatten_list(output)
 
-        value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])
+        value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])[0]
     else:
         value = int(float(str(value)))
 
@@ -137,7 +136,7 @@ def fade_brightness(
     increment: int = 1,
     blocking: bool = True,
     **kwargs
-) -> Union[List[threading.Thread], List[int], int]:
+) -> Union[List[threading.Thread], List[int]]:
     '''
     A function to somewhat gently fade the screen brightness from `start` to `finish`
 
@@ -977,9 +976,7 @@ def __brightness(
                 and ((no_return and output_is_none) or not output_is_none)
             )
         ):
-            if no_return:
-                return None
-            return output[0] if len(output) == 1 else output
+            return None if no_return else output
 
     # if the function hasn't returned then it has failed
     msg = '\n'
