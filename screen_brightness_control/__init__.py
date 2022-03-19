@@ -205,11 +205,11 @@ def fade_brightness(
             # if a user ONLY has XBacklight installed and no method was specified
             # then filter_monitors will raise a LookupError. In this case, default to using
             # linux.XBacklight method
-            available_monitors = [linux.XBacklight]
+            available_monitors = [_OS_MODULE.XBacklight]
         elif isinstance(e, ValueError) and method.lower() == 'xbacklight':
             # low level `list_monitors_info` will raise a ValueError if 'xbacklight' is passed as the method
             # because xbacklight cannot query individual monitor information
-            available_monitors = [linux.XBacklight]
+            available_monitors = [_OS_MODULE.XBacklight]
         else:
             raise ScreenBrightnessError(err_msg(e)) from e
 
@@ -219,7 +219,7 @@ def fade_brightness(
     threads = []
     for i in available_monitors:
         try:
-            if platform.system() == 'Linux' and i == linux.XBacklight:
+            if platform.system() == 'Linux' and i == _OS_MODULE.XBacklight:
                 monitor = i
             else:
                 monitor = Monitor(i)
@@ -293,7 +293,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     '''
     info = __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
     if info is None:
-        info = globals()['method'].list_monitors_info(method=method, allow_duplicates=allow_duplicates)
+        info = _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
         __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
     return info
 
@@ -941,8 +941,8 @@ def __brightness(
         if platform.system() == 'Linux' and display is None and method in ('xbacklight', None):
             try:
                 if meta_method == 'set':
-                    linux.XBacklight.set_brightness(*args)
-                output.append(linux.XBacklight.get_brightness())
+                    _OS_MODULE.XBacklight.set_brightness(*args)
+                output.append(_OS_MODULE.XBacklight.get_brightness())
             except Exception as e:
                 format_exc('XBacklight', e)
         else:
@@ -1033,15 +1033,14 @@ class __Cache(dict):
 
 
 __cache__ = __Cache()
-plat = platform.system()
-if plat == 'Windows':
+
+if platform.system() == 'Windows':
     from . import windows
-    method = windows
-elif plat == 'Linux':
+    _OS_MODULE = windows
+elif platform.system() == 'Linux':
     from . import linux
-    method = linux
-elif plat == 'Darwin':
+    _OS_MODULE = linux
+elif platform.system() == 'Darwin':
     raise NotImplementedError('MAC is not yet supported')
 else:
-    raise NotImplementedError(f'{plat} is not yet supported')
-del plat
+    raise NotImplementedError(f'{platform.system()} is not yet supported')
