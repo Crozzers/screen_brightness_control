@@ -42,42 +42,36 @@ class TestCase(unittest.TestCase):
                 else:
                     raise e
 
+    def assertBrightnessValid(self, brightness, target_length=None):
+        self.assertIsInstance(brightness, list)
+        for value in brightness:
+            self.assertIsInstance(value, int)
+            self.assertTrue(0 <= value <= 100)
 
-class TestGetBrightness(unittest.TestCase):
+        if target_length is not None:
+            self.assertTrue(len(brightness) == target_length)
+
+
+class TestGetBrightness(TestCase):
     def test_normal(self):
         brightness = sbc.get_brightness()
-        try:
-            # check it is the right type and within
-            # the max and min values
-            self.assertIsInstance(brightness, list)
-        except AssertionError:
-            self.assertIsInstance(brightness, int)
-            self.assertTrue(0 <= brightness <= 100)
-        else:
-            for i in brightness:
-                self.assertIsInstance(i, int)
-                self.assertTrue(0 <= i <= 100)
+        # check it is the right type and within
+        # the max and min values
+        self.assertBrightnessValid(brightness)
 
     def test_display_kwarg(self):
         for monitor in sbc.list_monitors():
             brightness = sbc.get_brightness(display=monitor)
-            self.assertIsInstance(brightness, int)
-            self.assertTrue(0 <= brightness <= 100)
+            self.assertBrightnessValid(brightness, target_length=1)
 
     def test_method_kwarg(self):
         for method in get_method_names():
             try:
                 value = sbc.get_brightness(method=method)
                 if method == 'xbacklight':
-                    self.assertIsInstance(value, int)
+                    self.assertBrightnessValid(value, target_length=1)
                 else:
-                    if type(value) == int:
-                        value = [value]
-                    else:
-                        self.assertIsInstance(value, list)
-                    self.assertTrue(
-                        len(sbc.list_monitors_info(method=method)) == len(value)
-                    )
+                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
@@ -100,26 +94,21 @@ class TestSetBrightness(TestCase):
     def test_normal(self):
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
             brightness = sbc.set_brightness(value, force=True, no_return=False)
-            if type(brightness) == list:
-                for index, i in enumerate(brightness):
-                    self.assertIsInstance(i, int)
-                    self.assertTrue(0 <= i <= 100)
-                    # use almost equal because some laptops cannot display all values 0 to 100
-                    self.assertBrightnessEqual(value, i, index)
-            else:
-                self.assertIsInstance(brightness, int)
-                self.assertTrue(0 <= brightness <= 100)
-                self.assertBrightnessEqual(value, brightness, 0)
+            self.assertIsNone(sbc.set_brightness(value, force=True))
+            self.assertBrightnessValid(brightness)
+            for index, i in enumerate(brightness):
+                # use almost equal because some laptops cannot display all values 0 to 100
+                self.assertBrightnessEqual(value, i, index)
 
     def test_increment_values(self):
         kw = {'display': 0} if sbc.list_monitors_info() else {}
         kw['no_return'] = False
 
-        self.assertBrightnessEqual(sbc.set_brightness('50', **kw), 50, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('10.0', **kw), 10, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('+40', **kw), 50, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('-20', **kw), 30, 0)
-        self.assertBrightnessEqual(sbc.set_brightness('+500', **kw), 100, 0)
+        self.assertBrightnessEqual(sbc.set_brightness('50', **kw), [50], 0)
+        self.assertBrightnessEqual(sbc.set_brightness('10.0', **kw), [10], 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+40', **kw), [50], 0)
+        self.assertBrightnessEqual(sbc.set_brightness('-20', **kw), [30], 0)
+        self.assertBrightnessEqual(sbc.set_brightness('+500', **kw), [100], 0)
 
         # test that all displays are affected equally
         for _ in sbc.list_monitors():
@@ -127,31 +116,23 @@ class TestSetBrightness(TestCase):
 
         old = sbc.get_brightness()
         new = sbc.set_brightness('-25', no_return=False)
-        if type(new) == list:
-            for i, v in enumerate(old):
-                self.assertBrightnessEqual(max(0, v - 25), new[i], i)
-        else:
-            self.assertBrightnessEqual(max(0, old - 25), new, 0)
+        for i, v in enumerate(old):
+            self.assertBrightnessEqual(max(0, v - 25), new[i], i)
 
     def test_display_kwarg(self):
         for index, monitor in enumerate(sbc.list_monitors()):
             brightness = sbc.set_brightness(90, display=monitor, no_return=False)
-            self.assertIsInstance(brightness, int)
-            self.assertTrue(0 <= brightness <= 100)
-            self.assertBrightnessEqual(90, brightness, index)
+            self.assertBrightnessValid(brightness, target_length=1)
+            self.assertBrightnessEqual(90, brightness[0], index)
 
     def test_method_kwarg(self):
         for method in get_method_names():
             try:
-                value = sbc.get_brightness(method=method)
+                value = sbc.set_brightness(90, method=method, no_return=False)
                 if method == 'xbacklight':
-                    self.assertIsInstance(value, int)
+                    self.assertBrightnessValid(value, target_length=1)
                 else:
-                    if type(value) == int:
-                        value = [value]
-                    self.assertTrue(
-                        len(sbc.list_monitors_info(method=method)) == len(value)
-                    )
+                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
@@ -173,22 +154,16 @@ class TestFadeBrightness(TestCase):
 
     def test_normal(self):
         brightness = sbc.fade_brightness(75)
-        self.assertIsInstance(brightness, (int, list))
-        if type(brightness) == list:
-            self.assertEqual(len(sbc.list_monitors()), len(brightness))
-            for index, i in enumerate(brightness):
-                self.assertIsInstance(i, int)
-                self.assertBrightnessEqual(75, i, index)
-        else:
-            self.assertTrue(len(sbc.list_monitors()) == 1)
-            self.assertBrightnessEqual(75, brightness, 0)
+        self.assertBrightnessValid(brightness, target_length=len(sbc.list_monitors()))
+        for index, i in enumerate(brightness):
+            self.assertBrightnessEqual(75, i, index)
 
     def test_increment_values(self):
-        self.assertBrightnessEqual(sbc.fade_brightness('60', display=0), 60, 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('70.0', display=0), 70, 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), 80, 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), 70, 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), 100, 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('60', display=0), [60], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('70.0', display=0), [70], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), [80], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), [70], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), [100], 0)
 
         # test that all displays are affected equally
         for _ in sbc.list_monitors():
@@ -196,17 +171,14 @@ class TestFadeBrightness(TestCase):
 
         old = sbc.get_brightness()
         new = sbc.fade_brightness('-25')
-        if type(new) == list:
-            for i, v in enumerate(old):
-                self.assertBrightnessEqual(max(0, v - 25), new[i], i)
-        else:
-            self.assertBrightnessEqual(max(0, old - 25), new, 0)
+        for i, v in enumerate(old):
+            self.assertBrightnessEqual(max(0, v - 25), new[i], i)
 
     def test_increment_kwarg(self):
         # smaller increment should take longer
         self.assertGreater(
-            timeit(lambda: sbc.fade_brightness(70, start=50, increment=1), number=1),
-            timeit(lambda: sbc.fade_brightness(70, start=50, increment=5), number=1)
+            timeit(lambda: sbc.fade_brightness(60, start=50, increment=1), number=1),
+            timeit(lambda: sbc.fade_brightness(60, start=50, increment=5), number=1)
         )
 
     def test_interval_kwarg(self):
@@ -222,27 +194,22 @@ class TestFadeBrightness(TestCase):
         for i, thread in enumerate(threads):
             self.assertIsInstance(thread, threading.Thread)
             thread.join()
-            self.assertEqual(sbc.get_brightness(display=i), 60)
+            self.assertBrightnessEqual(sbc.get_brightness(display=i), [60], i)
 
     def test_display_kwarg(self):
-        for monitor in sbc.list_monitors():
+        for index, monitor in enumerate(sbc.list_monitors()):
             brightness = sbc.fade_brightness(60, display=monitor)
-            self.assertIsInstance(brightness, int)
-            self.assertTrue(0 <= brightness <= 100)
-            self.assertEqual(60, brightness)
+            self.assertBrightnessValid(brightness, target_length=1)
+            self.assertBrightnessEqual(brightness, [60], index)
 
     def test_method_kwarg(self):
         for method in get_method_names():
             try:
                 value = sbc.fade_brightness(60, method=method)
                 if method == 'xbacklight':
-                    self.assertIsInstance(value, int)
+                    self.assertBrightnessValid(value, target_length=1)
                 else:
-                    if type(value) == int:
-                        value = [value]
-                    self.assertTrue(
-                        len(sbc.list_monitors_info(method=method)) == len(value)
-                    )
+                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
