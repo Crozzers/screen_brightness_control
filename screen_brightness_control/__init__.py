@@ -189,10 +189,6 @@ def fade_brightness(
     def err_msg(e):
         return f'\n\tfilter_monitors -> {type(e).__name__}: {e}'
 
-    threads = []
-    if 'verbose_error' in kwargs:
-        del kwargs['verbose_error']
-
     try:
         # make sure only compatible kwargs are passed to filter_monitors
         available_monitors = filter_monitors(
@@ -200,27 +196,30 @@ def fade_brightness(
                 'display', 'haystack', 'method', 'include'
             )}
         )
-    except (IndexError, LookupError) as e:
-        if isinstance(e, LookupError) and platform.system() == 'Linux' and method is None:
+    except (LookupError, ValueError) as e:
+        if not platform.system() == 'Linux':
+            raise ScreenBrightnessError(err_msg(e)) from e
+
+        method = kwargs.get('method', None)
+        if isinstance(e, LookupError) and method is None:
             # if a user ONLY has XBacklight installed and no method was specified
-            # then filter_monitors will raise a LookupError
-            available_monitors = [method.XBacklight]
+            # then filter_monitors will raise a LookupError. In this case, default to using
+            # linux.XBacklight method
+            available_monitors = [linux.XBacklight]
+        elif isinstance(e, ValueError) and method.lower() == 'xbacklight':
+            # low level `list_monitors_info` will raise a ValueError if 'xbacklight' is passed as the method
+            # because xbacklight cannot query individual monitor information
+            available_monitors = [linux.XBacklight]
         else:
             raise ScreenBrightnessError(err_msg(e)) from e
-    except ValueError as e:
-        if platform.system() == 'Linux' and (str(kwargs.get('method', '')).lower() == 'xbacklight'):
-            available_monitors = [method.XBacklight]
-        else:
-            raise ScreenBrightnessError(err_msg(e)) from e
+
     except Exception as e:
         raise ScreenBrightnessError(err_msg(e)) from e
 
+    threads = []
     for i in available_monitors:
         try:
-            if (
-                platform.system() == 'Linux'
-                and str(kwargs.get('method', '')).lower() == 'xbacklight'
-            ):
+            if platform.system() == 'Linux' and i == linux.XBacklight:
                 monitor = i
             else:
                 monitor = Monitor(i)
