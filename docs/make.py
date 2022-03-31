@@ -50,7 +50,7 @@ def run_pdoc(source, output):
 
 
 def get_documentation_versions(directory):
-    versions = [version.Version(i) for i in os.listdir(directory)]
+    versions = [version.Version(i) for i in os.listdir(directory) if os.path.isdir(os.path.join(directory, i))]
     versions.sort(reverse=True)
     versions_grouped = {}
 
