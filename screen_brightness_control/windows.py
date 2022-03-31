@@ -534,23 +534,21 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', info['edid'])
         ```
     '''
-    info = __cache__.get(f'windows_monitors_info_{method}_{allow_duplicates}')
-    if info is None:
-        info = get_display_info()
+    # no caching here because get_display_info caches its results
+    info = get_display_info()
 
-        if method is not None:
-            method = method.lower()
-            if method not in ('wmi', 'vcp'):
-                raise ValueError('method kwarg must be "wmi" or "vcp"')
+    if method is not None:
+        method = method.lower()
+        if method not in ('wmi', 'vcp'):
+            raise ValueError('method kwarg must be "wmi" or "vcp"')
 
-        info_final = []
-        serials = []
-        # to make sure each display (with unique edid) is only reported once
-        for i in info:
-            if allow_duplicates or i['serial'] not in serials:
-                if method is None or method == i['method'].__name__.lower():
-                    serials.append(i['serial'])
-                    info_final.append(i)
-        __cache__.store(f'windows_monitors_info_{method}_{allow_duplicates}', info_final)
-        info = info_final
-    return info
+    info_final = []
+    serials = []
+    # to make sure each display (with unique edid) is only reported once
+    for i in info:
+        if allow_duplicates or i['serial'] not in serials:
+            if method is None or method == i['method'].__name__.lower():
+                serials.append(i['serial'])
+                info_final.append(i)
+
+    return info_final

@@ -290,11 +290,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', monitor['edid'])
         ```
     '''
-    info = __cache__.get('monitors_info', method=method, allow_duplicates=allow_duplicates)
-    if info is None:
-        info = _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
-        __cache__.store('monitors_info', info, method=method, allow_duplicates=allow_duplicates)
-    return info
+    return _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
