@@ -2,7 +2,8 @@ import os
 import subprocess
 from typing import List, Optional, Union
 
-from . import EDID, __cache__, _monitor_brand_lookup, filter_monitors
+from . import filter_monitors
+from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 
 class SysFiles:

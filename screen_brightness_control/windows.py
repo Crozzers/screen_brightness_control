@@ -1,4 +1,5 @@
 import ctypes
+import platform
 import threading
 import time
 from ctypes import POINTER, WINFUNCTYPE, Structure, WinError, byref, windll
@@ -11,7 +12,8 @@ import win32api
 import win32con
 import wmi
 
-from . import EDID, __cache__, _monitor_brand_lookup, filter_monitors, platform
+from . import filter_monitors
+from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
