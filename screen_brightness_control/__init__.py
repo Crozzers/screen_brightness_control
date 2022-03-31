@@ -425,14 +425,8 @@ class EDID:
             # '00ffffffffffff00...'
             ```
         '''
-        hex_str = ''
         with open(file, 'rb') as f:
-            for char in f.read():
-                if char < 16:
-                    # hex values less than 16 get represented as single char
-                    # eg: 15 -> 'f' instead of '0f'
-                    hex_str += '0'
-                hex_str += f'{char:x}'  # represent binary as hex string
+            hex_str = ''.join(f'{char:02x}' for char in f.read())
 
         return hex_str
 
