@@ -12,7 +12,7 @@ import win32api
 import win32con
 import wmi
 
-from . import filter_monitors
+from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
@@ -502,7 +502,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     Lists detailed information about all detected monitors
 
     Args:
-        method (str): the method the monitor can be addressed by. Can be 'wmi' or 'vcp'
+        method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
+            for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
@@ -539,10 +540,12 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     # no caching here because get_display_info caches its results
     info = get_display_info()
 
+    all_methods = get_methods()
+
     if method is not None:
         method = method.lower()
-        if method not in ('wmi', 'vcp'):
-            raise ValueError('method kwarg must be "wmi" or "vcp"')
+        if method not in all_methods:
+            raise ValueError(f'method must be one of: {list(all_methods)}')
 
     info_final = []
     serials = []

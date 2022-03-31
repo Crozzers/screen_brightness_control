@@ -2,7 +2,7 @@ import platform
 import threading
 import time
 import traceback
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
@@ -19,9 +19,8 @@ def get_brightness(
 
     Args:
         display (str or int): the specific display to query
-        method (str): the way in which displays will be accessed.
-            On Windows this can be 'wmi' or 'vcp'.
-            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
+        method (str): the method to use to get the brightness. See `get_methods` for
+            more info on available methods
         verbose_error (bool): controls the level of detail in the error messages
 
     Returns:
@@ -59,9 +58,8 @@ def set_brightness(
     Args:
         value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
         display (int or str): the specific display to adjust
-        method (str): the way in which displays will be accessed.
-            On Windows this can be 'wmi' or 'vcp'.
-            On Linux it's 'light', 'xrandr', 'ddcutil' or 'xbacklight'.
+        method (str): the method to use to set the brightness. See `get_methods` for
+            more info on available methods
         force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
@@ -258,9 +256,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     list detailed information about all monitors that are controllable by this library
 
     Args:
-        method (str): the method to use to list the available monitors.
-            On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'sysfiles'`.
+        method (str): the method to use to list the available monitors. See `get_methods` for
+            more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays or not
 
     Returns:
@@ -298,9 +295,8 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     List the names of all detected monitors
 
     Args:
-        method (str): the method to use to list the available monitors.
-            On Windows this can be `'wmi'` or `'vcp'`.
-            On Linux this can be `'light'`, `'xrandr'`, `'ddcutil'` or `'sysfiles'`.
+        method (str): the method to use to list the available monitors. See `get_methods` for
+            more info on available methods
 
     Returns:
         list: list of strings
@@ -313,6 +309,38 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
         ```
     '''
     return [i['name'] for i in list_monitors_info(method=method)]
+
+
+def get_methods() -> Dict[str, object]:
+    '''
+    Returns all available brightness method names and their associated classes.
+
+    Returns:
+        dict: keys are the method names. This is what you would use
+            if a function has a `method` kwarg.
+            Values are the classes themselves
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+
+        all_methods = sbc.get_methods()
+
+        for method_name, method_class in all_methods.items():
+            print('Method:', method_name)
+            print('Class:', method_class)
+            print('Associated monitors:', sbc.list_monitors(method=method_name))
+        ```
+    '''
+    if platform.system() == 'Windows':
+        methods = (_OS_MODULE.WMI, _OS_MODULE.VCP)
+    else:  # linux
+        methods = (
+            _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
+            _OS_MODULE.Light, _OS_MODULE.SysFiles
+        )
+
+    return {i.__name__.lower(): i for i in methods}
 
 
 class Monitor():
@@ -589,7 +617,8 @@ def filter_monitors(
             Can be serial, name, model number, edid string or index of the display
         haystack (list): the information to filter from.
             If this isn't set it defaults to the return of `list_monitors_info`
-        method (str): the method the monitors use
+        method (str): the method the monitors use. See `get_methods` for
+            more info on available methods
         include (list): extra fields of information to sort by
 
     Raises:

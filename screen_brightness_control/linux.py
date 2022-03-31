@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import List, Optional, Union
 
-from . import filter_monitors
+from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 
@@ -757,7 +757,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     Lists detailed information about all detected monitors
 
     Args:
-        method (str): the method the monitor can be addressed by. Can be 'xrandr' or 'ddcutil' or 'light'
+        method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
+            for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
 
     Returns:
@@ -791,22 +792,20 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     '''
     info = __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
     if info is None:
-        methods = [XRandr, DDCUtil, Light, SysFiles]
+        all_methods = get_methods()
+
         if method is not None:
             method = method.lower()
-            if method not in ('xrandr', 'ddcutil', 'light', 'sysfiles'):
-                raise ValueError((
-                    'method must be "xrandr" or "ddcutil" or "light"'
-                    ' or "sysfiles" to get monitor information'
-                ))
+            if method not in all_methods:
+                raise ValueError(f'method must be one of: {list(all_methods)}')
 
         info = []
         edids = []
-        for m in methods:
-            if method is None or method == m.__name__.lower():
+        for method_name, method_class in all_methods.items():
+            if method is None or method == method_name:
                 # to make sure each display (with unique edid) is only reported once
                 try:
-                    tmp = m.get_display_info()
+                    tmp = method_class.get_display_info()
                 except Exception:
                     pass
                 else:

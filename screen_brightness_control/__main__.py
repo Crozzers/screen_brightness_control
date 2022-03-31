@@ -1,5 +1,4 @@
 import argparse
-import platform
 import time
 import screen_brightness_control as SBC
 
@@ -16,11 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--set', type=int, help='set the brightness to this value', metavar='VALUE')
     parser.add_argument('-g', '--get', action='store_true', help='get the current screen brightness')
     parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value', metavar='VALUE')
-    if platform.system() == 'Windows':
-        mthd = ('wmi', 'vcp')
-    elif platform.system() == 'Linux':
-        mthd = ('xrandr', 'ddcutil', 'light', 'xbacklight', 'sysfiles')
-    parser.add_argument('-m', '--method', type=str, help=f'specify which method to use ({" or ".join(mthd)})')
+    parser.add_argument('-m', '--method', type=str, help=f'the method to use ({" or ".join(SBC.get_methods())})')
     parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
     parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
     parser.add_argument('-V', '--version', action='store_true', help='print the current version')
