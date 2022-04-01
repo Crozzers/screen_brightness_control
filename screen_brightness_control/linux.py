@@ -1,5 +1,10 @@
+import fcntl
+import functools
+import glob
+import operator
 import os
 import subprocess
+import time
 from typing import List, Optional, Union
 
 from . import filter_monitors, get_methods
@@ -129,7 +134,7 @@ class SysFiles:
             primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]
 
             # get the brightness of the secondary display
-            edp_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]
+            secondary_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]
             ```
         '''
         info = cls.get_display_info()
@@ -154,7 +159,7 @@ class SysFiles:
 
         Args:
             value (int): Sets the brightness to this value
-            display (int): The specific display you wish to query.
+            display (int): The specific display you wish to adjust.
 
         Example:
             ```python
@@ -167,7 +172,7 @@ class SysFiles:
             sbc.linux.SysFiles.set_brightness(75, display = 0)
 
             # set the secondary display brightness to 25%
-            sbc.linux.SysFiles.set_brightness(75, display = 1)
+            sbc.linux.SysFiles.set_brightness(25, display = 1)
             ```
         '''
         info = cls.get_display_info()
@@ -177,6 +182,353 @@ class SysFiles:
         for device in info:
             with open(os.path.join(device['path'], 'brightness'), 'w') as f:
                 f.write(str(int(value * device['scale'])))
+
+
+class I2C:
+    '''
+    In the same spirit as `SysFiles`, this class serves as a way of getting
+    display information and adjusting the brightness without relying on any
+    3rd party software.
+
+    Usage of this class requires read and write permission for `/dev/i2c-*`.
+
+    This class works over the I2C bus, primarily with desktop monitors as I
+    haven't tested any e-DP displays yet.
+
+    Massive thanks to [siemer](https://github.com/siemer) for
+    his work on the [ddcci.py](https://github.com/siemer/ddcci) project,
+    which served as a my main reference for this.
+
+    References:
+        * [ddcci.py](https://github.com/siemer/ddcci)
+        * [DDCCI Spec](https://milek7.pl/ddcbacklight/ddcci.pdf)
+    '''
+    # vcp commands
+    GET_VCP_CMD = 0x01
+    '''VCP command to get the value of a feature (eg: brightness)'''
+    GET_VCP_REPLY = 0x02
+    '''VCP feature reply op code'''
+    SET_VCP_CMD = 0x03
+    '''VCP command to set the value of a feature (eg: brightness)'''
+
+    # addresses
+    DDCCI_ADDR = 0x37
+    '''DDC packets are transmittred using this I2C address'''
+    HOST_ADDR_R = 0x50
+    '''Packet source address (the computer) when reading data'''
+    HOST_ADDR_W = 0x51
+    '''Packet source address (the computer) when writing data'''
+    DESTINATION_ADDR_W = 0x6e
+    '''Packet destination address (the monitor) when writing data'''
+    I2C_SLAVE = 0x0703
+    '''The I2C slave address'''
+
+    # timings
+    WAIT_TIME = 0.05
+    '''How long to wait between I2C commands'''
+
+    class I2CDevice():
+        '''
+        Class to read and write data to an I2C bus,
+        based on the `I2CDev` class from [ddcci.py](https://github.com/siemer/ddcci)
+        '''
+        def __init__(self, fname: str, slave_addr: int):
+            '''
+            Args:
+                fname (str): the I2C path, eg: `/dev/i2c-2`
+                slave_addr (int): not entirely sure what this is meant to be
+            '''
+            self.device = os.open(fname, os.O_RDWR)
+            # I2C_SLAVE address setup
+            fcntl.ioctl(self.device, I2C.I2C_SLAVE, slave_addr)
+
+        def read(self, length: int) -> bytes:
+            '''
+            Read a certain number of bytes from the I2C bus
+
+            Args:
+                length (int): the number of bytes to read
+
+            Returns:
+                bytes
+            '''
+            return os.read(self.device, length)
+
+        def write(self, data: bytes) -> int:
+            '''
+            Writes data to the I2C bus
+
+            Args:
+                data (bytes): the data to write
+
+            Returns:
+                int: the number of bytes written
+            '''
+            return os.write(self.device, data)
+
+    class DDCInterface(I2CDevice):
+        '''
+        Class to send DDC (Display Data Channel) commands to an I2C device,
+        based on the `Ddcci` and `Mccs` classes from [ddcci.py](https://github.com/siemer/ddcci)
+        '''
+
+        PROTOCOL_FLAG = 0x80
+
+        def __init__(self, i2c_path: str):
+            '''
+            Args:
+                i2c_path (str): the path to the I2C device, eg: `/dev/i2c-2`
+            '''
+            super().__init__(i2c_path, I2C.DDCCI_ADDR)
+
+        def write(self, *args) -> int:
+            '''
+            Write some data to the I2C device.
+
+            It is recommended to use `setvcp` to set VCP values on the DDC device
+            instead of using this function directly.
+
+            Args:
+                *args: variable length list of arguments. This will be put
+                    into a `bytearray` and wrapped up in various flags and
+                    checksums before being written to the I2C device
+
+            Returns:
+                int: the number of bytes that were written
+            '''
+            time.sleep(I2C.WAIT_TIME)
+
+            ba = bytearray(args)
+            ba.insert(0, len(ba) | self.PROTOCOL_FLAG)  # add length info
+            ba.insert(0, I2C.HOST_ADDR_W)  # insert source address
+            ba.append(functools.reduce(operator.xor, ba, I2C.DESTINATION_ADDR_W))  # checksum
+
+            return super().write(ba)
+
+        def setvcp(self, vcp_code: int, value: int) -> int:
+            '''
+            Set a VCP value on the device
+
+            Args:
+                vcp_code (int): the VCP command to send, eg: `0x10` is brightness
+                value (int): what to set the value to
+
+            Returns:
+                int: the number of bytes written to the device
+            '''
+            return self.write(I2C.SET_VCP_CMD, vcp_code, *value.to_bytes(2, 'big'))
+
+        def read(self, amount: int) -> bytes:
+            '''
+            Reads data from the DDC device.
+
+            It is recommended to use `getvcp` to retrieve VCP values from the
+            DDC device instead of using this function directly.
+
+            Args:
+                amount (int): the number of bytes to read
+
+            Returns:
+                bytes
+
+            Raises:
+                ValueError: if the read data is deemed invalid
+            '''
+            time.sleep(I2C.WAIT_TIME)
+
+            ba = super().read(amount + 3)
+
+            # check the bytes read
+            checks = {
+                'source address': ba[0] == I2C.DESTINATION_ADDR_W,
+                'checksum': functools.reduce(operator.xor, ba) == I2C.HOST_ADDR_R,
+                'length': len(ba) >= (ba[1] & ~self.PROTOCOL_FLAG) + 3
+            }
+            if False in checks.values():
+                raise ValueError('i2c read check failed: ' + repr(checks))
+
+            return ba[2:-1]
+
+        def getvcp(self, vcp_code: int) -> int:
+            '''
+            Retrieves a VCP value from the DDC device.
+
+            Args:
+                vcp_code (int): the VCP value to read, eg: `0x10` is brightness
+
+            Returns:
+                int
+
+            Raises:
+                ValueError: if the read data is deemed invalid
+            '''
+            self.write(I2C.GET_VCP_CMD, vcp_code)
+            ba = self.read(8)
+
+            checks = {
+                'is feature reply': ba[0] == I2C.GET_VCP_REPLY,
+                'supported VCP opcode': ba[1] == 0,
+                'answer matches request': ba[2] == vcp_code
+            }
+            if False in checks.values():
+                raise ValueError('i2c read check failed: ' + repr(checks))
+
+            # min is ba[3], max is ba[4:6] and we return current value
+            return int.from_bytes(ba[6:8], 'big')
+
+    @classmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+        '''
+        Returns information about detected displays by querying the various I2C buses
+
+        Args:
+            display (str or int): [*Optional*] The monitor to return info about.
+                Pass in the serial number, name, model, interface, edid or index.
+                This is passed to `filter_monitors`
+
+        Returns:
+            list: list of dicts
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get info about all monitors
+            info = sbc.linux.I2C.get_display_info()
+            # EG output: [{'name': 'Benq GL2450H', 'model': 'GL2450H', 'manufacturer': 'BenQ', 'edid': '00ffff...'}]
+
+            # get info about the primary monitor
+            primary_info = sbc.linux.I2C.get_display_info(0)[0]
+
+            # get info about a monitor called 'Benq GL2450H'
+            benq_info = sbc.linux.I2C.get_display_info('Benq GL2450H')[0]
+            ```
+        '''
+        all_displays = __cache__.get('i2c_display_info')
+        if all_displays is None:
+            all_displays = []
+            index = 0
+
+            for i2c_path in glob.glob('/dev/i2c-*'):
+                if not os.path.exists(i2c_path):
+                    continue
+
+                try:
+                    # open the I2C device using the host read address
+                    device = cls.I2CDevice(i2c_path, cls.HOST_ADDR_R)
+                    # read some 512 bytes from the device
+                    data = device.read(512)
+                except IOError:
+                    continue
+
+                # search for the EDID header within our 512 read bytes
+                start = data.find(bytes.fromhex('00 FF FF FF FF FF FF 00'))
+                if start < 0:
+                    continue
+
+                # grab 128 bytes of the edid into a nice hex string
+                edid = ''.join(f'{i:02x}' for i in data[start: start + 128])
+
+                name, serial = EDID.parse_edid(edid)
+                if name is None:
+                    # failed to extract data.
+                    continue
+
+                # attempt to extract manufacturer id and name
+                manufacturer, model = name.split(' ', 1)
+                try:
+                    manufacturer_id, manufacturer = _monitor_brand_lookup(manufacturer)
+                except TypeError:
+                    manufacturer_id = None
+
+                all_displays.append(
+                    {
+                        'name': name,
+                        'model': model,
+                        'manufacturer': manufacturer,
+                        'manufacturer_id': manufacturer_id,
+                        'serial': serial,
+                        'method': cls,
+                        'index': index,
+                        'edid': edid,
+                        'i2c_bus': i2c_path
+                    }
+                )
+                index += 1
+
+            if all_displays:
+                __cache__.store('i2c_display_info', all_displays, expires=2)
+
+        if display is not None:
+            return filter_monitors(display=display, haystack=all_displays, include=['i2c_bus'])
+        return all_displays
+
+    @classmethod
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+        '''
+        Gets the brightness for a display by querying the I2C bus
+
+        Args:
+            display (int): The specific display you wish to query.
+
+        Returns:
+            list: list of ints (0 to 100)
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # get the current display brightness
+            current_brightness = sbc.linux.I2C.get_brightness()
+
+            # get the brightness of the primary display
+            primary_brightness = sbc.linux.I2C.get_brightness(display = 0)[0]
+
+            # get the brightness of the secondary display
+            secondary_brightness = sbc.linux.I2C.get_brightness(display = 1)[0]
+            ```
+        '''
+        all_displays = cls.get_display_info()
+        if display is not None:
+            all_displays = [all_displays[display]]
+
+        results = []
+        for device in all_displays:
+            interface = cls.DDCInterface(device['i2c_bus'])
+            results.append(interface.getvcp(0x10))
+
+        return results
+
+    @classmethod
+    def set_brightness(cls, value: int, display: Optional[int] = None):
+        '''
+        Sets the brightness for a display by writing to the I2C bus
+
+        Args:
+            value (int): Set the brightness to this value
+            display (int): The specific display you wish to adjust.
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            # set the brightness to 50%
+            sbc.linux.I2C.set_brightness(50)
+
+            # set the primary display brightness to 75%
+            sbc.linux.I2C.set_brightness(75, display = 0)
+
+            # set the secondary display brightness to 25%
+            sbc.linux.I2C.set_brightness(25, display = 1)
+            ```
+        '''
+        all_displays = cls.get_display_info()
+        if display is not None:
+            all_displays = [all_displays[display]]
+
+        for device in all_displays:
+            interface = cls.DDCInterface(device['i2c_bus'])
+            interface.setvcp(0x10, value)
 
 
 class Light:
@@ -255,7 +607,7 @@ class Light:
             sbc.linux.Light.set_brightness(75, display = 0)
 
             # set the secondary display brightness to 25%
-            sbc.linux.Light.set_brightness(75, display = 1)
+            sbc.linux.Light.set_brightness(25, display = 1)
             ```
         '''
         info = cls.get_display_info()
