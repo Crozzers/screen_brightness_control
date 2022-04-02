@@ -13,7 +13,7 @@ pip install .
 ```
 
 #### Linux:
-It is recommended to install a 3rd party program to use this library on Linux.
+Installing on Linux usually requires some extra work after installing the module.
 Please see the [installing on Linux](https://crozzers.github.io/screen_brightness_control/extras/Installing%20On%20Linux.html) documentation for more details.
 
 
