@@ -4,26 +4,25 @@ import sys
 import threading
 import time
 import unittest
-from functools import lru_cache
 from timeit import timeit
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
+from screen_brightness_control import get_methods as __get_methods  # noqa: E402
 
 
-@lru_cache(maxsize=1)
 def get_methods():
-    if os.name == 'nt':
-        methods = (sbc.windows.WMI, sbc.windows.VCP)
-    else:  # linux
-        methods = (sbc.linux.Light, sbc.linux.XRandr, sbc.linux.DDCUtil, sbc.linux.XBacklight, sbc.linux.SysFiles)
-
+    methods = tuple(__get_methods.values())
+    if os.name != 'nt':
+        methods += (sbc.linux.XBacklight,)
     return methods
 
 
-@lru_cache(maxsize=1)
 def get_method_names():
-    return tuple(i.__name__.lower() for i in get_methods())
+    methods = tuple(__get_methods.keys())
+    if os.name != 'nt':
+        methods += ('xbacklight',)
+    return methods
 
 
 class TestCase(unittest.TestCase):
