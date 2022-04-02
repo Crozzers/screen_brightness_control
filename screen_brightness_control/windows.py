@@ -214,10 +214,7 @@ class WMI:
             benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
-        info = __cache__.get('wmi_monitor_info')
-        if info is None:
-            info = [i for i in get_display_info() if i['method'] == cls]
-            __cache__.store('wmi_monitor_info', info)
+        info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
         return info
@@ -394,10 +391,7 @@ class VCP:
             # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
         '''
-        info = __cache__.get('vcp_monitor_info')
-        if info is None:
-            info = [i for i in get_display_info() if i['method'] == cls]
-            __cache__.store('vcp_monitor_info', info)
+        info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
         return info

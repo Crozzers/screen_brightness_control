@@ -1142,28 +1142,25 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('Method:', monitor['method'])
         ```
     '''
-    info = __cache__.get('linux_monitors_info', method=method, allow_duplicates=allow_duplicates)
-    if info is None:
-        all_methods = get_methods()
+    all_methods = get_methods()
 
-        if method is not None:
-            method = method.lower()
-            if method not in all_methods:
-                raise ValueError(f'method must be one of: {list(all_methods)}')
+    if method is not None:
+        method = method.lower()
+        if method not in all_methods:
+            raise ValueError(f'method must be one of: {list(all_methods)}')
 
-        info = []
-        edids = []
-        for method_name, method_class in all_methods.items():
-            if method is None or method == method_name:
-                # to make sure each display (with unique edid) is only reported once
-                try:
-                    tmp = method_class.get_display_info()
-                except Exception:
-                    pass
-                else:
-                    for i in tmp:
-                        if allow_duplicates or i['edid'] not in edids:
-                            edids.append(i['edid'])
-                            info.append(i)
-        __cache__.store('linux_monitors_info', info, method=method, allow_duplicates=allow_duplicates)
+    info = []
+    edids = []
+    for method_name, method_class in all_methods.items():
+        if method is None or method == method_name:
+            # to make sure each display (with unique edid) is only reported once
+            try:
+                tmp = method_class.get_display_info()
+            except Exception:
+                pass
+            else:
+                for i in tmp:
+                    if allow_duplicates or i['edid'] not in edids:
+                        edids.append(i['edid'])
+                        info.append(i)
     return info
