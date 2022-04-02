@@ -7,7 +7,7 @@ Raises `ScreenBrightnessError` upon failure
 **Arguments:**
 
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
+* `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 
 **Usage:**  
@@ -34,7 +34,7 @@ Raises `ScreenBrightnessError` upon failure
 
 * `value` - the level to set the brightness to. Can either be an integer or a string.
 * `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
+* `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 * `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return `None` by default.
@@ -101,12 +101,32 @@ Returns a list of the names of all detected monitors
 
 **Arguments:**
 
-* `method` - the OS specific method to use. On Windows this can be `'wmi'` or `'vcp'` and on Linux this can be `'light'`, `'xrandr'`, `'ddcutil'`, `'sysfiles'` or `'xbacklight'`
+* `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 
 **Usage:**  
 ```python
 import screen_brightness_control as sbc
 monitor_names = sbc.list_monitors()
 # eg: ['BenQ GL2450H', 'Dell U2211H']
+```
+
+
+## get_methods()
+**Summary:**  
+Returns a dictionary of brightness methods that you can use for adjusting screen brightness.
+
+A method is just a class that uses a particular API or program to get display information and retrieve/set brightness levels for displays.
+Each method may be able to address different kinds of displays (eg: laptop vs external monitors).
+
+**Usage:**
+```python
+import screen_brightness_control as sbc
+
+all_methods = sbc.get_methods()
+
+for method_name, method_class in all_methods.items():
+    print('Method:', method_name)
+    print('Class:', method_class)
+    print('Associated monitors:', sbc.list_monitors(method=method_name))
 ```
 '''
