@@ -9,6 +9,7 @@ from typing import List, Optional, Union
 
 from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup
+import warnings
 
 
 class SysFiles:
@@ -660,14 +661,29 @@ class Light:
 
 
 class XBacklight:
-    '''collection of screen brightness related methods using the xbacklight executable'''
+    '''
+    DEPRECATED.
+
+    A collection of screen brightness related methods using the xbacklight executable'''
 
     executable: str = 'xbacklight'
     '''the xbacklight executable to be called'''
 
+    @staticmethod
+    def __warn_deprecated():
+        warnings.warn(
+            (
+                'xbacklight brightness method is deprecated and will be removed in the next release.'
+                ' Please use sysfiles or i2c or light or xrandr or ddcutil instead'
+            ),
+            DeprecationWarning
+        )
+
     @classmethod
     def set_brightness(cls, value: int, **kwargs):
         '''
+        DEPRECATED.
+
         Sets the screen brightness to a supplied value
 
         Args:
@@ -682,11 +698,14 @@ class XBacklight:
             sbc.linux.XBacklight.set_brightness(100)
             ```
         '''
+        cls.__warn_deprecated()
         subprocess.call([cls.executable, '-set', str(value)])
 
     @classmethod
     def get_brightness(cls, **kwargs) -> int:
         '''
+        DEPRECATED.
+
         Returns the screen brightness as reported by xbacklight
 
         Returns:
@@ -703,6 +722,7 @@ class XBacklight:
             current_brightness = sbc.linux.XBacklight.get_brightness()
             ```
         '''
+        cls.__warn_deprecated()
         result = subprocess.check_output([cls.executable, '-get']).decode()
         if not result:
             raise ValueError('no valid output was received from xbacklight')

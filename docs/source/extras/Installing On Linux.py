@@ -29,19 +29,21 @@ users to adjust the backlight without having to manually fiddle with permissions
 
 Here is an outline of all of the external programs that `screen_brightness_control` can call upon:
 
-Program     | Works on laptop displays | Works on external monitors | Per-display brightness control        | Requires Special Permissions After Install
-------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------
-ddcutil     | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*`
-xrandr      | Yes                      | Yes           [2]          | Yes                                   | No
-xbacklight  | Yes                      | No                         | No                                    | No
-light       | Yes                      | No                         | Yes                                   | No
-[No program]| Yes                      | Yes (slow)                 | Yes                                   | Read/write access for `/dev/i2c*` and `/sys/class/backlight`
+Program       | Works on laptop displays | Works on external monitors | Per-display brightness control        | Requires Special Permissions After Install
+--------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------
+ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*`
+xrandr        | Yes                      | Yes           [2]          | Yes                                   | No
+xbacklight [3]| Yes                      | No                         | No                                    | No
+light         | Yes                      | No                         | Yes                                   | No
+[No program]  | Yes                      | Yes (slow)                 | Yes                                   | Read/write access for `/dev/i2c*` and `/sys/class/backlight`
 
 #### Footnotes
 [1] While both DDCUtil and the 1st party `linux.I2C` class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the [Monitor Control Command Set over USB](https://www.ddcutil.com/usb)
 
 [2] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+
+[3] The xbacklight brightness method is deprecated and will be removed in v0.14.0
 
 
 ## Install 3rd Party Programs
@@ -50,14 +52,11 @@ DDCUtil also supports communicating with monitors that implement the [Monitor Co
     * Xrandr: `sudo pacman -S xorg-xrandr`
     * DDCUtil: `sudo pacman -S ddcutil`
     * Light: `sudo pacman -S light-git`
-    * Xbacklight: `sudo pacman -S xorg-xbacklight`
 * Debian/Ubuntu
     * XRandr: `sudo apt install x11-xserver-utils`
     * DDCUtil: `sudo apt install ddcutil`
     * Light: `sudo apt install light`
-    * Xbacklight: `sudo apt install xbacklight`
 * Fedora
     * Xrandr: `sudo dnf install libXrandr`
     * Light: `sudo dnf install light`
-    * Xbacklight: `sudo dnf install xbacklight`
 '''
