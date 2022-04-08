@@ -1,8 +1,7 @@
 '''
 ## get_brightness(`display=None, method=None, verbose_error=False`)
 **Summary:**  
-Returns the current screen brightness as a percentage. It may return a list of values if you have multiple, brightness adjustable monitors.  
-Raises `ScreenBrightnessError` upon failure
+Gets the percentage brightness of all detected monitors. This is returned as a list of integers.  
 
 **Arguments:**
 
@@ -17,18 +16,17 @@ import screen_brightness_control as sbc
 # get the current screen brightness (for all detected displays)
 all_screens_brightness = sbc.get_brightness()
 # get the brightness of the primary display
-primary_display_brightness = sbc.get_brightness(display=0)
+primary_display_brightness = sbc.get_brightness(display=0)[0]
 # get the brightness of the secondary display (if connected)
-secondary_display_brightness = sbc.get_brightness(display=1)
+secondary_display_brightness = sbc.get_brightness(display=1)[0]
 # get the brightness for a named monitor
-benq_brightness = sbc.get_brightness(display='BenQ GL2450H')
+benq_brightness = sbc.get_brightness(display='BenQ GL2450H')[0]
 ```  
 
 
-## set_brightness(`value, display=None, method=None, force=False, verbose_error=False, no_return=False`)
+## set_brightness(`value, display=None, method=None, force=False, verbose_error=False, no_return=True`)
 **Summary:**  
-Sets the brightness to `value`. If `value` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.
-Raises `ScreenBrightnessError` upon failure
+Sets the brightness to `value`. If `value` is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.  
 
 **Arguments:**
 
@@ -37,7 +35,7 @@ Raises `ScreenBrightnessError` upon failure
 * `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
-* `no_return` - boolean value, whether this function should return `None` or not. By default, the return value is the new brightness value but this behaviour is deprecated. In the future this function will return `None` by default.
+* `no_return` - whether this function should return the new brightness values. By default this behaviour is turned off
 
 **Usage:**  
 ```python
@@ -63,7 +61,7 @@ sbc.set_brightness(50, display=0)
 ## fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs`)
 **Summary:**  
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
-If it runs in the main thread it will return the final brightness upon success, `ScreenBrightnessError` upon failure. Otherwise it returns the list of thread objects that the process is running in
+If it runs in the main thread it will return the final brightness. Otherwise it returns the list of thread objects that the process is running in
 
 **Arguments:**
 
