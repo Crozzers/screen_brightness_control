@@ -5,6 +5,7 @@ import struct
 import time
 from functools import lru_cache
 from typing import Any, List, Tuple, Union
+import warnings
 
 
 class ScreenBrightnessError(Exception):
@@ -38,18 +39,102 @@ class EDID:
         "H"     # supported timings (2 bytes)
         "B"     # reserved timing (1 byte)
         "16s"   # EDID supported timings (16 bytes)
-        "18s"   # detailed timing block 1 (18 bytes)
-        "18s"   # detailed timing block 2 (18 bytes)
-        "18s"   # detailed timing block 3 (18 bytes)
-        "18s"   # detailed timing block 4 (18 bytes)
+        "18s"   # timing / display descriptor block 1 (18 bytes)
+        "18s"   # timing / display descriptor block 2 (18 bytes)
+        "18s"   # timing / display descriptor block 3 (18 bytes)
+        "18s"   # timing / display descriptor block 4 (18 bytes)
         "B"     # extension flag (1 byte)
         "B"     # checksum (1 byte)
     )
     '''The byte structure for EDID strings'''
 
     @classmethod
+    def parse(cls, edid: Union[bytes, str]) -> Tuple[Union[str, None], ...]:
+        '''
+        Takes an EDID string and parses some relevant information from it according to the
+        [EDID 1.4](https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#EDID_1.4_data_format)
+        specification on Wikipedia.
+
+        Args:
+            edid (bytes or str): the EDID, can either be raw bytes or
+                a hex formatted string (00 ff ff ff ff...)
+
+        Returns:
+            tuple[str | None]: A tuple of 5 items representing the monitor's manufacturer ID,
+                manufacturer, model, name, serial in that order.
+                If any of these values are unable to be determined, they will be None.
+                Otherwise, expect a string
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            edid = sbc.list_monitors_info()[0]['edid']
+            manufacturer_id, manufacturer, model, name, serial = sbc.EDID.parse(edid)
+
+            print('Manufacturer:', manufacturer_id or 'Unknown')
+            print('Model:', model or 'Unknown')
+            print('Name:', name or 'Unknown')
+            ```
+        '''
+        # see https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#EDID_1.4_data_format
+        if not isinstance(edid, bytes):
+            edid = bytes.fromhex(edid)
+
+        blocks = struct.unpack(cls.EDID_FORMAT, edid)
+
+        mfg_id_block = blocks[1]
+        # split mfg_id (2 bytes) into 3 letters, 5 bits each (ignoring reserved bit)
+        mfg_id = (
+            mfg_id_block >> 10,             # First 6 bits (reserved bit at start is always 0)
+            (mfg_id_block >> 5) & 0b11111,  # Next 5 (use bitwise AND to isolate the 5 bits we want from first 11)
+            mfg_id_block & 0b11111          # Last five bits
+        )
+        # turn numbers into ascii
+        mfg_id = ''.join(chr(i + 64) for i in mfg_id)
+
+        # now grab the manufacturer name
+        mfg_lookup = _monitor_brand_lookup(mfg_id)
+        if mfg_lookup is not None:
+            manufacturer = mfg_lookup[1]
+        else:
+            manufacturer = None
+
+        SERIAL_DESCRIPTOR = bytes.fromhex('00 00 00 ff 00')
+        serial = None
+        NAME_DESCRIPTOR = bytes.fromhex('00 00 00 FC 00')
+        name = None
+        for descriptor_block in blocks[17:21]:
+            # decode the serial
+            if descriptor_block.startswith(SERIAL_DESCRIPTOR):
+                # strip descriptor bytes and trailing whitespace
+                serial_bytes = descriptor_block[len(SERIAL_DESCRIPTOR):].rstrip()
+                serial = serial_bytes.decode()
+
+            # decode the monitor name
+            elif descriptor_block.startswith(NAME_DESCRIPTOR):
+                # strip descriptor bytes and trailing whitespace
+                name_bytes = descriptor_block[len(NAME_DESCRIPTOR):].rstrip()
+                name = name_bytes.decode()
+
+        # now try to figure out what model the display is
+        model = None
+        if name is not None:
+            if manufacturer is not None and name.startswith(manufacturer):
+                # eg: 'BenQ GL2450H' -> ['BenQ', 'GL2450H']
+                model = name.replace(manufacturer, '', 1).strip()
+
+            # if previous method did not work, try taking last word of name
+            if not model:
+                model = name.strip().rsplit(' ', 1)[1]
+
+        return mfg_id, manufacturer, model, name, serial
+
+    @classmethod
     def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
         '''
+        DEPRECATED. Please use `EDID.parse` instead.
+
         Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
         attempts to extract the monitor's name and serial number from it
 
@@ -76,6 +161,11 @@ class EDID:
                 print('Unable to extract the data')
             ```
         '''
+        warnings.warn(
+            'EDID.parse_edid is deprecated and will be removed in the next release. Please use EDID.parse instead.',
+            DeprecationWarning
+        )
+
         def filter_hex(st):
             st = str(st)
             while '\\x' in st:
