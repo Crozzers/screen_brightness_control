@@ -90,19 +90,12 @@ class SysFiles:
                         # to 'actual' values
                         continue
 
-                name, serial = EDID.parse_edid(device['edid'])
-                if name is not None:
-                    device['name'], device['serial'] = name, serial
-
-                    try:
-                        manufacturer_id, manufacturer = _monitor_brand_lookup(name.split(' ')[0])
-                    except TypeError:
-                        device['manufacturer'] = name.split(' ')[0]
-                        device['manufacturer_id'] = None
-                    else:
-                        device['manufacturer_id'], device['manufacturer'] = manufacturer_id, manufacturer
-
-                    device['model'] = name.split(' ')[1]
+                device.update(
+                    zip(
+                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                        EDID.parse(device['edid'])
+                    )
+                )
 
                 displays[device['edid']] = device
                 index += 1
@@ -427,20 +420,12 @@ class I2C:
                 if start < 0:
                     continue
 
-                # grab 128 bytes of the edid into a nice hex string
-                edid = ''.join(f'{i:02x}' for i in data[start: start + 128])
-
-                name, serial = EDID.parse_edid(edid)
-                if name is None:
-                    # failed to extract data.
-                    continue
-
-                # attempt to extract manufacturer id and name
-                manufacturer, model = name.split(' ', 1)
-                try:
-                    manufacturer_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                except TypeError:
-                    manufacturer_id = None
+                # grab 128 bytes of the edid
+                edid = data[start: start + 128]
+                # parse the EDID
+                manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
+                # convert edid to hex string
+                edid = ''.join(f'{i:02x}' for i in edid)
 
                 all_displays.append(
                     {
@@ -810,20 +795,12 @@ class XRandr:
                 )
                 tmp_display['edid'] = edid
 
-                # get name and serial from edid
-                name, serial = EDID.parse_edid(edid)
-                if name is not None:
-                    tmp_display['name'] = name
-                    tmp_display['manufacturer'] = name.split(' ')[0]
-                    tmp_display['model'] = name.split(' ')[1]
-                    tmp_display['serial'] = serial
-                    try:
-                        (
-                            tmp_display['manufacturer_id'],
-                            tmp_display['manufacturer']
-                        ) = _monitor_brand_lookup(tmp_display['manufacturer'])
-                    except TypeError:
-                        tmp_display['manufacturer_id'] = None
+                tmp_display.update(
+                    zip(
+                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                        EDID.parse(edid)
+                    )
+                )
 
             elif 'Brightness:' in line and brightness:
                 tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
@@ -1018,8 +995,6 @@ class DDCUtil:
                     # the split() removes extra spaces
                     name = line.replace('Model:', '').split()
                     try:
-                        # EG: DELL U2211H -> Dell U2211H
-                        name[0] = name[0].lower().capitalize()
                         tmp_display['model'] = name[1]
                     except IndexError:
                         pass
