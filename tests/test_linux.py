@@ -15,6 +15,14 @@ class TestSysFiles(BasicMethodTest, unittest.TestCase):
             linux.SysFiles.set_brightness(100)
 
 
+class TestI2C(BasicMethodTest, unittest.TestCase):
+    method = linux.I2C
+
+    def tearDownClass():
+        if linux.I2C.get_display_info():
+            linux.I2C.set_brightness(100)
+
+
 class TestLight(BasicMethodTest, unittest.TestCase):
     method = linux.Light
 
