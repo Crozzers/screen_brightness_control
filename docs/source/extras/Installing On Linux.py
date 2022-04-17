@@ -7,8 +7,25 @@ However, your user will need a few extra permissions.
 ### Laptop displays
 
 Laptop displays are adjusted by reading and writing to the files in the `/sys/class/backlight` directory.
-You will need write permissions for this directory to be able to change your laptop's brightness, which is
-achieved by running `screen_brightness_control` as root.
+To avoid having to run this library as root every time, you can do the following:
+
+1. Add a udev rule to allow editing of the brightness files.  
+   This command adds a line to your backlight udev rules allowing you to write brightness values to the relevant files.
+
+   ```bash
+   echo 'SUBSYSTEM=="backlight",RUN+="/bin/chmod 666 /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power"' | sudo tee -a /etc/udev/rules.d/backlight-permissions.rules
+   ```
+
+2. Reload udev rules
+
+   ```bash
+   sudo udevadm control --reload-rules && udevadm trigger
+   ```
+
+3. If the above steps don't immediately work, reboot.
+
+Credit to [Nayr438's comment](https://linustechtips.com/topic/1246132-allow-non-root-user-to-access-sysclassbacklight/?do=findComment&comment=14015728)
+on the LTT forums for this.
 
 ### Desktop displays
 
