@@ -336,9 +336,9 @@ def get_methods() -> Dict[str, object]:
         methods = (_OS_MODULE.WMI, _OS_MODULE.VCP)
     else:  # linux
         methods = (
-            _OS_MODULE.XRandr,
-            _OS_MODULE.I2C, _OS_MODULE.DDCUtil,
-            _OS_MODULE.Light, _OS_MODULE.SysFiles
+            _OS_MODULE.SysFiles, _OS_MODULE.I2C,
+            _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
+            _OS_MODULE.Light
         )
 
     return {i.__name__.lower(): i for i in methods}
