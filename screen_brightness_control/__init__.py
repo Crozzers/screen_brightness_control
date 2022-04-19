@@ -193,33 +193,13 @@ def fade_brightness(
                 'display', 'haystack', 'method', 'include'
             )}
         )
-    except (LookupError, ValueError) as e:
-        if not platform.system() == 'Linux':
-            raise ScreenBrightnessError(err_msg(e)) from e
-
-        method = kwargs.get('method', None)
-        if isinstance(e, LookupError) and method is None:
-            # if a user ONLY has XBacklight installed and no method was specified
-            # then filter_monitors will raise a LookupError. In this case, default to using
-            # linux.XBacklight method
-            available_monitors = [_OS_MODULE.XBacklight]
-        elif isinstance(e, ValueError) and method.lower() == 'xbacklight':
-            # low level `list_monitors_info` will raise a ValueError if 'xbacklight' is passed as the method
-            # because xbacklight cannot query individual monitor information
-            available_monitors = [_OS_MODULE.XBacklight]
-        else:
-            raise ScreenBrightnessError(err_msg(e)) from e
-
     except Exception as e:
         raise ScreenBrightnessError(err_msg(e)) from e
 
     threads = []
     for i in available_monitors:
         try:
-            if platform.system() == 'Linux' and i == _OS_MODULE.XBacklight:
-                monitor = i
-            else:
-                monitor = Monitor(i)
+            monitor = Monitor(i)
 
             # same effect as monitor.is_active()
             current = monitor.get_brightness()
@@ -711,16 +691,6 @@ def __brightness(
 
     try:
         monitors = filter_monitors(display=display, method=method)
-    except (LookupError, ValueError) as e:
-        if platform.system() == 'Linux' and display is None and method in ('xbacklight', None):
-            try:
-                if meta_method == 'set':
-                    _OS_MODULE.XBacklight.set_brightness(*args)
-                output.append(_OS_MODULE.XBacklight.get_brightness())
-            except Exception as e:
-                format_exc('XBacklight', e)
-        else:
-            format_exc('filter_monitors', e)
     except Exception as e:
         format_exc('filter_monitors', e)
     else:

@@ -10,8 +10,6 @@ from typing import List, Optional, Union
 if platform.system() == 'Linux':
     import fcntl
 
-import warnings
-
 from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
@@ -647,75 +645,6 @@ class Light:
             )
         results = [int(round(float(i.decode()), 0)) for i in results]
         return results
-
-
-class XBacklight:
-    '''
-    DEPRECATED.
-
-    A collection of screen brightness related methods using the xbacklight executable'''
-
-    executable: str = 'xbacklight'
-    '''the xbacklight executable to be called'''
-
-    @staticmethod
-    def __warn_deprecated():
-        warnings.warn(
-            (
-                'xbacklight brightness method is deprecated and will be removed in the next release.'
-                ' Please use sysfiles or i2c or light or xrandr or ddcutil instead'
-            ),
-            DeprecationWarning
-        )
-
-    @classmethod
-    def set_brightness(cls, value: int, **kwargs):
-        '''
-        DEPRECATED.
-
-        Sets the screen brightness to a supplied value
-
-        Args:
-            value (int): the value to set the brightnes to
-            **kwargs: arbitrary keyword arguments. Ignored
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 100%
-            sbc.linux.XBacklight.set_brightness(100)
-            ```
-        '''
-        cls.__warn_deprecated()
-        subprocess.call([cls.executable, '-set', str(value)])
-
-    @classmethod
-    def get_brightness(cls, **kwargs) -> int:
-        '''
-        DEPRECATED.
-
-        Returns the screen brightness as reported by xbacklight
-
-        Returns:
-            int: from 0 to 100
-            **kwargs: arbitrary keyword arguments. Ignored
-
-        Raises:
-            ValueError: if xbacklight does not produce any valid output
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            current_brightness = sbc.linux.XBacklight.get_brightness()
-            ```
-        '''
-        cls.__warn_deprecated()
-        result = subprocess.check_output([cls.executable, '-get']).decode()
-        if not result:
-            raise ValueError('no valid output was received from xbacklight')
-        return int(round(float(str(result)), 0))
 
 
 class XRandr:

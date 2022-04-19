@@ -12,17 +12,11 @@ from screen_brightness_control import get_methods as __get_methods  # noqa: E402
 
 
 def get_methods():
-    methods = tuple(__get_methods.values())
-    if os.name != 'nt':
-        methods += (sbc.linux.XBacklight,)
-    return methods
+    return tuple(__get_methods.values())
 
 
 def get_method_names():
-    methods = tuple(__get_methods.keys())
-    if os.name != 'nt':
-        methods += ('xbacklight',)
-    return methods
+    return tuple(__get_methods.keys())
 
 
 class TestCase(unittest.TestCase):
@@ -67,10 +61,7 @@ class TestGetBrightness(TestCase):
         for method in get_method_names():
             try:
                 value = sbc.get_brightness(method=method)
-                if method == 'xbacklight':
-                    self.assertBrightnessValid(value, target_length=1)
-                else:
-                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
+                self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
@@ -128,10 +119,7 @@ class TestSetBrightness(TestCase):
         for method in get_method_names():
             try:
                 value = sbc.set_brightness(90, method=method, no_return=False)
-                if method == 'xbacklight':
-                    self.assertBrightnessValid(value, target_length=1)
-                else:
-                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
+                self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
@@ -205,10 +193,7 @@ class TestFadeBrightness(TestCase):
         for method in get_method_names():
             try:
                 value = sbc.fade_brightness(60, method=method)
-                if method == 'xbacklight':
-                    self.assertBrightnessValid(value, target_length=1)
-                else:
-                    self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
+                self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
                 pass
@@ -244,9 +229,6 @@ class TestListMonitorsInfo(unittest.TestCase):
                     self.assertEqual(monitor['method'], method)
             except LookupError:
                 pass
-            except ValueError as e:
-                if name != 'xbacklight':
-                    raise e
 
 
 class TestListMonitors(unittest.TestCase):
@@ -430,9 +412,6 @@ class TestFilterMonitors(unittest.TestCase):
             except LookupError:
                 # if we don't have monitors of a certain method then pass
                 pass
-            except ValueError as e:
-                if name != 'xbacklight':
-                    raise e
 
     def test_include_kwarg(self):
         monitors = sbc.list_monitors_info()
@@ -485,16 +464,6 @@ if __name__ == '__main__':
         for m in get_methods():
             m.executable = 'file doesnt exist'
         sbc.linux.Light.executable = 'light'
-        unittest.main(exit=False)
-
-        # let cache expire
-        time.sleep(5)
-
-        print('\n\nOnly xbacklight exe:')
-        # test with only xbacklight exe available
-        for m in get_methods():
-            m.executable = 'file doesnt exist'
-        sbc.linux.XBacklight.executable = 'xbacklight'
         unittest.main(exit=False)
 
         # let cache expire

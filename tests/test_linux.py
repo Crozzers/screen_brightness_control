@@ -31,21 +31,6 @@ class TestLight(BasicMethodTest, unittest.TestCase):
             linux.Light.set_brightness(100)
 
 
-class TestXBacklight(unittest.TestCase):
-    def test_set_brightness(self):
-        for i in (0, 10, 25, 45, 50, 60, 71, 80, 99, 100):
-            self.assertIsNone(linux.XBacklight.set_brightness(i))
-            self.assertEqual(linux.XBacklight.get_brightness(), i)
-
-    def test_get_brightness(self):
-        brightness = linux.XBacklight.get_brightness()
-        self.assertIsInstance(brightness, int)
-        self.assertTrue(0 <= brightness <= 100)
-
-    def tearDownClass():
-        linux.XBacklight.set_brightness(100)
-
-
 class TestXRandr(BasicMethodTest, unittest.TestCase):
     method = linux.XRandr
 
