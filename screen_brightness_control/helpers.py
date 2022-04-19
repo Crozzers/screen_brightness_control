@@ -5,7 +5,6 @@ import struct
 import time
 from functools import lru_cache
 from typing import Any, List, Tuple, Union
-import warnings
 
 
 class ScreenBrightnessError(Exception):
@@ -129,66 +128,6 @@ class EDID:
                 model = name.strip().rsplit(' ', 1)[1]
 
         return mfg_id, manufacturer, model, name, serial
-
-    @classmethod
-    def parse_edid(cls, edid: str) -> Tuple[Union[str, None], str]:
-        '''
-        DEPRECATED. Please use `EDID.parse` instead.
-
-        Takes an EDID string (as string hex, formatted as: '00ffffff00...') and
-        attempts to extract the monitor's name and serial number from it
-
-        Args:
-            edid (str): the edid string
-
-        Returns:
-            tuple: First item can be None or str. Second item is always str.
-                This represents the name and serial respectively.
-                If the name (first item) is None then this function likely
-                failed to extract the serial correctly.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            edid = sbc.list_monitors_info()[0]['edid']
-            name, serial = sbc.EDID.parse_edid(edid)
-            if name is not None:
-                print('Success!')
-                print('Name:', name)
-                print('Serial:', serial)
-            else:
-                print('Unable to extract the data')
-            ```
-        '''
-        warnings.warn(
-            'EDID.parse_edid is deprecated and will be removed in the next release. Please use EDID.parse instead.',
-            DeprecationWarning
-        )
-
-        def filter_hex(st):
-            st = str(st)
-            while '\\x' in st:
-                i = st.index('\\x')
-                st = st.replace(st[i:i + 4], '')
-            return st.replace('\\n', '')[2:-1]
-
-        if ' ' in edid:
-            edid = edid.replace(' ', '')
-        edid = bytes.fromhex(edid)
-        data = struct.unpack(cls.EDID_FORMAT, edid)
-        serial = filter_hex(data[18])
-        # other info can be anywhere in this range, I don't know why
-        name = None
-        for i in data[19:22]:
-            try:
-                st = str(i)[2:-1].rstrip(' ').rstrip('\t')
-                if st.index(' ') < len(st) - 1:
-                    name = filter_hex(i).split(' ')
-                    name = name[0].lower().capitalize() + ' ' + name[1]
-            except Exception:
-                pass
-        return name, serial.strip(' ')
 
     @staticmethod
     def hexdump(file: str) -> str:
