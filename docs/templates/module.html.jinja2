@@ -4,7 +4,7 @@
     {% if env["BUILD_DOCS_LEVEL"] == "homepage" %}
 screen_brightness_control Documentation
     {% elif env["BUILD_DOCS_LEVEL"] == "extras" %}
-screen_brightness_control - {{ module.modulename.split(".")[-1] }}
+{{ module.modulename.split(".")[-1] }} - screen_brightness_control
     {% else %}
 {{ super() }}
     {% endif %}
