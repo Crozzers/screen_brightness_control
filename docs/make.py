@@ -86,7 +86,9 @@ def custom_navigation_links():
             if file.startswith('__') or not file.endswith('.py'):
                 continue
             links[category].append(f'{directory}/{file.rstrip(".py")}.html')
-        if not links[category]:
+        if links[category]:
+            links[category].sort()
+        else:
             del links[category]
 
     return links
