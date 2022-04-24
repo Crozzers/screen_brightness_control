@@ -5,6 +5,7 @@ import os
 import platform
 import subprocess
 import time
+import warnings
 from typing import List, Optional, Union
 
 if platform.system() == 'Linux':
@@ -693,7 +694,6 @@ class XRandr:
             return False
 
         xrandr_output = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
-        connected_interfaces = tuple(cls.get_display_interfaces())
 
         valid_displays = []
         display_count = 0
@@ -703,7 +703,7 @@ class XRandr:
             if line == '':
                 continue
 
-            if line.startswith(connected_interfaces):
+            if not line.startswith((' ', '\t')) and 'connected' in line and 'disconnected' not in line:
                 if check_display(tmp_display):
                     valid_displays.append(tmp_display)
 
@@ -748,6 +748,7 @@ class XRandr:
     @classmethod
     def get_display_interfaces(cls) -> List[str]:
         '''
+        *DEPRECATED*  
         Returns the interfaces of each display, as reported by xrandr
 
         Returns:
@@ -761,6 +762,12 @@ class XRandr:
             # EG output: ['eDP-1', 'HDMI1', 'HDMI2']
             ```
         '''
+        warnings.warn(
+            (
+                'XRandr.get_display_interfaces is deprecated and will be removed in the next release.'
+                ' Please use XRandr.get_display_info instead'
+            ), DeprecationWarning
+        )
         out = subprocess.check_output([cls.executable, '-q']).decode().split('\n')
         return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
