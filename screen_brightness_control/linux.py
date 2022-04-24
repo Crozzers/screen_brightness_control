@@ -56,42 +56,46 @@ class SysFiles:
             edp_info = sbc.linux.SysFiles.get_display_info('edp-backlight')[0]
             ```
         '''
-        displays = {}
-        index = 0
+        subsystems = set()
         for folder in os.listdir('/sys/class/backlight'):
-            if os.path.isfile(f'/sys/class/backlight/{folder}/device/edid'):
-                device = {
-                    'name': folder,
-                    'path': f'/sys/class/backlight/{folder}',
-                    'method': cls,
-                    'index': index,
-                    'model': None,
-                    'serial': None,
-                    'manufacturer': None,
-                    'manufacturer_id': None,
-                    'edid': EDID.hexdump(f'/sys/class/backlight/{folder}/device/edid'),
-                    'scale': None
-                }
+            if os.path.isdir(f'/sys/class/backlight/{folder}/subsystem'):
+                subsystems.add(tuple(os.listdir(f'/sys/class/backlight/{folder}/subsystem')))
 
+        all_displays = {}
+        index = 0
+
+        for subsystem in subsystems:
+
+            device = {
+                'name': subsystem[0],
+                'path': f'/sys/class/backlight/{subsystem[0]}',
+                'method': cls,
+                'index': index,
+                'model': None,
+                'serial': None,
+                'manufacturer': None,
+                'manufacturer_id': None,
+                'edid': None,
+                'scale': None
+            }
+
+            for folder in subsystem:
+                # subsystems like intel_backlight usually have an acpi_video0
+                # counterpart, which we don't want so lets find the 'best' candidate
                 try:
-                    # try to get resolution of brightness settings
-                    with open(os.path.join(device['path'], 'max_brightness'), 'r') as f:
-                        device['scale'] = int(f.read().rstrip('\n')) / 100
+                    with open(os.path.join(f'/sys/class/backlight/{folder}/max_brightness')) as f:
+                        scale = int(f.read().rstrip(' \n')) / 100
+
+                    # use the display with the highest resolution scale
+                    if device['scale'] is None or scale > device['scale']:
+                        device['name'] = folder
+                        device['path'] = f'/sys/class/backlight/{folder}'
+                        device['scale'] = scale
                 except (FileNotFoundError, TypeError):
-                    # if the scale cannot be figured out then exclude the display
                     continue
 
-                # now check for duplicate displays
-                if device['edid'] in displays:
-                    if (
-                        displays[device['edid']]['scale'] == 1
-                        or displays[device['edid']]['scale'] >= device['scale']
-                    ):
-                        # if there is a duplicate display, pick the display with
-                        # a scale equal to 1 or the display with the highest scale.
-                        # Reduces rounding errrors when converting percentages
-                        # to 'actual' values
-                        continue
+            if os.path.isfile('%s/device/edid' % device['path']):
+                device['edid'] = EDID.hexdump('%s/device/edid' % device['path'])
 
                 for key, value in zip(
                     ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
@@ -101,13 +105,13 @@ class SysFiles:
                         continue
                     device[key] = value
 
-                displays[device['edid']] = device
-                index += 1
+            all_displays[device['edid']] = device
+            index += 1
 
-        displays = list(displays.values())
+        all_displays = list(all_displays.values())
         if display is not None:
-            displays = filter_monitors(display=display, haystack=displays, include=['path'])
-        return displays
+            all_displays = filter_monitors(display=display, haystack=all_displays, include=['path'])
+        return all_displays
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
