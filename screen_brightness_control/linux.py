@@ -830,10 +830,6 @@ class XRandr:
         for i in info:
             subprocess.check_call([cls.executable, '--output', i['interface'], '--brightness', value])
 
-        # The get_brightness method takes the brightness value from get_display_info
-        # The problem is that that display info is cached, meaning that the brightness
-        # value is also cached. We must expire it here.
-
 
 class DDCUtil:
     '''collection of screen brightness related methods using the ddcutil executable'''
