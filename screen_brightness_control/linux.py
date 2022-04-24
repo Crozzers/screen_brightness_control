@@ -93,12 +93,13 @@ class SysFiles:
                         # to 'actual' values
                         continue
 
-                device.update(
-                    zip(
-                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                        EDID.parse(device['edid'])
-                    )
-                )
+                for key, value in zip(
+                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                    EDID.parse(device['edid'])
+                ):
+                    if value is None:
+                        continue
+                    device[key] = value
 
                 displays[device['edid']] = device
                 index += 1
@@ -728,12 +729,13 @@ class XRandr:
                 )
                 tmp_display['edid'] = edid
 
-                tmp_display.update(
-                    zip(
-                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                        EDID.parse(edid)
-                    )
-                )
+                for key, value in zip(
+                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                    EDID.parse(tmp_display['edid'])
+                ):
+                    if value is None:
+                        continue
+                    tmp_display[key] = value
 
             elif 'Brightness:' in line and brightness:
                 tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
