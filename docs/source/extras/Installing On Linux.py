@@ -50,8 +50,7 @@ Program       | Works on laptop displays | Works on external monitors | Per-disp
 --------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------
 ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*`
 xrandr        | Yes                      | Yes           [2]          | Yes                                   | No
-xbacklight [3]| Yes                      | No                         | No                                    | No
-light         | Yes                      | No                         | Yes                                   | No
+light         | Yes                      | No                         | Yes                                   | User must be in the `video` group [3]
 [No program]  | Yes                      | Yes (slow)                 | Yes                                   | Read/write access for `/dev/i2c*` and `/sys/class/backlight`
 
 #### Footnotes
@@ -60,7 +59,7 @@ DDCUtil also supports communicating with monitors that implement the [Monitor Co
 
 [2] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
-[3] The xbacklight brightness method is deprecated and will be removed in v0.14.0
+[3] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
 
 
 ## Install 3rd Party Programs
