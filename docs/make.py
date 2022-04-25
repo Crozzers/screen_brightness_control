@@ -108,6 +108,11 @@ if __name__ == '__main__':
     parser.add_argument('--clean', help='Remove any existing documentation of any version', action='store_true')
     args = parser.parse_args()
 
+    # use dummy imports for OS independent type hinting
+    sys.path.insert(0, HERE)
+    import dummy_imports
+    dummy_imports.clear_dummy_modules()
+
     # generate top level documentation
     makedir(OUTPUT_DIR, destroy=args.clean)
     os.environ['BUILD_DOCS_LEVEL'] = 'homepage'
@@ -138,6 +143,9 @@ if __name__ == '__main__':
     makedir(OUTPUT_DIR / 'docs' / path_version)
     configure_pdoc(footer_text=f'screen_brightness_control v{path_version}')
     run_pdoc(args.path, OUTPUT_DIR / 'docs' / path_version)
+
+    # clear up dummy imports
+    dummy_imports.clear_dummy_modules()
 
     # read version switcher js
     with open(TEMPLATES / 'version_navigator.js', 'r') as f:
