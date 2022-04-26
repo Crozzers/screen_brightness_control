@@ -1,10 +1,10 @@
 '''
-## Without using a 3rd party program
+# Without using a 3rd party program
 
 As of version [0.13.0](https://github.com/Crozzers/screen_brightness_control/releases/tag/v0.13.0), you do not need a 3rd party program to adjust your display brightness.  
 However, your user will need a few extra permissions.
 
-### Laptop displays
+## Laptop displays
 
 Laptop displays are adjusted by reading and writing to the files in the `/sys/class/backlight` directory.
 To avoid having to run this library as root every time, you can do the following:
@@ -27,7 +27,7 @@ To avoid having to run this library as root every time, you can do the following
 Credit to [Nayr438's comment](https://linustechtips.com/topic/1246132-allow-non-root-user-to-access-sysclassbacklight/?do=findComment&comment=14015728)
 on the LTT forums for this.
 
-### Desktop displays
+## Desktop displays
 
 Desktop displays are dealt with by reading and writing to the I2C buses, located at `/dev/i2c*` on a Linux system.
 These are usually part of an `i2c` user group, which you can check by running the command `ls -lh /dev/i2c*`.  
@@ -38,7 +38,9 @@ to the I2C buses without needing to use `sudo`. To add youself to the `i2c` grou
 usermod -a -G i2c [your username here]
 ```
 
-## Supported 3rd Party Programs
+# Using 3rd Party Programs
+
+## Supported Programs
 
 There are a number of external programs that `screen_brightness_control` can call upon if the native methods fail.
 The advantage of using external programs is that, because they are installed using `sudo apt install ...`, they usually allow
@@ -62,7 +64,7 @@ DDCUtil also supports communicating with monitors that implement the [Monitor Co
 [3] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
 
 
-## Install 3rd Party Programs
+## Install Instructions
 
 * Arch
     * Xrandr: `sudo pacman -S xorg-xrandr`
