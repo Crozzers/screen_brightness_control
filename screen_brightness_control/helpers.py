@@ -1,10 +1,16 @@
 '''
 Helper functions for the library
 '''
+import platform
 import struct
 import time
 from functools import lru_cache
 from typing import Any, List, Tuple, Union
+
+if int(platform.python_version_tuple()[1]) < 9:
+    from typing import Generator
+else:
+    from collections.abc import Generator
 
 
 class ScreenBrightnessError(Exception):
@@ -316,6 +322,51 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
         else:
             flat_list.append(item)
     return flat_list
+
+
+def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, None, None]:
+    '''
+    A `range`-like function that returns a sequence of integers following
+    a logarithmic curve (`y = 10 ^ (x / 50)`) from `start` (inclusive) to
+    `stop` (inclusive).
+
+    This is useful because it skips many of the higher percentages in the
+    sequence where single percent brightness changes are hard to notice.
+
+    This function is designed to deal with brightness percentages, and so
+    will never return a value less than 0 or greater than 100.
+
+    Args:
+        start (int): the start of your percentage range
+        stop (int): the end of your percentage range
+        step (int): the increment per iteration through the sequence
+
+    Yields:
+        int
+    '''
+    start = int(max(0, start))
+    stop = int(min(100, stop))
+
+    if start == stop or abs(stop - start) <= 1:
+        return stop
+
+    value_range = stop - start
+
+    last_yielded = None
+    for x in range(start, stop + 1, step):
+        # get difference from base point
+        x -= start
+        # calculate progress through our range as a percentage
+        x = (x / value_range) * 100
+        # convert along logarithmic curve (inverse of y = 50log(x)) to another percentage
+        x = 10 ** (x / 50)
+        # apply this percentage to our range and add back starting offset
+        x = int(((x / 100) * value_range) + start)
+
+        if x == last_yielded:
+            continue
+        yield x
+        last_yielded = x
 
 
 class __Cache(dict):

@@ -5,8 +5,8 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._version import __author__, __version__  # noqa: F401
-from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
-                      ScreenBrightnessError, flatten_list)
+from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
+from .helpers import ScreenBrightnessError, flatten_list, logarithmic_range
 
 
 def get_brightness(
@@ -133,6 +133,7 @@ def fade_brightness(
     interval: float = 0.01,
     increment: int = 1,
     blocking: bool = True,
+    logarithmic: bool = True,
     **kwargs
 ) -> Union[List[threading.Thread], List[int]]:
     '''
@@ -145,6 +146,7 @@ def fade_brightness(
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
+        logarithmic (bool): follow a logarithmic brightness curve when adjusting the brightness
         kwargs (dict): passed directly to `set_brightness`.
             Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
 
@@ -173,11 +175,13 @@ def fade_brightness(
         ```
     '''
     def fade(start, finish, increment, monitor):
-        for i in range(min(start, finish), max(start, finish), increment):
-            val = i
-            if start > finish:
-                val = start - (val - finish)
-            monitor.set_brightness(val, no_return=True)
+        range_func = logarithmic_range if logarithmic else range
+
+        if start > finish:
+            increment = -abs(increment)
+
+        for value in range_func(start, finish, increment):
+            monitor.set_brightness(value, no_return=True)
             time.sleep(interval)
 
         if monitor.get_brightness() != finish:
