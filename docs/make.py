@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import sys
+from functools import cache
 from pathlib import Path
 
 import pdoc
@@ -69,6 +70,7 @@ def get_documentation_versions(directory):
     return versions_grouped
 
 
+@cache
 def custom_navigation_links():
     links = {}
     links['API Version'] = get_documentation_versions(OUTPUT_DIR / 'docs')
@@ -92,6 +94,18 @@ def custom_navigation_links():
             del links[category]
 
     return links
+
+
+def latest_navigation_links():
+    # get list of categories from `custom_navigation_links` that will need to be marked out of date.
+    # basically any links containing a version number
+    mark_latest = {}
+
+    for category, links in custom_navigation_links().items():
+        if 'version' in category.lower():
+            mark_latest[category] = next(iter(links))
+
+    return mark_latest
 
 
 __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
@@ -153,7 +167,9 @@ if __name__ == '__main__':
 
     # insert list of navigation links
     navigation_links = json.dumps(custom_navigation_links())
+    dated_links = json.dumps(latest_navigation_links())
     js_code = js_code.replace('var all_nav_links = {};', f'var all_nav_links = {navigation_links};')
+    js_code = js_code.replace('var mark_latest = {};', f'var mark_latest = {dated_links};')
 
     # write to gh-pages dir
     with open(OUTPUT_DIR / 'version_navigator.js', 'w') as f:

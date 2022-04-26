@@ -24,3 +24,14 @@ div#custom-version-navigation .subversion {
     display: none;
     padding-left: 14%;
 }
+div.notice-marker {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: calc(100% - var(--sidebar-width));
+    max-width: 100%;
+    padding: .4rem 5rem .4rem 1rem;
+    border: solid 3px red;
+    background-color: var(--active);
+    font-weight: bold;
+}
