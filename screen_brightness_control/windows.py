@@ -112,7 +112,8 @@ def get_display_info() -> List[dict]:
                             raise Exception
                         # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                         # takes too long
-                        name, serial = EDID.parse_edid(edid)
+                        parsed = EDID.parse(edid)
+                        name, serial = parsed['name'], parsed['serial']
                         if name is None:
                             raise Exception
 
