@@ -5,7 +5,7 @@ import os
 import platform
 import subprocess
 import time
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 if platform.system() == 'Linux':
     import fcntl
@@ -226,6 +226,8 @@ class I2C:
     WAIT_TIME = 0.05
     '''How long to wait between I2C commands'''
 
+    _max_brightness_cache: dict = {}
+
     class I2CDevice():
         '''
         Class to read and write data to an I2C bus,
@@ -348,7 +350,7 @@ class I2C:
 
             return ba[2:-1]
 
-        def getvcp(self, vcp_code: int) -> int:
+        def getvcp(self, vcp_code: int) -> Tuple[int, int]:
             '''
             Retrieves a VCP value from the DDC device.
 
@@ -356,7 +358,7 @@ class I2C:
                 vcp_code (int): the VCP value to read, eg: `0x10` is brightness
 
             Returns:
-                int
+                tuple[int, int]: the current and maximum value respectively
 
             Raises:
                 ValueError: if the read data is deemed invalid
@@ -372,8 +374,8 @@ class I2C:
             if False in checks.values():
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
-            # min is ba[3], max is ba[4:6] and we return current value
-            return int.from_bytes(ba[6:8], 'big')
+            # current and max values
+            return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -486,7 +488,19 @@ class I2C:
         results = []
         for device in all_displays:
             interface = cls.DDCInterface(device['i2c_bus'])
-            results.append(interface.getvcp(0x10))
+            value, max_value = interface.getvcp(0x10)
+
+            # make sure display's max brighness is cached
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            if cache_ident not in cls._max_brightness_cache:
+                cls._max_brightness_cache[cache_ident] = max_value
+
+            if max_value != 100:
+                # if max value is not 100 then we have to adjust the scale to be
+                # a percentage
+                value = int((value / max_value) * 100)
+
+            results.append(value)
 
         return results
 
@@ -518,6 +532,16 @@ class I2C:
             all_displays = [all_displays[display]]
 
         for device in all_displays:
+            # make sure display brightness max value is cached
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            if cache_ident not in cls._max_brightness_cache:
+                cls.get_brightness(display=device['index'])
+
+            # scale the brightness value according to the max brightness
+            max_value = cls._max_brightness_cache[cache_ident]
+            if max_value != 100:
+                value = int((value / 100) * max_value)
+
             interface = cls.DDCInterface(device['i2c_bus'])
             interface.setvcp(0x10, value)
 
