@@ -6,7 +6,7 @@ import platform
 import subprocess
 import time
 import warnings
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 if platform.system() == 'Linux':
     import fcntl
@@ -229,6 +229,8 @@ class I2C:
     WAIT_TIME = 0.05
     '''How long to wait between I2C commands'''
 
+    _max_brightness_cache: dict = {}
+
     class I2CDevice():
         '''
         Class to read and write data to an I2C bus,
@@ -351,7 +353,7 @@ class I2C:
 
             return ba[2:-1]
 
-        def getvcp(self, vcp_code: int) -> int:
+        def getvcp(self, vcp_code: int) -> Tuple[int, int]:
             '''
             Retrieves a VCP value from the DDC device.
 
@@ -359,7 +361,7 @@ class I2C:
                 vcp_code (int): the VCP value to read, eg: `0x10` is brightness
 
             Returns:
-                int
+                tuple[int, int]: the current and maximum value respectively
 
             Raises:
                 ValueError: if the read data is deemed invalid
@@ -375,8 +377,8 @@ class I2C:
             if False in checks.values():
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
-            # min is ba[3], max is ba[4:6] and we return current value
-            return int.from_bytes(ba[6:8], 'big')
+            # current and max values
+            return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -489,7 +491,19 @@ class I2C:
         results = []
         for device in all_displays:
             interface = cls.DDCInterface(device['i2c_bus'])
-            results.append(interface.getvcp(0x10))
+            value, max_value = interface.getvcp(0x10)
+
+            # make sure display's max brighness is cached
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            if cache_ident not in cls._max_brightness_cache:
+                cls._max_brightness_cache[cache_ident] = max_value
+
+            if max_value != 100:
+                # if max value is not 100 then we have to adjust the scale to be
+                # a percentage
+                value = int((value / max_value) * 100)
+
+            results.append(value)
 
         return results
 
@@ -521,6 +535,16 @@ class I2C:
             all_displays = [all_displays[display]]
 
         for device in all_displays:
+            # make sure display brightness max value is cached
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            if cache_ident not in cls._max_brightness_cache:
+                cls.get_brightness(display=device['index'])
+
+            # scale the brightness value according to the max brightness
+            max_value = cls._max_brightness_cache[cache_ident]
+            if max_value != 100:
+                value = int((value / 100) * max_value)
+
             interface = cls.DDCInterface(device['i2c_bus'])
             interface.setvcp(0x10, value)
 
@@ -843,6 +867,8 @@ class DDCUtil:
     sleep_multiplier: float = 0.5
     '''how long ddcutil should sleep between each DDC request (lower is shorter).
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
+    _max_brightness_cache: dict = {}
+    '''Cache for monitors and their maximum brightness values'''
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -913,6 +939,7 @@ class DDCUtil:
                         'index': display_count,
                         'model': None,
                         'serial': None,
+                        'bin_serial': None,
                         'manufacturer': None,
                         'manufacturer_id': None,
                         'edid': None
@@ -944,6 +971,9 @@ class DDCUtil:
 
                 elif 'Serial number' in line:
                     tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '')
+
+                elif 'Binary serial number:' in line:
+                    tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
 
                 elif 'EDID hex dump:' in line:
                     try:
@@ -989,19 +1019,32 @@ class DDCUtil:
 
         res = []
         for monitor in monitors:
-            out = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
-            if out is None:
-                out = subprocess.check_output(
+            value = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
+            if value is None:
+                cmd_out = subprocess.check_output(
                     [
                         cls.executable,
                         'getvcp', '10', '-t',
                         '-b', str(monitor['bus_number']),
                         f'--sleep-multiplier={cls.sleep_multiplier}'
                     ], stderr=subprocess.DEVNULL
-                ).decode().split(' ')[-2]
-                __cache__.store(f'ddcutil_brightness_{monitor["index"]}', out, expires=0.5)
+                ).decode().split(' ')
+
+                value = int(cmd_out[-2])
+                max_value = int(cmd_out[-1])
+                if max_value != 100:
+                    # if the max brightness is not 100 then the number is not a percentage
+                    # and will need to be scaled
+                    value = int((value / max_value) * 100)
+
+                # now make sure max brightness is recorded so set_brightness can use it
+                cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
+                if cache_ident not in cls._max_brightness_cache:
+                    cls._max_brightness_cache[cache_ident] = max_value
+
+                __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
             try:
-                res.append(int(out))
+                res.append(value)
             except (TypeError, ValueError):
                 pass
         return res
@@ -1032,6 +1075,14 @@ class DDCUtil:
 
         __cache__.expire(startswith='ddcutil_brightness_')
         for monitor in monitors:
+            # check if monitor has a max brightness that requires us to scale this value
+            cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
+            if cache_ident not in cls._max_brightness_cache:
+                cls.get_brightness(display=monitor['index'])
+
+            if cls._max_brightness_cache[cache_ident] != 100:
+                value = int((value / 100) * cls._max_brightness_cache[cache_ident])
+
             subprocess.check_call(
                 [
                     cls.executable, 'setvcp', '10', str(value),
