@@ -870,6 +870,17 @@ class DDCUtil:
     _max_brightness_cache: dict = {}
     '''Cache for monitors and their maximum brightness values'''
 
+    @staticmethod
+    def __call_ddcutil(command):
+        try:
+            return subprocess.check_output(command, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            if 'verification failed' not in str(e.stderr).lower():
+                if 'communication failed' not in str(e.stdout).lower():
+                    raise
+            time.sleep(0.04)  # sleep 40ms
+            return subprocess.check_output(command, stderr=subprocess.PIPE)
+
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
@@ -910,11 +921,11 @@ class DDCUtil:
         valid_displays = __cache__.get('ddcutil_monitors_info')
         if valid_displays is None:
             raw_ddcutil_output = str(
-                subprocess.check_output(
+                cls.__call_ddcutil(
                     [
                         cls.executable, 'detect', '-v',
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ], stderr=subprocess.DEVNULL
+                    ]
                 )
             )[2:-1].split('\\n')
             # Use -v to get EDID string but this means output cannot be decoded.
@@ -1021,13 +1032,13 @@ class DDCUtil:
         for monitor in monitors:
             value = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
             if value is None:
-                cmd_out = subprocess.check_output(
+                cmd_out = cls.__call_ddcutil(
                     [
                         cls.executable,
                         'getvcp', '10', '-t',
                         '-b', str(monitor['bus_number']),
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ], stderr=subprocess.DEVNULL
+                    ]
                 ).decode().split(' ')
 
                 value = int(cmd_out[-2])
@@ -1083,12 +1094,12 @@ class DDCUtil:
             if cls._max_brightness_cache[cache_ident] != 100:
                 value = int((value / 100) * cls._max_brightness_cache[cache_ident])
 
-            subprocess.check_call(
+            cls.__call_ddcutil(
                 [
                     cls.executable, 'setvcp', '10', str(value),
                     '-b', str(monitor['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ], stderr=subprocess.DEVNULL
+                ]
             )
 
 
