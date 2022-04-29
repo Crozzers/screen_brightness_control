@@ -623,46 +623,62 @@ def filter_monitors(
         # EG output: [{'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }]
         ```
     '''
-    # if we have been provided with a list of monitors to sift through then use that
-    # otherwise, get the info ourselves
-    if haystack:
-        monitors_with_duplicates = haystack
-        if method is not None:
-            monitors_with_duplicates = [i for i in haystack if method.lower() == i['method'].__name__.lower()]
-    else:
-        monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
-
     if display is not None and type(display) not in (str, int):
         raise TypeError(f'display kwarg must be int or str, not "{type(display).__name__}"')
 
-    # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
-    unique_identifiers = []
-    monitors = []
-    for monitor in monitors_with_duplicates:
-        # find a valid identifier for a monitor, excluding any which are equal to None
-        added = False
-        for identifier in ['edid', 'serial', 'name', 'model'] + include:
-            if monitor.get(identifier, None) is not None:
-                # check we haven't already added the monitor
-                if monitor[identifier] not in unique_identifiers:
-                    # check if the display kwarg (if str) matches this monitor
-                    if monitor[identifier] == display or not isinstance(display, str):
-                        # if valid and monitor[identifier] not in unique_identifiers:
-                        if not added:
-                            monitors.append(monitor)
-                            unique_identifiers.append(monitor[identifier])
-                            added = True
+    def get_monitor_list():
+        # if we have been provided with a list of monitors to sift through then use that
+        # otherwise, get the info ourselves
+        if haystack:
+            monitors_with_duplicates = haystack
+            if method is not None:
+                monitors_with_duplicates = [i for i in haystack if method.lower() == i['method'].__name__.lower()]
+        else:
+            monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
-                        # if the display kwarg is an integer and we are currently at that index
-                        if isinstance(display, int) and len(monitors) - 1 == display:
-                            return [monitor]
-                        if added:
-                            break
-                else:
-                    # if we have already added a monitor with the same identifier
-                    # then any info matching this monitor will match the other one
-                    # so exit the checking now
-                    break
+        return monitors_with_duplicates
+
+    def filter_monitor_list():
+        # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
+        unique_identifiers = []
+        monitors = []
+        for monitor in monitors_with_duplicates:
+            # find a valid identifier for a monitor, excluding any which are equal to None
+            added = False
+            for identifier in ['edid', 'serial', 'name', 'model'] + include:
+                if monitor.get(identifier, None) is not None:
+                    # check we haven't already added the monitor
+                    if monitor[identifier] not in unique_identifiers:
+                        # check if the display kwarg (if str) matches this monitor
+                        if monitor[identifier] == display or not isinstance(display, str):
+                            # if valid and monitor[identifier] not in unique_identifiers:
+                            if not added:
+                                monitors.append(monitor)
+                                unique_identifiers.append(monitor[identifier])
+                                added = True
+
+                            # if the display kwarg is an integer and we are currently at that index
+                            if isinstance(display, int) and len(monitors) - 1 == display:
+                                return [monitor]
+                            if added:
+                                break
+                    else:
+                        # if we have already added a monitor with the same identifier
+                        # then any info matching this monitor will match the other one
+                        # so exit the checking now
+                        break
+        return monitors
+
+    monitors_with_duplicates = get_monitor_list()
+    monitors = filter_monitor_list()
+    for _ in range(3):
+        if monitors == [] and not haystack:
+            # try again
+            time.sleep(0.4)
+            monitors_with_duplicates = get_monitor_list()
+            monitors = filter_monitor_list()
+        else:
+            break
 
     # if no monitors matched the query OR if display kwarg was an int
     # if the latter and we made it this far then the int was out of range
