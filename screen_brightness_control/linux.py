@@ -871,15 +871,16 @@ class DDCUtil:
     '''Cache for monitors and their maximum brightness values'''
 
     @staticmethod
-    def __call_ddcutil(command):
-        try:
-            return subprocess.check_output(command, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            if 'verification failed' not in str(e.stderr).lower():
-                if 'communication failed' not in str(e.stdout).lower():
+    def __call_ddcutil(command: list):
+        tries = 0
+        while True:
+            try:
+                return subprocess.check_output(command, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError:
+                if tries > 10:
                     raise
-            time.sleep(0.04)  # sleep 40ms
-            return subprocess.check_output(command, stderr=subprocess.PIPE)
+                tries += 1
+                time.sleep(0.04 if tries < 5 else 0.5)
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -996,7 +997,8 @@ class DDCUtil:
 
             if check_display(tmp_display):
                 valid_displays.append(tmp_display)
-            __cache__.store('ddcutil_monitors_info', valid_displays)
+            if valid_displays:
+                __cache__.store('ddcutil_monitors_info', valid_displays)
 
         if display is not None:
             valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['i2c_bus'])
