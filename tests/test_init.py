@@ -12,11 +12,11 @@ from screen_brightness_control import get_methods as __get_methods  # noqa: E402
 
 
 def get_methods():
-    return tuple(__get_methods.values())
+    return tuple(__get_methods().values())
 
 
 def get_method_names():
-    return tuple(__get_methods.keys())
+    return tuple(__get_methods().keys())
 
 
 class TestCase(unittest.TestCase):
