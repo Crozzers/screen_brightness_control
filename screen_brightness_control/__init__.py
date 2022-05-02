@@ -133,6 +133,7 @@ def fade_brightness(
     interval: float = 0.01,
     increment: int = 1,
     blocking: bool = True,
+    force: bool = False,
     logarithmic: bool = True,
     **kwargs
 ) -> Union[List[threading.Thread], List[int]]:
@@ -146,6 +147,9 @@ def fade_brightness(
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
+        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+            This is because on most displays a brightness of 0 will turn off the backlight.
+            If True, this check is bypassed
         logarithmic (bool): follow a logarithmic brightness curve when adjusting the brightness
         kwargs (dict): passed directly to `set_brightness`.
             Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
@@ -200,6 +204,12 @@ def fade_brightness(
     except Exception as e:
         raise ScreenBrightnessError(err_msg(e)) from e
 
+    # minimum brightness value
+    if platform.system() == 'Linux' and not force:
+        lower_bound = 1
+    else:
+        lower_bound = 0
+
     threads = []
     for i in available_monitors:
         try:
@@ -218,8 +228,8 @@ def fade_brightness(
 
             st = current if st is None else st
             # make sure both values are within the correct range
-            fi = min(max(int(float(fi)), 0), 100)
-            st = min(max(int(float(st)), 0), 100)
+            fi = min(max(int(float(fi)), lower_bound), 100)
+            st = min(max(int(float(st)), lower_bound), 100)
 
             t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
             t1.start()
@@ -436,7 +446,7 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, value: int, no_return: bool = True) -> Union[None, int]:
+    def set_brightness(self, value: int, no_return: bool = True, force: bool = False) -> Union[None, int]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
@@ -444,6 +454,9 @@ class Monitor():
             value (int): the brightness value to set the display to (from 0 to 100)
             no_return (bool): if true, this function returns `None`
                 Otherwise it returns the result of `Monitor.get_brightness`
+            force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+                This is because on most displays a brightness of 0 will turn off the backlight.
+                If True, this check is bypassed
 
         Returns:
             None: if `no_return==True`
@@ -461,7 +474,12 @@ class Monitor():
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-        value = max(0, min(value, 100))
+        # min brightness value
+        if platform.system() == 'Linux' and not force:
+            lower_bound = 1
+        else:
+            lower_bound = 0
+        value = max(lower_bound, min(value, 100))
         self.method.set_brightness(value, display=self.index)
         if no_return:
             return None
