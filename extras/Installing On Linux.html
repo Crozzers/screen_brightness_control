@@ -33,9 +33,16 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
 
         <h2>Contents</h2>
         <ul>
-  <li><a href="#without-using-a-3rd-party-program">Without using a 3rd party program</a></li>
-  <li><a href="#supported-3rd-party-programs">Supported 3rd Party Programs</a></li>
-  <li><a href="#install-3rd-party-programs">Install 3rd Party Programs</a></li>
+  <li><a href="#without-using-a-3rd-party-program">Without using a 3rd party program</a>
+  <ul>
+    <li><a href="#laptop-displays">Laptop displays</a></li>
+    <li><a href="#desktop-displays">Desktop displays</a></li>
+  </ul></li>
+  <li><a href="#using-3rd-party-programs">Using 3rd Party Programs</a>
+  <ul>
+    <li><a href="#supported-programs">Supported Programs</a></li>
+    <li><a href="#install-instructions">Install Instructions</a></li>
+  </ul></li>
 </ul>
 
 
@@ -59,7 +66,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.13.2</footer>
+                <footer>screen_brightness_control v0.14.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev">
@@ -76,12 +83,12 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
             <h1 class="modulename">
             Installing On Linux
             </h1>
-                <div class="docstring"><h2 id="without-using-a-3rd-party-program">Without using a 3rd party program</h2>
+                <div class="docstring"><h1 id="without-using-a-3rd-party-program">Without using a 3rd party program</h1>
 
 <p>As of version <a href="https://github.com/Crozzers/screen_brightness_control/releases/tag/v0.13.0">0.13.0</a>, you do not need a 3rd party program to adjust your display brightness. <br />
 However, your user will need a few extra permissions.</p>
 
-<h3 id="laptop-displays">Laptop displays</h3>
+<h2 id="laptop-displays">Laptop displays</h2>
 
 <p>Laptop displays are adjusted by reading and writing to the files in the <code>/sys/class/backlight</code> directory.
 To avoid having to run this library as root every time, you can do the following:</p>
@@ -102,7 +109,7 @@ This command adds a line to your backlight udev rules allowing you to write brig
 <p>Credit to <a href="https://linustechtips.com/topic/1246132-allow-non-root-user-to-access-sysclassbacklight/?do=findComment&amp;comment=14015728">Nayr438's comment</a>
 on the LTT forums for this.</p>
 
-<h3 id="desktop-displays">Desktop displays</h3>
+<h2 id="desktop-displays">Desktop displays</h2>
 
 <p>Desktop displays are dealt with by reading and writing to the I2C buses, located at <code>/dev/i2c*</code> on a Linux system.
 These are usually part of an <code>i2c</code> user group, which you can check by running the command <code>ls -lh /dev/i2c*</code>.  </p>
@@ -113,7 +120,9 @@ to the I2C buses without needing to use <code>sudo</code>. To add youself to the
 <pre><code>usermod -a -G i2c [your username here]
 </code></pre>
 
-<h2 id="supported-3rd-party-programs">Supported 3rd Party Programs</h2>
+<h1 id="using-3rd-party-programs">Using 3rd Party Programs</h1>
+
+<h2 id="supported-programs">Supported Programs</h2>
 
 <p>There are a number of external programs that <code>screen_brightness_control</code> can call upon if the native methods fail.
 The advantage of using external programs is that, because they are installed using <code>sudo apt install ...</code>, they usually allow
@@ -147,18 +156,11 @@ users to adjust the backlight without having to manually fiddle with permissions
   <td>No</td>
 </tr>
 <tr>
-  <td>xbacklight [3]</td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>No</td>
-  <td>No</td>
-</tr>
-<tr>
   <td>light</td>
   <td>Yes</td>
   <td>No</td>
   <td>Yes</td>
-  <td>No</td>
+  <td>User must be in the <code>video</code> group [3]</td>
 </tr>
 <tr>
   <td>[No program]</td>
@@ -177,9 +179,9 @@ DDCUtil also supports communicating with monitors that implement the <a href="ht
 
 <p>[2] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
 
-<p>[3] The xbacklight brightness method is deprecated and will be removed in v0.14.0</p>
+<p>[3] You can add yourself to the video user group by running <code>sudo usermod -a -G video [your username]</code> and then logging out and back in again for the changes to take effect.</p>
 
-<h2 id="install-3rd-party-programs">Install 3rd Party Programs</h2>
+<h2 id="install-instructions">Install Instructions</h2>
 
 <ul>
 <li>Arch
