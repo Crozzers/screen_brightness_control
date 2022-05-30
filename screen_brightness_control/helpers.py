@@ -3,6 +3,7 @@ Helper functions for the library
 '''
 import platform
 import struct
+import subprocess
 import time
 from functools import lru_cache
 from typing import Any, List, Tuple, Union
@@ -367,6 +368,28 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
             continue
         yield x
         last_yielded = x
+
+
+def check_output(command: list, max_tries: int = 1):
+    '''
+    Run a command with retry management built in.
+
+    Args:
+        command (list[str]): the command to run
+        max_retries (int): the maximum number of retries to allow before raising an error
+
+    Returns:
+        str: the command output
+    '''
+    tries = 1
+    while True:
+        try:
+            return subprocess.check_output(command, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            if tries >= max_tries:
+                raise
+            tries += 1
+            time.sleep(0.04 if tries < 5 else 0.5)
 
 
 class __Cache(dict):

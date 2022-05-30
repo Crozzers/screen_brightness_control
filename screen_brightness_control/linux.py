@@ -12,7 +12,7 @@ if platform.system() == 'Linux':
     import fcntl
 
 from . import filter_monitors, get_methods
-from .helpers import EDID, __cache__, _monitor_brand_lookup
+from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
 
 
 class SysFiles:
@@ -586,7 +586,7 @@ class Light:
             edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
-        light_output = subprocess.check_output([cls.executable, '-L']).decode()
+        light_output = check_output([cls.executable, '-L']).decode()
         displays = []
         index = 0
         for device in SysFiles.get_display_info():
@@ -633,7 +633,7 @@ class Light:
             info = [info[display]]
 
         for i in info:
-            subprocess.call(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
+            check_output(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
@@ -667,11 +667,7 @@ class Light:
         results = []
         for i in info:
             results.append(
-                subprocess.check_output(
-                    [
-                        cls.executable, '-G', '-s', i['light_path']
-                    ]
-                )
+                check_output([cls.executable, '-G', '-s', i['light_path']])
             )
         results = [int(round(float(i.decode()), 0)) for i in results]
         return results
@@ -722,7 +718,7 @@ class XRandr:
                 return display['serial'] is None or '\\x' not in display['serial']
             return False
 
-        xrandr_output = subprocess.check_output([cls.executable, '--verbose']).decode().split('\n')
+        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
 
         valid_displays = []
         display_count = 0
@@ -856,7 +852,7 @@ class XRandr:
             info = [info[display]]
 
         for i in info:
-            subprocess.check_call([cls.executable, '--output', i['interface'], '--brightness', value])
+            check_output([cls.executable, '--output', i['interface'], '--brightness', value])
 
 
 class DDCUtil:
@@ -869,18 +865,6 @@ class DDCUtil:
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
     _max_brightness_cache: dict = {}
     '''Cache for monitors and their maximum brightness values'''
-
-    @staticmethod
-    def __call_ddcutil(command: list):
-        tries = 0
-        while True:
-            try:
-                return subprocess.check_output(command, stderr=subprocess.PIPE)
-            except subprocess.CalledProcessError:
-                if tries > 10:
-                    raise
-                tries += 1
-                time.sleep(0.04 if tries < 5 else 0.5)
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
@@ -922,11 +906,11 @@ class DDCUtil:
         valid_displays = __cache__.get('ddcutil_monitors_info')
         if valid_displays is None:
             raw_ddcutil_output = str(
-                cls.__call_ddcutil(
+                check_output(
                     [
                         cls.executable, 'detect', '-v',
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ]
+                    ], max_tries=10
                 )
             )[2:-1].split('\\n')
             # Use -v to get EDID string but this means output cannot be decoded.
@@ -1034,13 +1018,13 @@ class DDCUtil:
         for monitor in monitors:
             value = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
             if value is None:
-                cmd_out = cls.__call_ddcutil(
+                cmd_out = check_output(
                     [
                         cls.executable,
                         'getvcp', '10', '-t',
                         '-b', str(monitor['bus_number']),
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ]
+                    ], max_tries=10
                 ).decode().split(' ')
 
                 value = int(cmd_out[-2])
@@ -1096,12 +1080,12 @@ class DDCUtil:
             if cls._max_brightness_cache[cache_ident] != 100:
                 value = int((value / 100) * cls._max_brightness_cache[cache_ident])
 
-            cls.__call_ddcutil(
+            check_output(
                 [
                     cls.executable, 'setvcp', '10', str(value),
                     '-b', str(monitor['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ]
+                ], max_tries=10
             )
 
 
