@@ -3,9 +3,7 @@ import glob
 import operator
 import os
 import platform
-import subprocess
 import time
-import warnings
 from typing import List, Optional, Tuple, Union
 
 if platform.system() == 'Linux':
@@ -770,32 +768,6 @@ class XRandr:
         if display is not None:
             valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['interface'])
         return valid_displays
-
-    @classmethod
-    def get_display_interfaces(cls) -> List[str]:
-        '''
-        *DEPRECATED*  
-        Returns the interfaces of each display, as reported by xrandr
-
-        Returns:
-            list: list of strings
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            names = sbc.linux.XRandr.get_display_interfaces()
-            # EG output: ['eDP-1', 'HDMI1', 'HDMI2']
-            ```
-        '''
-        warnings.warn(
-            (
-                'XRandr.get_display_interfaces is deprecated and will be removed in the next release.'
-                ' Please use XRandr.get_display_info instead'
-            ), DeprecationWarning
-        )
-        out = subprocess.check_output([cls.executable, '-q']).decode().split('\n')
-        return [i.split(' ')[0] for i in out if 'connected' in i and 'disconnected' not in i]
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
