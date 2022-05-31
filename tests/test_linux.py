@@ -34,18 +34,6 @@ class TestLight(BasicMethodTest, unittest.TestCase):
 class TestXRandr(BasicMethodTest, unittest.TestCase):
     method = linux.XRandr
 
-    def test_get_display_interfaces(self):
-        interfaces = linux.XRandr.get_display_interfaces()
-        self.assertIsInstance(interfaces, list)
-
-        self.assertListEqual(
-            interfaces,
-            [i['interface'] for i in linux.XRandr.get_display_info()]
-        )
-
-        for interface in interfaces:
-            self.assertIsInstance(interface, str)
-
     def tearDownClass():
         if linux.XRandr.get_display_info():
             linux.XRandr.set_brightness(100)
