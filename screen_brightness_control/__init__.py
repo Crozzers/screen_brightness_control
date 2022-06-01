@@ -697,10 +697,8 @@ def filter_monitors(
             monitors = filter_monitor_list()
         else:
             break
-
-    # if no monitors matched the query OR if display kwarg was an int
-    # if the latter and we made it this far then the int was out of range
-    if monitors == [] or isinstance(display, int):
+    else:
+        # if no monitors matched the query
         msg = 'no monitors found'
         if display is not None:
             msg += f' with name/serial/model/edid/index of {repr(display)}'
