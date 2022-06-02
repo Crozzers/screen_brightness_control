@@ -20,14 +20,18 @@ class TestCase(unittest.TestCase):
         try:
             self.assertEqual(a, b)
         except AssertionError as e:
-            if os.name != 'nt':
-                raise e
-            else:
+            if os.name == 'nt':
                 if sbc.list_monitors_info()[display]['method'] == sbc.windows.WMI:
                     # some laptop displays will only have a set number of levels
                     # the brightness can be set to so check the value is at least close.
                     # this allows for 16ish brightness levels
                     self.assertTrue(abs(a - b) < 7)
+                else:
+                    raise e
+            else:  # linux
+                if a < 2 and b < 2:
+                    # on linux if you set the brightness to 0 it actually sets it to 1
+                    pass
                 else:
                     raise e
 
