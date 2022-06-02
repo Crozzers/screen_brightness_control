@@ -139,16 +139,16 @@ class TestSetBrightness(TestCase):
 
 class TestFadeBrightness(TestCase):
     def test_normal(self):
-        brightness = sbc.fade_brightness(75)
+        brightness = sbc.fade_brightness(90)
         self.assertBrightnessValid(brightness, target_length=len(sbc.list_monitors()))
         for index, i in enumerate(brightness):
-            self.assertBrightnessEqual(75, i, index)
+            self.assertBrightnessEqual(90, i, index)
 
     def test_increment_values(self):
-        self.assertBrightnessEqual(sbc.fade_brightness('60', display=0), [60], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('70.0', display=0), [70], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), [80], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), [70], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('90', display=0), [90], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('80.0', display=0), [80], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), [90], 0)
+        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), [80], 0)
         self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), [100], 0)
 
         # test that all displays are affected equally
@@ -163,35 +163,35 @@ class TestFadeBrightness(TestCase):
     def test_increment_kwarg(self):
         # smaller increment should take longer
         self.assertGreater(
-            timeit(lambda: sbc.fade_brightness(60, start=50, increment=1), number=1),
-            timeit(lambda: sbc.fade_brightness(60, start=50, increment=5), number=1)
+            timeit(lambda: sbc.fade_brightness(80, start=100, increment=1), number=1),
+            timeit(lambda: sbc.fade_brightness(80, start=100, increment=5), number=1)
         )
 
     def test_interval_kwarg(self):
         # longer intervals should take longer
         self.assertGreater(
-            timeit(lambda: sbc.fade_brightness(60, start=50, interval=0.05), number=1),
-            timeit(lambda: sbc.fade_brightness(60, start=50, interval=0.01), number=1)
+            timeit(lambda: sbc.fade_brightness(80, start=100, interval=0.05), number=1),
+            timeit(lambda: sbc.fade_brightness(80, start=100, interval=0.01), number=1)
         )
 
     def test_blocking_kwarg(self):
-        threads = sbc.fade_brightness(60, blocking=False)
+        threads = sbc.fade_brightness(90, blocking=False)
         self.assertIsInstance(threads, list)
         for i, thread in enumerate(threads):
             self.assertIsInstance(thread, threading.Thread)
             thread.join()
-            self.assertBrightnessEqual(sbc.get_brightness(display=i), [60], i)
+            self.assertBrightnessEqual(sbc.get_brightness(display=i), [90], i)
 
     def test_display_kwarg(self):
         for index, monitor in enumerate(sbc.list_monitors()):
-            brightness = sbc.fade_brightness(60, display=monitor)
+            brightness = sbc.fade_brightness(90, display=monitor)
             self.assertBrightnessValid(brightness, target_length=1)
-            self.assertBrightnessEqual(brightness, [60], index)
+            self.assertBrightnessEqual(brightness, [90], index)
 
     def test_method_kwarg(self):
         for method in get_method_names():
             try:
-                value = sbc.fade_brightness(60, method=method)
+                value = sbc.fade_brightness(90, method=method)
                 self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
             except sbc.ScreenBrightnessError:
                 # likely no monitors of that method
