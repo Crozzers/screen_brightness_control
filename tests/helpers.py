@@ -3,15 +3,14 @@ import sys
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
-from screen_brightness_control import get_methods as __get_methods  # noqa: E402
 
 
 def get_methods():
-    return tuple(__get_methods().values())
+    return tuple(sbc.get_methods().values())
 
 
 def get_method_names():
-    return tuple(__get_methods().keys())
+    return tuple(sbc.get_methods().keys())
 
 
 class BasicMethodTest(object):

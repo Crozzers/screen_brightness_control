@@ -2,7 +2,6 @@ import os
 import random
 import sys
 import threading
-import time
 import unittest
 from timeit import timeit
 
