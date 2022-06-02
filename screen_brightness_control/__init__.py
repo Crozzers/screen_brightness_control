@@ -697,7 +697,8 @@ def filter_monitors(
             monitors = filter_monitor_list()
         else:
             break
-    else:
+
+    if not monitors:
         # if no monitors matched the query
         msg = 'no monitors found'
         if display is not None:
