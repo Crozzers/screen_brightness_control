@@ -249,7 +249,7 @@ class TestMonitorBrandLookup(unittest.TestCase):
             ]
             for var in variations:
                 self.assertEqual(
-                    sbc._monitor_brand_lookup(var),
+                    sbc.helpers._monitor_brand_lookup(var),
                     (code, sbc.MONITOR_MANUFACTURER_CODES[code])
                 )
 
@@ -264,7 +264,7 @@ class TestMonitorBrandLookup(unittest.TestCase):
             for var in variations:
                 try:
                     self.assertEqual(
-                        sbc._monitor_brand_lookup(var),
+                        sbc.helpers._monitor_brand_lookup(var),
                         (reverse_dict[name], name)
                     )
                 except AssertionError:
@@ -274,7 +274,7 @@ class TestMonitorBrandLookup(unittest.TestCase):
     def test_invalid(self):
         invalids = ['TEST', 'INVALID', 'ITEMS']
         for item in invalids:
-            self.assertEqual(sbc._monitor_brand_lookup(item), None)
+            self.assertEqual(sbc.helpers._monitor_brand_lookup(item), None)
 
 
 class TestMonitor(TestCase):
