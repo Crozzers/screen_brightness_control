@@ -6,17 +6,13 @@ import time
 import unittest
 from timeit import timeit
 
+import helpers
+from helpers import get_method_names, get_methods
+
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
-from screen_brightness_control import get_methods as __get_methods  # noqa: E402
 
 
-def get_methods():
-    return tuple(__get_methods().values())
-
-
-def get_method_names():
-    return tuple(__get_methods().keys())
 
 
 class TestCase(unittest.TestCase):
