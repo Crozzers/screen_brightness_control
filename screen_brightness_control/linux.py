@@ -880,7 +880,7 @@ class DDCUtil:
             raw_ddcutil_output = str(
                 check_output(
                     [
-                        cls.executable, 'detect', '-v',
+                        cls.executable, 'detect', '-v', '--async',
                         f'--sleep-multiplier={cls.sleep_multiplier}'
                     ], max_tries=10
                 )
