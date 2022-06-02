@@ -63,3 +63,60 @@ class BasicMethodTest(object):
                 for value in self.method.get_brightness():
                     self.assertIsInstance(value, int)
                     self.assertBrightnessEqual(value, i)
+
+
+class FakeMethodTest():
+    def __enter__(self):
+        if not hasattr(sbc, '_old_get_methods'):
+            sbc._old_get_methods = sbc.get_methods
+
+        # change the sbc get_methods function
+        sbc.get_methods = lambda: {self.__class__.__name__.lower(): self.__class__}
+        # change that same function which was imported by the os specific module
+        sbc._OS_MODULE.get_methods = sbc.get_methods
+
+    def __exit__(self, *args):
+        # change the sbc get_methods function
+        sbc.get_methods = sbc._old_get_methods
+        # change that same function which was imported by the os specific module
+        sbc._OS_MODULE.get_methods = sbc.get_methods
+
+    cached_display_info = []
+    cached_brightness = {}
+
+    @classmethod
+    def get_display_info(cls, display=None):
+        if not cls.cached_display_info:
+            for method in sbc._old_get_methods().values():
+                try:
+                    for d in method.get_display_info():
+                        d['method'] = cls
+                        cls.cached_display_info.append(d)
+                except Exception:
+                    pass
+
+            cls.cached_display_info = sbc.filter_monitors(haystack=cls.cached_display_info)
+
+        return sbc.filter_monitors(display=display, haystack=cls.cached_display_info)
+
+    @classmethod
+    def get_brightness(cls, display=None):
+        all_displays = cls.get_display_info(display)
+
+        results = []
+        for display in all_displays:
+            cache_ident = '%s-%s-%s' % (display['name'], display['model'], display['serial'])
+            if cache_ident not in cls.cached_brightness:
+                cls.cached_brightness[cache_ident] = 100
+
+            results.append(cls.cached_brightness[cache_ident])
+
+        return results
+
+    @classmethod
+    def set_brightness(cls, value, display=None):
+        all_displays = cls.get_display_info(display)
+
+        for display in all_displays:
+            cache_ident = '%s-%s-%s' % (display['name'], display['model'], display['serial'])
+            cls.cached_brightness[cache_ident] = value

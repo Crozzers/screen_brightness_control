@@ -12,9 +12,21 @@ sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
 
 
-
-
 class TestCase(unittest.TestCase):
+    def setUp(self):
+        if not TEST_FAST:
+            # only set brightness to 100 pre test if testing in slow mode
+            sbc.set_brightness(100, verbose_error=True)
+        else:
+            helpers.FakeMethodTest().__enter__()
+
+    def tearDown(self):
+        if not TEST_FAST:
+            # only set brightness to 100 post test if testing in slow mode
+            sbc.set_brightness(100, verbose_error=True)
+        else:
+            helpers.FakeMethodTest().__exit__()
+
     def assertBrightnessEqual(self, a, b, display):
         try:
             self.assertEqual(a, b)
@@ -74,12 +86,6 @@ class TestGetBrightness(TestCase):
 
 
 class TestSetBrightness(TestCase):
-    def setUp(self):
-        sbc.set_brightness(100, verbose_error=True)
-
-    def tearDown(self):
-        sbc.set_brightness(100)
-
     def test_normal(self):
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
             brightness = sbc.set_brightness(value, force=True, no_return=False)
@@ -132,12 +138,6 @@ class TestSetBrightness(TestCase):
 
 
 class TestFadeBrightness(TestCase):
-    def setUp(self):
-        sbc.set_brightness(50)
-
-    def tearDown(self):
-        sbc.set_brightness(100)
-
     def test_normal(self):
         brightness = sbc.fade_brightness(75)
         self.assertBrightnessValid(brightness, target_length=len(sbc.list_monitors()))
@@ -205,7 +205,7 @@ class TestFadeBrightness(TestCase):
         self.assertRaises(sbc.ScreenBrightnessError, sbc.fade_brightness, 100, display=0.0)
 
 
-class TestListMonitorsInfo(unittest.TestCase):
+class TestListMonitorsInfo(TestCase):
     def test_normal(self):
         methods = get_methods()
         monitors = sbc.list_monitors_info()
@@ -230,7 +230,7 @@ class TestListMonitorsInfo(unittest.TestCase):
                 pass
 
 
-class TestListMonitors(unittest.TestCase):
+class TestListMonitors(TestCase):
     def test_normal(self):
         monitors = sbc.list_monitors()
         self.assertIsInstance(monitors, list)
@@ -238,7 +238,7 @@ class TestListMonitors(unittest.TestCase):
             self.assertIsInstance(monitor, str)
 
 
-class TestMonitorBrandLookup(unittest.TestCase):
+class TestMonitorBrandLookup(TestCase):
     def test_code(self):
         test_codes = sbc.MONITOR_MANUFACTURER_CODES.keys()
         for code in test_codes:
@@ -356,7 +356,7 @@ class TestMonitor(TestCase):
         self.assertIsInstance(sbc.Monitor(0).is_active(), bool)
 
 
-class TestFilterMonitors(unittest.TestCase):
+class TestFilterMonitors(TestCase):
     def test_normal(self):
         monitors = sbc.list_monitors_info()
         filtered = sbc.filter_monitors()
@@ -432,7 +432,7 @@ class TestFilterMonitors(unittest.TestCase):
         )
 
 
-class TestFlattenList(unittest.TestCase):
+class TestFlattenList(TestCase):
     def test_normal(self):
         # test flat list
         test_list = list(range(0, 100))
@@ -448,39 +448,11 @@ class TestFlattenList(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    if os.name == 'nt' or '--full' not in sys.argv:
-        unittest.main()
+    global TEST_FAST
+    if '--test-fast' in sys.argv:
+        sys.argv.remove('--test-fast')
+        TEST_FAST = True
     else:
-        print('Full test:')
-        sys.argv.remove('--full')
-        unittest.main(exit=False)
+        TEST_FAST = False
 
-        # let cache expire
-        time.sleep(5)
-
-        print('\n\nOnly light exe:')
-        # test with only light exe available
-        for m in get_methods():
-            m.executable = 'file doesnt exist'
-        sbc.linux.Light.executable = 'light'
-        unittest.main(exit=False)
-
-        # let cache expire
-        time.sleep(5)
-
-        print('\n\nOnly xrandr exe:')
-        # test with only xrandr exe available
-        for m in get_methods():
-            m.executable = 'file doesnt exist'
-        sbc.linux.XRandr.executable = 'xrandr'
-        unittest.main(exit=False)
-
-        # let cache expire
-        time.sleep(5)
-
-        print('\n\nOnly ddcutil exe:')
-        # test with only ddcutil exe available
-        for m in get_methods():
-            m.executable = 'file doesnt exist'
-        sbc.linux.DDCUtil.executable = 'ddcutil'
-        unittest.main()
+    unittest.main()
