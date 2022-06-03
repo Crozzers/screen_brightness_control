@@ -78,7 +78,7 @@ class FakeMethodTest():
                     'manufacturer_id': None,
                     'serial': f'FakeSerialDEF456_{i}',
                     'index': i,
-                    'edid': None,#f'lernveuirnviruvbneiqruvberuivbruevbn{i}',
+                    'edid': None,
                     'method': cls
                 }
             )
