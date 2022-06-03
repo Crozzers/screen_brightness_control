@@ -536,13 +536,11 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         if method not in all_methods:
             raise ValueError(f'method must be one of: {list(all_methods)}')
 
-    info_final = []
-    serials = []
-    # to make sure each display (with unique edid) is only reported once
-    for i in info:
-        if allow_duplicates or i['serial'] not in serials:
-            if method is None or method == i['method'].__name__.lower():
-                serials.append(i['serial'])
-                info_final.append(i)
+    if allow_duplicates:
+        return info
 
-    return info_final
+    try:
+        # use filter_monitors to remove duplicates
+        return filter_monitors(method=method, haystack=info)
+    except LookupError:
+        return []
