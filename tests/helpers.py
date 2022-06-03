@@ -92,12 +92,21 @@ class FakeMethodTest():
         sbc.get_methods = lambda: {self.__class__.__name__.lower(): self.__class__}
         # change that same function which was imported by the os specific module
         sbc._OS_MODULE.get_methods = sbc.get_methods
+        # on windows we also need to override the module level `get_display_info`
+        if os.name == 'nt':
+            if not hasattr(sbc._OS_MODULE, '_old_get_display_info'):
+                sbc._OS_MODULE._old_get_display_info = sbc._OS_MODULE.get_display_info
+
+            sbc._OS_MODULE.get_display_info = self.generate_fake_displays
 
     def __exit__(self, *args):
         # change the sbc get_methods function
         sbc.get_methods = sbc._old_get_methods
         # change that same function which was imported by the os specific module
         sbc._OS_MODULE.get_methods = sbc.get_methods
+        # on windows we also need to override the module level `get_display_info`
+        if os.name == 'nt':
+            sbc._OS_MODULE.get_display_info = sbc._OS_MODULE._old_get_display_info
 
     cached_display_info = []
     cached_brightness = {}
