@@ -66,6 +66,24 @@ class BasicMethodTest(object):
 
 
 class FakeMethodTest():
+    @classmethod
+    def generate_fake_displays(cls):
+        fakes = []
+        for i in range(3):
+            fakes.append(
+                {
+                    'name': 'FakeDisplay ABC123',
+                    'model': 'ABC123',
+                    'manufacturer': 'FakeDisplay',
+                    'manufacturer_id': None,
+                    'serial': f'FakeSerialDEF456_{i}',
+                    'index': i,
+                    'edid': None,#f'lernveuirnviruvbneiqruvberuivbruevbn{i}',
+                    'method': cls
+                }
+            )
+        return fakes
+
     def __enter__(self):
         if not hasattr(sbc, '_old_get_methods'):
             sbc._old_get_methods = sbc.get_methods
@@ -94,6 +112,10 @@ class FakeMethodTest():
                         cls.cached_display_info.append(d)
                 except Exception:
                     pass
+
+            if not cls.cached_display_info:
+                # no display info available. Lets make some up
+                cls.cached_display_info = cls.generate_fake_displays()
 
             cls.cached_display_info = sbc.filter_monitors(haystack=cls.cached_display_info)
 
