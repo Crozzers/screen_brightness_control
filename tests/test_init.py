@@ -449,8 +449,8 @@ class TestFlattenList(TestCase):
 
 if __name__ == '__main__':
     global TEST_FAST
-    if '--test-fast' in sys.argv:
-        sys.argv.remove('--test-fast')
+    if '--synthetic' in sys.argv:
+        sys.argv.remove('--synthetic')
         TEST_FAST = True
     else:
         TEST_FAST = False
