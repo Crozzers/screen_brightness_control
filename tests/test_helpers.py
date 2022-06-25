@@ -6,6 +6,7 @@ import os
 import sys
 import unittest
 
+import helpers
 from helpers import TestCase
 
 sys.path.insert(0, os.path.abspath('./'))
@@ -84,11 +85,10 @@ class TestFlattenList(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    global TEST_FAST
     if '--synthetic' in sys.argv:
         sys.argv.remove('--synthetic')
-        TEST_FAST = True
+        helpers.TEST_FAST = True
     else:
-        TEST_FAST = False
+        helpers.TEST_FAST = False
 
     unittest.main()

@@ -156,14 +156,14 @@ class FakeMethodTest():
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        if not globals().get('TEST_FAST', False):
+        if not TEST_FAST:
             # only set brightness to 100 pre test if testing in slow mode
             sbc.set_brightness(100, verbose_error=True)
         else:
             FakeMethodTest().__enter__()
 
     def tearDown(self):
-        if not globals().get('TEST_FAST', False):
+        if not TEST_FAST:
             # only set brightness to 100 post test if testing in slow mode
             sbc.set_brightness(100, verbose_error=True)
         else:
@@ -196,3 +196,6 @@ class TestCase(unittest.TestCase):
 
         if target_length is not None:
             self.assertTrue(len(brightness) == target_length)
+
+
+TEST_FAST = False

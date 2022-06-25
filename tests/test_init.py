@@ -5,6 +5,7 @@ import threading
 import unittest
 from timeit import timeit
 
+import helpers
 from helpers import TestCase, get_method_names, get_methods
 
 sys.path.insert(0, os.path.abspath('./'))
@@ -363,11 +364,10 @@ class TestFilterMonitors(TestCase):
 
 
 if __name__ == '__main__':
-    global TEST_FAST
     if '--synthetic' in sys.argv:
         sys.argv.remove('--synthetic')
-        TEST_FAST = True
+        helpers.TEST_FAST = True
     else:
-        TEST_FAST = False
+        helpers.TEST_FAST = False
 
     unittest.main()
