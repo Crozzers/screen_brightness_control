@@ -5,55 +5,10 @@ import threading
 import unittest
 from timeit import timeit
 
-import helpers
-from helpers import get_method_names, get_methods
+from helpers import TestCase, get_method_names, get_methods
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
-
-
-class TestCase(unittest.TestCase):
-    def setUp(self):
-        if not TEST_FAST:
-            # only set brightness to 100 pre test if testing in slow mode
-            sbc.set_brightness(100, verbose_error=True)
-        else:
-            helpers.FakeMethodTest().__enter__()
-
-    def tearDown(self):
-        if not TEST_FAST:
-            # only set brightness to 100 post test if testing in slow mode
-            sbc.set_brightness(100, verbose_error=True)
-        else:
-            helpers.FakeMethodTest().__exit__()
-
-    def assertBrightnessEqual(self, a, b, display):
-        try:
-            self.assertEqual(a, b)
-        except AssertionError as e:
-            if os.name == 'nt':
-                if sbc.list_monitors_info()[display]['method'] == sbc.windows.WMI:
-                    # some laptop displays will only have a set number of levels
-                    # the brightness can be set to so check the value is at least close.
-                    # this allows for 16ish brightness levels
-                    self.assertTrue(abs(a - b) < 7)
-                else:
-                    raise e
-            else:  # linux
-                if a < 2 and b < 2:
-                    # on linux if you set the brightness to 0 it actually sets it to 1
-                    pass
-                else:
-                    raise e
-
-    def assertBrightnessValid(self, brightness, target_length=None):
-        self.assertIsInstance(brightness, list)
-        for value in brightness:
-            self.assertIsInstance(value, int)
-            self.assertTrue(0 <= value <= 100)
-
-        if target_length is not None:
-            self.assertTrue(len(brightness) == target_length)
 
 
 class TestGetBrightness(TestCase):
@@ -238,42 +193,17 @@ class TestListMonitors(TestCase):
             self.assertIsInstance(monitor, str)
 
 
-class TestMonitorBrandLookup(TestCase):
-    def test_code(self):
-        test_codes = sbc.MONITOR_MANUFACTURER_CODES.keys()
-        for code in test_codes:
-            variations = [
-                code, code.lower(), code.upper(),
-                code.lower().capitalize()
-            ]
-            for var in variations:
-                self.assertEqual(
-                    sbc.helpers._monitor_brand_lookup(var),
-                    (code, sbc.MONITOR_MANUFACTURER_CODES[code])
-                )
+class TestGetMethods(TestCase):
+    def test_normal(self):
+        methods = sbc.get_methods()
+        self.assertIsInstance(methods, dict)
 
-    def test_name(self):
-        reverse_dict = {v: k for k, v in sbc.MONITOR_MANUFACTURER_CODES.items()}
-        test_names = reverse_dict.keys()
-        for name in test_names:
-            variations = [
-                name, name.lower(), name.upper(),
-                name.lower().capitalize()
-            ]
-            for var in variations:
-                try:
-                    self.assertEqual(
-                        sbc.helpers._monitor_brand_lookup(var),
-                        (reverse_dict[name], name)
-                    )
-                except AssertionError:
-                    # for duplicate keys. EG: Acer has codes "ACR" and "CMO"
-                    assert sbc.MONITOR_MANUFACTURER_CODES[reverse_dict[name]] == name
+        for name, method in methods.items():
+            self.assertTrue(hasattr(method, 'get_brightness'))
+            self.assertTrue(hasattr(method, 'set_brightness'))
+            self.assertTrue(hasattr(method, 'get_display_info'))
 
-    def test_invalid(self):
-        invalids = ['TEST', 'INVALID', 'ITEMS']
-        for item in invalids:
-            self.assertEqual(sbc.helpers._monitor_brand_lookup(item), None)
+            self.assertEqual(name.lower(), method.__name__.lower())
 
 
 class TestMonitor(TestCase):
@@ -430,21 +360,6 @@ class TestFilterMonitors(TestCase):
             display='Extra info',
             haystack=haystack
         )
-
-
-class TestFlattenList(TestCase):
-    def test_normal(self):
-        # test flat list
-        test_list = list(range(0, 100))
-        self.assertEqual(sbc.flatten_list(test_list), test_list)
-        # test unflattened list
-        test_list = [1, [[[[2, 3, 4], 5, 6, [7, 8], 9], 10]], 11, 12, [13, 14], 15]
-        self.assertEqual(sbc.flatten_list(test_list), list(range(1, 16)))
-        # test list with other types of iterable
-        test_list = [(1, 2, 3), (4, 5, 6), [7, 8, 9]]
-        self.assertEqual(sbc.flatten_list(test_list), [(1, 2, 3), (4, 5, 6), 7, 8, 9])
-        # test with not a list
-        self.assertEqual(sbc.flatten_list((1, 2, 3)), [1, 2, 3])
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import os
 import sys
+import unittest
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
@@ -151,3 +152,47 @@ class FakeMethodTest():
         for display in all_displays:
             cache_ident = '%s-%s-%s' % (display['name'], display['model'], display['serial'])
             cls.cached_brightness[cache_ident] = value
+
+
+class TestCase(unittest.TestCase):
+    def setUp(self):
+        if not globals().get('TEST_FAST', False):
+            # only set brightness to 100 pre test if testing in slow mode
+            sbc.set_brightness(100, verbose_error=True)
+        else:
+            FakeMethodTest().__enter__()
+
+    def tearDown(self):
+        if not globals().get('TEST_FAST', False):
+            # only set brightness to 100 post test if testing in slow mode
+            sbc.set_brightness(100, verbose_error=True)
+        else:
+            FakeMethodTest().__exit__()
+
+    def assertBrightnessEqual(self, a, b, display):
+        try:
+            self.assertEqual(a, b)
+        except AssertionError as e:
+            if os.name == 'nt':
+                if sbc.list_monitors_info()[display]['method'] == sbc.windows.WMI:
+                    # some laptop displays will only have a set number of levels
+                    # the brightness can be set to so check the value is at least close.
+                    # this allows for 16ish brightness levels
+                    self.assertTrue(abs(a - b) < 7)
+                else:
+                    raise e
+            else:  # linux
+                if a < 2 and b < 2:
+                    # on linux if you set the brightness to 0 it actually sets it to 1
+                    pass
+                else:
+                    raise e
+
+    def assertBrightnessValid(self, brightness, target_length=None):
+        self.assertIsInstance(brightness, list)
+        for value in brightness:
+            self.assertIsInstance(value, int)
+            self.assertTrue(0 <= value <= 100)
+
+        if target_length is not None:
+            self.assertTrue(len(brightness) == target_length)
