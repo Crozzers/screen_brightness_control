@@ -34,3 +34,4 @@ jobs:
       - name: Run tests
         run: |
           python tests/test_init.py --synthetic
+          python tests/test_helpers.py --synthetic
