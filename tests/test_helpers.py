@@ -1,9 +1,33 @@
-import unittest
+'''
+Not to be confused with `tests/helpers.py`, this file contains tests
+for code in the `screen_brightness_control/helpers.py` file
+'''
 import os
 import sys
+import unittest
+
+from helpers import TestCase
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
+
+
+class TestEDID(TestCase):
+    def test_parser(self):
+        monitors = [i for i in sbc.list_monitors_info() if isinstance(i['edid'], str)]
+
+        for monitor in monitors:
+            edid = monitor['edid']
+            mfg_id, manufacturer, model, name, serial = sbc.helpers.EDID.parse(edid)
+
+            self.assertIsInstance(mfg_id, (str, type(None)))
+            if mfg_id is not None:
+                self.assertEqual(len(mfg_id), 3)
+
+            self.assertIsInstance(manufacturer, (str, type(None)))
+            self.assertIsInstance(model, (str, type(None)))
+            self.assertIsInstance(name, (str, type(None)))
+            self.assertIsInstance(serial, (str, type(None)))
 
 
 class TestMonitorBrandLookup(unittest.TestCase):
@@ -60,4 +84,11 @@ class TestFlattenList(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    global TEST_FAST
+    if '--synthetic' in sys.argv:
+        sys.argv.remove('--synthetic')
+        TEST_FAST = True
+    else:
+        TEST_FAST = False
+
     unittest.main()
