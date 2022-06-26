@@ -15,6 +15,19 @@ else:
 
 
 class ScreenBrightnessError(Exception):
+    '''
+    Generic error class designed to make catching errors under one umbrella easy.
+    Raised when the brightness cannot be set/retrieved.
+
+    Example:
+        ```python
+        import screen_brightness_control as sbc
+        try:
+            sbc.set_brightness(50)
+        except sbc.ScreenBrightnessError as error:
+            print(error)
+        ```
+    '''
     def __init__(self, message="Cannot set/retrieve brightness level"):
         self.message = message
         super().__init__(self.message)
@@ -304,19 +317,6 @@ def flatten_list(thick_list: List[Any]) -> List[Any]:
         ```
     '''
     flat_list = []
-    '''
-    Generic error class designed to make catching errors under one umbrella easy.
-    Raised when the brightness cannot be set/retrieved.
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-        try:
-            sbc.set_brightness(50)
-        except sbc.ScreenBrightnessError as error:
-            print(error)
-        ```
-    '''
     for item in thick_list:
         if isinstance(item, list):
             flat_list += flatten_list(item)
