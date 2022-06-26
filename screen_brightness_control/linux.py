@@ -1110,6 +1110,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
 
     haystack = []
     for method_class in all_methods:
+        if method is not None and method != method_class.__name__.lower():
+            continue
         try:
             haystack += method_class.get_display_info()
         except Exception:
