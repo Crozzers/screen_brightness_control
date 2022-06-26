@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from copy import deepcopy
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
@@ -90,7 +91,7 @@ class FakeMethodTest():
             sbc._old_get_methods = sbc.get_methods
 
         # change the sbc get_methods function
-        sbc.get_methods = lambda: {self.__class__.__name__.lower(): self.__class__}
+        sbc.get_methods = lambda: {i.__name__.lower(): i for i in FAKE_METHODS}
         # change that same function which was imported by the os specific module
         sbc._OS_MODULE.get_methods = sbc.get_methods
         # on windows we also need to override the module level `get_display_info`
@@ -152,6 +153,27 @@ class FakeMethodTest():
         for display in all_displays:
             cache_ident = '%s-%s-%s' % (display['name'], display['model'], display['serial'])
             cls.cached_brightness[cache_ident] = value
+
+
+class FakeMethodTest2(FakeMethodTest):
+    @classmethod
+    def get_display_info(cls, *args, **kwargs):
+        displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
+        for display in displays:
+            display['method'] = cls
+        return displays
+
+
+class FakeMethodTest3(FakeMethodTest):
+    @classmethod
+    def get_display_info(cls, *args, **kwargs):
+        displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
+        for display in displays:
+            display['method'] = cls
+        return displays
+
+
+FAKE_METHODS = [FakeMethodTest, FakeMethodTest2, FakeMethodTest3]
 
 
 class TestCase(unittest.TestCase):
