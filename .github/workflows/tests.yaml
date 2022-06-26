@@ -33,5 +33,4 @@ jobs:
           flake8 screen_brightness_control --max-line-length=119 --ignore=W503
       - name: Run tests
         run: |
-          python tests/test_init.py --synthetic
-          python tests/test_helpers.py --synthetic
+          python tests/testall.py --synthetic
