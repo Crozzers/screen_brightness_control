@@ -4,7 +4,7 @@ import sys
 
 
 def run_test(file, synthetic=False):
-    print(f'Run test: {file}, {synthetic=}')
+    print(f'Run test: {file}, synthetic={synthetic}')
     exitcode = os.system(
         '"%s" %s %s' % (
             sys.executable, file,
