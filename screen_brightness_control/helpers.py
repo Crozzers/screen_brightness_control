@@ -349,25 +349,25 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
     stop = int(min(100, stop))
 
     if start == stop or abs(stop - start) <= 1:
-        return stop
+        yield start
+    else:
+        value_range = stop - start
 
-    value_range = stop - start
+        last_yielded = None
+        for x in range(start, stop + 1, step):
+            # get difference from base point
+            x -= start
+            # calculate progress through our range as a percentage
+            x = (x / value_range) * 100
+            # convert along logarithmic curve (inverse of y = 50log(x)) to another percentage
+            x = 10 ** (x / 50)
+            # apply this percentage to our range and add back starting offset
+            x = int(((x / 100) * value_range) + start)
 
-    last_yielded = None
-    for x in range(start, stop + 1, step):
-        # get difference from base point
-        x -= start
-        # calculate progress through our range as a percentage
-        x = (x / value_range) * 100
-        # convert along logarithmic curve (inverse of y = 50log(x)) to another percentage
-        x = 10 ** (x / 50)
-        # apply this percentage to our range and add back starting offset
-        x = int(((x / 100) * value_range) + start)
-
-        if x == last_yielded:
-            continue
-        yield x
-        last_yielded = x
+            if x == last_yielded:
+                continue
+            yield x
+            last_yielded = x
 
 
 def check_output(command: list, max_tries: int = 1):
