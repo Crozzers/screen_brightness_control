@@ -101,20 +101,21 @@ class TestFadeBrightness(TestCase):
             self.assertBrightnessEqual(90, i, index)
 
     def test_increment_values(self):
-        self.assertBrightnessEqual(sbc.fade_brightness('90', display=0), [90], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('80.0', display=0), [80], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), [90], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), [80], 0)
-        self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), [100], 0)
+        with helpers.FakeMethodTest():
+            self.assertBrightnessEqual(sbc.fade_brightness('90', display=0), [90], 0)
+            self.assertBrightnessEqual(sbc.fade_brightness('80.0', display=0), [80], 0)
+            self.assertBrightnessEqual(sbc.fade_brightness('+10', display=0), [90], 0)
+            self.assertBrightnessEqual(sbc.fade_brightness('-10', display=0), [80], 0)
+            self.assertBrightnessEqual(sbc.fade_brightness('+500', display=0), [100], 0)
 
-        # test that all displays are affected equally
-        for _ in sbc.list_monitors():
-            sbc.set_brightness(random.randint(30, 70))
+            # test that all displays are affected equally
+            for _ in sbc.list_monitors():
+                sbc.set_brightness(random.randint(30, 70))
 
-        old = sbc.get_brightness()
-        new = sbc.fade_brightness('-25')
-        for i, v in enumerate(old):
-            self.assertBrightnessEqual(max(0, v - 25), new[i], i)
+            old = sbc.get_brightness()
+            new = sbc.fade_brightness('-25')
+            for i, v in enumerate(old):
+                self.assertBrightnessEqual(max(0, v - 25), new[i], i)
 
     def test_increment_kwarg(self):
         # smaller increment should take longer
@@ -136,7 +137,7 @@ class TestFadeBrightness(TestCase):
         for i, thread in enumerate(threads):
             self.assertIsInstance(thread, threading.Thread)
             thread.join()
-            self.assertBrightnessEqual(sbc.get_brightness(display=i), [90], i)
+            self.assertBrightnessEqual(sbc.get_brightness(display=i)[0], 90, i)
 
     def test_display_kwarg(self):
         for index, monitor in enumerate(sbc.list_monitors()):
