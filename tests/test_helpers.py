@@ -84,6 +84,19 @@ class TestFlattenList(unittest.TestCase):
         self.assertEqual(sbc.helpers.flatten_list((1, 2, 3)), [1, 2, 3])
 
 
+class TestLogarithmicRange(unittest.TestCase):
+    def test_normal(self):
+        for l_bound, u_bound in ((0, 100), (0, 10), (29, 77), (99, 100)):
+            l_range = list(sbc.helpers.logarithmic_range(l_bound, u_bound))
+            n_range = list(range(l_bound, u_bound))
+
+            self.assertLessEqual(len(l_range), len(n_range))
+            self.assertLessEqual(max(l_range), u_bound)
+            self.assertGreaterEqual(min(l_range), l_bound)
+
+            self.assertTrue(all(isinstance(i, int) for i in l_range))
+
+
 if __name__ == '__main__':
     if '--synthetic' in sys.argv:
         sys.argv.remove('--synthetic')
