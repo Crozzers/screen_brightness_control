@@ -7,7 +7,6 @@ import json
 import os
 import shutil
 import sys
-from functools import cache
 from pathlib import Path
 
 import pdoc
@@ -70,7 +69,6 @@ def get_documentation_versions(directory):
     return versions_grouped
 
 
-@cache
 def custom_navigation_links():
     links = {}
     links['API Version'] = get_documentation_versions(OUTPUT_DIR / 'docs')
