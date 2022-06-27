@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 from copy import deepcopy
+import itertools
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
@@ -99,7 +100,7 @@ class FakeMethodTest():
             if not hasattr(sbc._OS_MODULE, '_old_get_display_info'):
                 sbc._OS_MODULE._old_get_display_info = sbc._OS_MODULE.get_display_info
 
-            sbc._OS_MODULE.get_display_info = self.generate_fake_displays
+            sbc._OS_MODULE.get_display_info = lambda: list(itertools.chain.from_iterable(i.generate_fake_displays() for i in FAKE_METHODS))
 
     def __exit__(self, *args):
         # change the sbc get_methods function
@@ -157,6 +158,13 @@ class FakeMethodTest():
 
 class FakeMethodTest2(FakeMethodTest):
     @classmethod
+    def generate_fake_displays(cls, *args, **kwargs):
+        displays = deepcopy(FakeMethodTest.generate_fake_displays(*args, **kwargs))
+        for display in displays:
+            display['method'] = cls
+        return displays
+
+    @classmethod
     def get_display_info(cls, *args, **kwargs):
         displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
         for display in displays:
@@ -165,6 +173,13 @@ class FakeMethodTest2(FakeMethodTest):
 
 
 class FakeMethodTest3(FakeMethodTest):
+    @classmethod
+    def generate_fake_displays(cls, *args, **kwargs):
+        displays = deepcopy(FakeMethodTest.generate_fake_displays(*args, **kwargs))
+        for display in displays:
+            display['method'] = cls
+        return displays
+
     @classmethod
     def get_display_info(cls, *args, **kwargs):
         displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
