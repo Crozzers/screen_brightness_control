@@ -535,12 +535,13 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         method = method.lower()
         if method not in all_methods:
             raise ValueError(f'method must be one of: {list(all_methods)}')
+        info = [i for i in info if i['method'].__name__.lower() == method]
 
     if allow_duplicates:
         return info
 
     try:
         # use filter_monitors to remove duplicates
-        return filter_monitors(method=method, haystack=info)
+        return filter_monitors(haystack=info)
     except LookupError:
         return []
