@@ -107,17 +107,9 @@ def get_display_info() -> List[dict]:
                         # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                         # takes too long
                         parsed = EDID.parse(edid)
-                        name, serial = parsed['name'], parsed['serial']
+                        man_id, manufacturer, model, name, serial = parsed
                         if name is None:
                             raise Exception
-
-                        # split by last space because model numbers usually are one word
-                        # whereas brands can be multiple (EG: 'LG Electronics')
-                        manufacturer, model = name.rsplit(' ', 1)
-                        try:
-                            man_id, manufacturer = _monitor_brand_lookup(manufacturer)
-                        except TypeError:
-                            man_id, manufacturer = None, manufacturer.lower().capitalize()
                     except Exception:
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
