@@ -413,7 +413,7 @@ class __Cache(dict):
             pass
 
     def store(self, key, value, *args, expires=1, **kwargs):
-        self[key] = (value, expires + time.time(), args or None, kwargs or None)
+        self[key] = (value, expires + time.time(), args, kwargs)
 
     def expire(self, key=None, startswith=None):
         if key is not None:
