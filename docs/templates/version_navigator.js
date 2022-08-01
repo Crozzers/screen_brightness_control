@@ -18,21 +18,21 @@ function navLink(link){
 class Menu{
     constructor(parent){
         this.container = newElement(parent, "ul");
+        this.frame = this.container;
         this._numItems = 0;
     }
 
     addItem(item){
+        this._incrementItemCount();
         var [name, href] = navLink(item);
 
-        var listItem = newElement(this.container, "li");
+        var listItem = newElement(this.frame, "li");
         listItem.className = "navigation";
 
         var item = newElement(listItem, "a");
         item.className = "navigation";
         item.href = href;
         item.innerHTML = name;
-
-        this._incrementItemCount();
     }
 
     addItems(items){
@@ -42,12 +42,16 @@ class Menu{
     }
 
     addSubMenu(){
-        var subMenu = new SubMenu(this.container);
         this._incrementItemCount();
+        var subMenu = new SubMenu(this.frame);
         return subMenu;
     }
 
     _incrementItemCount(){
+        if (this._numItems === 5){
+            this.frame = newElement(this.frame, "details");
+            newElement(this.frame, "summary").innerHTML = "More";
+        }
         this._numItems += 1
     }
 }
@@ -88,18 +92,10 @@ class SubMenu{
     toggleHidden(){
         let subMenu = this;
         return function(){
-            switch (subMenu.button.innerHTML){
-                case "+":
-                    subMenu.button.innerHTML = "-";
-                    break;
-                case "-":
-                    subMenu.button.innerHTML = "+";
-                    break;
-                case "More":
-                    subMenu.button.innerHTML = "Less";
-                    break;
-                case "Less":
-                    subMenu.button.innerHTML = "More";
+            if (subMenu.button.innerHTML === "+"){
+                subMenu.button.innerHTML = "-";
+            } else {
+                subMenu.button.innerHTML = "+";
             }
 
             for (const elem of subMenu.container.getElementsByClassName("subversion")){

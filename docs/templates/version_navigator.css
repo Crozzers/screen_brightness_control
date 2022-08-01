@@ -3,21 +3,19 @@
 }
 div#custom-version-navigation .navigation {
     font-family: monospace;
-    padding: 0 0 0 7%;
+    padding: 0 0 0 1.5rem;
 }
 div#custom-version-navigation .dropdown {
     display: inline-block;
-    width: 90%;
+    width: calc(100% - 1.5rem);
     height: 100%;
     padding-left: 0%;
 }
-div#custom-version-navigation button {
+div#custom-version-navigation button.dropdown {
     border: none;
     text-align: left;
     background-color: inherit;
-}
-div#custom-version-navigation button.dropdown {
-    width: 7%;
+    width: 1.5rem;
     text-align: center;
 }
 div#custom-version-navigation button.dropdown:hover {
@@ -25,7 +23,7 @@ div#custom-version-navigation button.dropdown:hover {
 }
 div#custom-version-navigation .subversion {
     display: none;
-    padding-left: 14%;
+    padding-left: 2rem;
 }
 div.notice-marker {
     position: fixed;
@@ -37,4 +35,14 @@ div.notice-marker {
     border: solid 3px red;
     background-color: var(--active);
     font-weight: bold;
+}
+div#custom-version-navigation summary {
+    position: inherit;
+    font-size: inherit;
+    list-style-position: inherit;
+    padding-left: 1.7rem;
+    margin-left: 1.3rem;
+}
+div#custom-version-navigation summary:hover {
+    background-color: var(--nav-hover);
 }
