@@ -11,11 +11,14 @@ div#custom-version-navigation .dropdown {
     height: 100%;
     padding-left: 0%;
 }
+div#custom-version-navigation button {
+    border: none;
+    text-align: left;
+    background-color: inherit;
+}
 div#custom-version-navigation button.dropdown {
     width: 7%;
-    border: none;
     text-align: center;
-    background-color: inherit;
 }
 div#custom-version-navigation button.dropdown:hover {
     background-color: var(--nav-hover);

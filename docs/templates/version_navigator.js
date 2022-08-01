@@ -3,55 +3,114 @@ var all_nav_links = {};
 var mark_latest = {};
 // Used in gh-pages generation
 
-function create_nav_link(item, hidden=false){
-    // create the hyperlink
-    var link = document.createElement("a");
-    link.innerHTML = item.split("/").slice(-1).pop().replace('.html', '');
-    link.className = "navigation";
-    link.href = new URL(item, get_version_navigation_base_url()).href;
-
-    // create the list item and append link to it
-    var item = document.createElement("li");
-    item.className = "navigation";
-    if (hidden === true){
-        item.className += " dropdown subversion";
-    }
-    item.appendChild(link);
-    return item;
+function newElement(parent, elem){
+    var element = document.createElement(elem);
+    parent.appendChild(element);
+    return element;
 }
 
-function toggle_subversions(div){
-    for (elem of div.getElementsByClassName("subversion")){
-        if (window.getComputedStyle(elem).getPropertyValue("display") === "none"){
-            elem.style = "display: inline-block;";
-        } else {
-            elem.style = "display: none;";
+function navLink(link){
+    var name = link.split("/").slice(-1).pop().replace('.html', '');
+    var url = new URL(link, get_version_navigation_base_url()).href;
+    return [name, url];
+}
+
+class Menu{
+    constructor(parent){
+        this.container = newElement(parent, "ul");
+        this._numItems = 0;
+    }
+
+    addItem(item){
+        var [name, href] = navLink(item);
+
+        var listItem = newElement(this.container, "li");
+        listItem.className = "navigation";
+
+        var item = newElement(listItem, "a");
+        item.className = "navigation";
+        item.href = href;
+        item.innerHTML = name;
+
+        this._incrementItemCount();
+    }
+
+    addItems(items){
+        for (const item of items){
+            this.addItem(item);
         }
     }
-}
 
-function toggle_btn_text(button){
-    if (button.innerHTML === "+"){
-        button.innerHTML = "-";
-    } else {
-        button.innerHTML = "+";
+    addSubMenu(){
+        var subMenu = new SubMenu(this.container);
+        this._incrementItemCount();
+        return subMenu;
+    }
+
+    _incrementItemCount(){
+        this._numItems += 1
     }
 }
 
-function create_dropdown_nav_link(version){
-    var div = document.createElement('div');
+class SubMenu{
+    constructor(parent){
+        this.container = newElement(parent, "div");
+        this.button = newElement(this.container, "button");
+        this.button.innerHTML = "+";
+        this.button.className = "dropdown";
+        this.button.onclick = this.toggleHidden();
+    }
 
-    var expand_btn = document.createElement('button');
-    expand_btn.innerHTML = "+";
-    expand_btn.onclick = function(){toggle_subversions(div);toggle_btn_text(expand_btn)};
-    expand_btn.className = "dropdown";
-    div.appendChild(expand_btn);
+    addItem(item, is_title_item=false){
+        var [name, href] = navLink(item);
 
-    var nav_link = create_nav_link(version);
-    nav_link.className = "navigation dropdown";
-    div.appendChild(nav_link);
+        var listItem = newElement(this.container, "li");
+        listItem.className = "navigation dropdown";
+        if (!is_title_item){
+            listItem.className += " subversion";
+        }
 
-    return div;
+        var item = newElement(listItem, "a");
+        item.className = "navigation";
+        item.href = href;
+        item.innerHTML = name;
+    }
+
+    addItems(items, title_item=null){
+        if (title_item !== null){
+            this.addItem(title_item, true);
+        }
+        for (const item of items){
+            this.addItem(item);
+        }
+    }
+
+    toggleHidden(){
+        let subMenu = this;
+        return function(){
+            switch (subMenu.button.innerHTML){
+                case "+":
+                    subMenu.button.innerHTML = "-";
+                    break;
+                case "-":
+                    subMenu.button.innerHTML = "+";
+                    break;
+                case "More":
+                    subMenu.button.innerHTML = "Less";
+                    break;
+                case "Less":
+                    subMenu.button.innerHTML = "More";
+            }
+
+            for (const elem of subMenu.container.getElementsByClassName("subversion")){
+                if (window.getComputedStyle(elem).getPropertyValue("display") === "none"){
+                    elem.style.display = "inline-block";
+                } else {
+                    elem.style.display = "none";
+                }
+            }
+        }
+    }
 }
 
 function is_dict(v) {
@@ -59,37 +118,29 @@ function is_dict(v) {
 }
 
 function create_navigation_menu(){
-    if (Object.keys(all_nav_links).length > 0){
-        const navigator_div = document.getElementById("custom-version-navigation");
+    if (Object.keys(all_nav_links).length <= 0){
+        return;
+    } 
 
-        for (const [category, nav_links] of Object.entries(all_nav_links)){
-            // create header
-            var header = document.createElement('h2');
-            header.innerHTML = category;
-            navigator_div.appendChild(header);
+    const navigator_div = document.getElementById("custom-version-navigation");
 
-            // create the navigation UL
-            const navigator = document.createElement("ul");
+    for (const [category, nav_links] of Object.entries(all_nav_links)){
+        newElement(navigator_div, 'h2').innerHTML = category;
 
-            if (is_dict(nav_links)){
-                for (const [link, sub_links] of Object.entries(nav_links)){
-                    if (sub_links.length === 0){
-                        navigator.appendChild(create_nav_link(link));
-                    } else {
-                        var dropdown = create_dropdown_nav_link(link);
-                        for (var i = 0; i < sub_links.length; i++){
-                            dropdown.appendChild(create_nav_link(sub_links[i], true));
-                        }
-                        navigator.appendChild(dropdown);
-                    }
+        const menu = new Menu(navigator_div);
+
+        if (is_dict(nav_links)){
+            for (const [link, sub_links] of Object.entries(nav_links)){
+                if (sub_links.length === 0){
+                    menu.addItem(link);
+                    continue;
                 }
-            }else{
-                for (var i = 0; i < nav_links.length; i++){
-                    navigator.appendChild(create_nav_link(nav_links[i]));
-                }
+
+                let subMenu = menu.addSubMenu();
+                subMenu.addItems(sub_links, link);
             }
-
-            navigator_div.appendChild(navigator);
+        } else {
+            menu.addItems(nav_links);
         }
     }
 }
