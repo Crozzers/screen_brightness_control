@@ -948,7 +948,7 @@ class DDCUtil:
                     tmp_display['name'] = ' '.join(name)
 
                 elif 'Serial number' in line:
-                    tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '')
+                    tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
 
                 elif 'Binary serial number:' in line:
                     tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
