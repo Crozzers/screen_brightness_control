@@ -3,6 +3,7 @@ import glob
 import operator
 import os
 import platform
+import re
 import time
 from typing import List, Optional, Tuple, Union
 
@@ -919,14 +920,23 @@ class DDCUtil:
                     tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
 
                 elif 'Mfg id' in line:
-                    tmp_display['manufacturer_id'] = line.replace('Mfg id:', '').replace(' ', '')
-                    try:
-                        (
-                            tmp_display['manufacturer_id'],
-                            tmp_display['manufacturer']
-                        ) = _monitor_brand_lookup(tmp_display['manufacturer_id'])
-                    except TypeError:
-                        pass
+                    # Recently ddcutil has started reporting manufacturer IDs like
+                    # 'BNQ - UNK' or 'MSI - Microstep' so we have to split the line
+                    # into chunks of alpha chars and check for a valid mfg id
+                    for code in re.split(r'[^A-Za-z]', line.replace('Mfg id:', '').replace(' ', '')):
+                        if len(code) != 3:
+                            # all mfg ids are 3 chars long
+                            continue
+
+                        try:
+                            (
+                                tmp_display['manufacturer_id'],
+                                tmp_display['manufacturer']
+                            ) = _monitor_brand_lookup(code)
+                        except TypeError:
+                            continue
+                        else:
+                            break
 
                 elif 'Model' in line:
                     # the split() removes extra spaces
