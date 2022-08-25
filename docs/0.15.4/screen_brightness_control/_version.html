@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="pdoc 11.0.0"/>
-    <title>Quick Start Guide - screen_brightness_control
+    <title>screen_brightness_control._version API documentation
 </title>
     
     <script type="text/javascript">
-function get_version_navigation_base_url(){return new URL('./../',window.location.href);}
+function get_version_navigation_base_url(){if(window.location.href.indexOf("screen_brightness_control.html")!==-1){return new URL("./../..",window.location.href);}
+return new URL("./../../..",window.location.href);}
 var css_url=new URL("version_navigator.css",get_version_navigation_base_url());var js_url=new URL("version_navigator.js",get_version_navigation_base_url());var link=document.createElement("link");link.rel="stylesheet";link.href=css_url;document.getElementsByTagName("head")[0].appendChild(link);window.onload=function(){var s=document.createElement("script");s.type="text/javascript";s.src=js_url;document.getElementById("custom-version-navigation").appendChild(s);}    </script>
 
     <style>/*! * Bootstrap Reboot v5.0.0 (https://getbootstrap.com/) * Copyright 2011-2021 The Bootstrap Authors * Copyright 2011-2021 Twitter, Inc. * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE) * Forked from Normalize.css, licensed MIT (https://github.com/necolas/normalize.css/blob/master/LICENSE.md) */*,::after,::before{box-sizing:border-box}@media (prefers-reduced-motion:no-preference){:root{scroll-behavior:smooth}}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#fff;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}hr{margin:1rem 0;color:inherit;background-color:currentColor;border:0;opacity:.25}hr:not([size]){height:1px}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:.5rem;font-weight:500;line-height:1.2}h1{font-size:calc(1.375rem + 1.5vw)}@media (min-width:1200px){h1{font-size:2.5rem}}h2{font-size:calc(1.325rem + .9vw)}@media (min-width:1200px){h2{font-size:2rem}}h3{font-size:calc(1.3rem + .6vw)}@media (min-width:1200px){h3{font-size:1.75rem}}h4{font-size:calc(1.275rem + .3vw)}@media (min-width:1200px){h4{font-size:1.5rem}}h5{font-size:1.25rem}h6{font-size:1rem}p{margin-top:0;margin-bottom:1rem}abbr[data-bs-original-title],abbr[title]{-webkit-text-decoration:underline dotted;text-decoration:underline dotted;cursor:help;-webkit-text-decoration-skip-ink:none;text-decoration-skip-ink:none}address{margin-bottom:1rem;font-style:normal;line-height:inherit}ol,ul{padding-left:2rem}dl,ol,ul{margin-top:0;margin-bottom:1rem}ol ol,ol ul,ul ol,ul ul{margin-bottom:0}dt{font-weight:700}dd{margin-bottom:.5rem;margin-left:0}blockquote{margin:0 0 1rem}b,strong{font-weight:bolder}small{font-size:.875em}mark{padding:.2em;background-color:#fcf8e3}sub,sup{position:relative;font-size:.75em;line-height:0;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}a{color:#0d6efd;text-decoration:underline}a:hover{color:#0a58ca}a:not([href]):not([class]),a:not([href]):not([class]):hover{color:inherit;text-decoration:none}code,kbd,pre,samp{font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:1em;direction:ltr;unicode-bidi:bidi-override}pre{display:block;margin-top:0;margin-bottom:1rem;overflow:auto;font-size:.875em}pre code{font-size:inherit;color:inherit;word-break:normal}code{font-size:.875em;color:#d63384;word-wrap:break-word}a>code{color:inherit}kbd{padding:.2rem .4rem;font-size:.875em;color:#fff;background-color:#212529;border-radius:.2rem}kbd kbd{padding:0;font-size:1em;font-weight:700}figure{margin:0 0 1rem}img,svg{vertical-align:middle}table{caption-side:bottom;border-collapse:collapse}caption{padding-top:.5rem;padding-bottom:.5rem;color:#6c757d;text-align:left}th{text-align:inherit;text-align:-webkit-match-parent}tbody,td,tfoot,th,thead,tr{border-color:inherit;border-style:solid;border-width:0}label{display:inline-block}button{border-radius:0}button:focus:not(:focus-visible){outline:0}button,input,optgroup,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}button,select{text-transform:none}[role=button]{cursor:pointer}select{word-wrap:normal}select:disabled{opacity:1}[list]::-webkit-calendar-picker-indicator{display:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]:not(:disabled),[type=reset]:not(:disabled),[type=submit]:not(:disabled),button:not(:disabled){cursor:pointer}::-moz-focus-inner{padding:0;border-style:none}textarea{resize:vertical}fieldset{min-width:0;padding:0;margin:0;border:0}legend{float:left;width:100%;padding:0;margin-bottom:.5rem;font-size:calc(1.275rem + .3vw);line-height:inherit}@media (min-width:1200px){legend{font-size:1.5rem}}legend+*{clear:left}::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-fields-wrapper,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-text,::-webkit-datetime-edit-year-field{padding:0}::-webkit-inner-spin-button{height:auto}[type=search]{outline-offset:-2px;-webkit-appearance:textfield}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-color-swatch-wrapper{padding:0}::file-selector-button{font:inherit}::-webkit-file-upload-button{font:inherit;-webkit-appearance:button}output{display:inline-block}iframe{border:0}summary{display:list-item;cursor:pointer}progress{vertical-align:baseline}[hidden]{display:none!important}</style>
@@ -28,17 +29,16 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
 </svg>            &nbsp;
             Back to homepage
         </a>
+                    <a class="pdoc-button module-list-button" href="../screen_brightness_control.html">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>                &nbsp;screen_brightness_control</a>
 
 
 
-        <h2>Contents</h2>
-        <ul>
-  <li><a href="#get_brightnessdisplaynone-methodnone-verbose_errorfalse">get_brightness(<code>display=None, method=None, verbose_error=False</code>)</a></li>
-  <li><a href="#set_brightnessvalue-displaynone-methodnone-forcefalse-verbose_errorfalse-no_returntrue">set_brightness(<code>value, display=None, method=None, force=False, verbose_error=False, no_return=True</code>)</a></li>
-  <li><a href="#fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs</code>)</a></li>
-  <li><a href="#list_monitorsmethodnone">list_monitors(<code>method=None</code>)</a></li>
-  <li><a href="#get_methods">get_methods()</a></li>
-</ul>
+            <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
+                   pattern=".+" required>
 
 
 
@@ -75,150 +75,200 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <section>
             
 
-            <h1 class="modulename">
-            Quick Start Guide
-            </h1>
-                <div class="docstring"><h2 id="get_brightnessdisplaynone-methodnone-verbose_errorfalse">get_brightness(<code>display=None, method=None, verbose_error=False</code>)</h2>
+                <h1 class="modulename">
+<a href="./../screen_brightness_control.html">screen_brightness_control</a><wbr>._version    </h1>
 
-<p><strong>Summary:</strong> <br />
-Gets the percentage brightness of all detected monitors. This is returned as a list of integers.  </p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. Use the <a href="#get_methods">get_methods</a> function to get all available methods for your system.</li>
-<li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1"># get the current screen brightness (for all detected displays)</span>
-<span class="n">all_screens_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
-<span class="c1"># get the brightness of the primary display</span>
-<span class="n">primary_display_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<span class="c1"># get the brightness of the secondary display (if connected)</span>
-<span class="n">secondary_display_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<span class="c1"># get the brightness for a named monitor</span>
-<span class="n">benq_brightness</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="s1">&#39;BenQ GL2450H&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</code></pre></div>
-
-<h2 id="set_brightnessvalue-displaynone-methodnone-forcefalse-verbose_errorfalse-no_returntrue">set_brightness(<code>value, display=None, method=None, force=False, verbose_error=False, no_return=True</code>)</h2>
-
-<p><strong>Summary:</strong> <br />
-Sets the brightness to <code>value</code>. If <code>value</code> is a string and contains "+" or "-" then that value is added to/subtracted from the current brightness.  </p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>value</code> - the level to set the brightness to. Can either be an integer or a string.</li>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
-<li><code>method</code> - the OS specific method to use. Use the <a href="#get_methods">get_methods</a> function to get all available methods for your system.</li>
-<li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
-<li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
-<li><code>no_return</code> - whether this function should return the new brightness values. By default this behaviour is turned off</li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1">#set brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1">#set brightness to 0%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1">#increase brightness by 25%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="s1">&#39;+25&#39;</span><span class="p">)</span>
-
-<span class="c1">#decrease brightness by 30%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="s1">&#39;-30&#39;</span><span class="p">)</span>
-
-<span class="c1">#set the brightness of display 0 to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs</code>)</h2>
-
-<p><strong>Summary:</strong> <br />
-Fades the brightness from <code>start</code> to <code>finish</code> in steps of <code>increment</code>, pausing for <code>interval</code> seconds between each step.
-If it runs in the main thread it will return the final brightness. Otherwise it returns the list of thread objects that the process is running in</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>finish</code> - The brightness value to fade to</li>
-<li><code>start</code> - The value to start from. If not specified it defaults to the current brightness</li>
-<li><code>interval</code> - The time interval between each step in brightness</li>
-<li><code>increment</code> - The amount to change the brightness by each step in percent.</li>
-<li><code>blocking</code> - If set to <code>False</code> it fades the brightness in a new thread</li>
-<li><code>kwargs</code> - passed to <code>set_brightness</code></li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="c1">#fade brightness from the current brightness to 50%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from 25% to 75%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from the current value to 100% in steps of 10%</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">increment</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness from 100% to 90% with time intervals of 0.1 seconds</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
-
-<span class="c1">#fade the brightness to 100% in a new thread</span>
-<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="list_monitorsmethodnone">list_monitors(<code>method=None</code>)</h2>
-
-<p><strong>Summary:</strong> <br />
-Returns a list of the names of all detected monitors</p>
-
-<p><strong>Arguments:</strong></p>
-
-<ul>
-<li><code>method</code> - the OS specific method to use. Use the <a href="#get_methods">get_methods</a> function to get all available methods for your system.</li>
-</ul>
-
-<p><strong>Usage:</strong>  </p>
-
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-<span class="n">monitor_names</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">()</span>
-<span class="c1"># eg: [&#39;BenQ GL2450H&#39;, &#39;Dell U2211H&#39;]</span>
-</code></pre></div>
-
-<h2 id="get_methods">get_methods()</h2>
-
-<p><strong>Summary:</strong> <br />
-Returns a dictionary of brightness methods that you can use for adjusting screen brightness.</p>
-
-<p>A method is just a class that uses a particular API or program to get display information and retrieve/set brightness levels for displays.
-Each method may be able to address different kinds of displays (eg: laptop vs external monitors).</p>
-
-<p><strong>Usage:</strong></p>
-
-<div class="pdoc-code codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
-
-<span class="n">all_methods</span> <span class="o">=</span> <span class="n">sbc</span><span class="o">.</span><span class="n">get_methods</span><span class="p">()</span>
-
-<span class="k">for</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_class</span> <span class="ow">in</span> <span class="n">all_methods</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Method:&#39;</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Class:&#39;</span><span class="p">,</span> <span class="n">method_class</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Associated monitors:&#39;</span><span class="p">,</span> <span class="n">sbc</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method_name</span><span class="p">))</span>
-</code></pre></div>
+                <div class="docstring"><p>Short file to provide version and author information for this package</p>
 </div>
 
-        
+                <details>
+            <summary>View Source</summary>
+            <div class="pdoc-code codehilite"><pre><span></span><span class="sd">&#39;&#39;&#39;Short file to provide version and author information for this package&#39;&#39;&#39;</span>
+
+<span class="n">__version__</span> <span class="o">=</span> <span class="s1">&#39;0.15.4&#39;</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Crozzers&#39;</span>
+</pre></div>
+
+        </details>
+
     </section>
     </main>
-</body>
+<script>
+    function escapeHTML(html) {
+        return document.createElement('div').appendChild(document.createTextNode(html)).parentNode.innerHTML;
+    }
+
+    const originalContent = document.querySelector("main.pdoc");
+    let currentContent = originalContent;
+
+    function setContent(innerHTML) {
+        let elem;
+        if (innerHTML) {
+            elem = document.createElement("main");
+            elem.classList.add("pdoc");
+            elem.innerHTML = innerHTML;
+        } else {
+            elem = originalContent;
+        }
+        if (currentContent !== elem) {
+            currentContent.replaceWith(elem);
+            currentContent = elem;
+        }
+    }
+
+    function getSearchTerm() {
+        return (new URL(window.location)).searchParams.get("search");
+    }
+
+    const searchBox = document.querySelector(".pdoc input[type=search]");
+    searchBox.addEventListener("input", function () {
+        let url = new URL(window.location);
+        if (searchBox.value.trim()) {
+            url.hash = "";
+            url.searchParams.set("search", searchBox.value);
+        } else {
+            url.searchParams.delete("search");
+        }
+        history.replaceState("", "", url.toString());
+        onInput();
+    });
+    window.addEventListener("popstate", onInput);
+
+
+    let search, searchErr;
+
+    async function initialize() {
+        try {
+            search = await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.type = "text/javascript";
+                script.async = true;
+                script.onload = () => resolve(window.pdocSearch);
+                script.onerror = (e) => reject(e);
+                script.src = "../search.js";
+                document.getElementsByTagName("head")[0].appendChild(script);
+            });
+        } catch (e) {
+            console.error("Cannot fetch pdoc search index");
+            searchErr = "Cannot fetch search index.";
+        }
+        onInput();
+
+        document.querySelector("nav.pdoc").addEventListener("click", e => {
+            if (e.target.hash) {
+                searchBox.value = "";
+                searchBox.dispatchEvent(new Event("input"));
+            }
+        });
+    }
+
+    function onInput() {
+        setContent((() => {
+            const term = getSearchTerm();
+            if (!term) {
+                return null
+            }
+            if (searchErr) {
+                return `<h3>Error: ${searchErr}</h3>`
+            }
+            if (!search) {
+                return "<h3>Searching...</h3>"
+            }
+
+            window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+
+            const results = search(term);
+
+            let html;
+            if (results.length === 0) {
+                html = `No search results for '${escapeHTML(term)}'.`
+            } else {
+                html = `<h4>${results.length} search result${results.length > 1 ? "s" : ""} for '${escapeHTML(term)}'.</h4>`;
+            }
+            for (let result of results.slice(0, 10)) {
+                let doc = result.doc;
+                let url = `../${doc.modulename.replaceAll(".", "/")}.html`;
+                if (doc.qualname) {
+                    url += `#${doc.qualname}`;
+                }
+
+                let heading;
+                switch (result.doc.type) {
+                    case "function":
+                        heading = `<span class="def">${doc.funcdef}</span> <span class="name">${doc.fullname}</span><span class="signature">${doc.signature}:</span>`;
+                        break;
+                    case "class":
+                        heading = `<span class="def">class</span> <span class="name">${doc.fullname}</span>`;
+                        if (doc.bases)
+                            heading += `<wbr>(<span class="base">${doc.bases}</span>)`;
+                        heading += `:`;
+                        break;
+                    case "variable":
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        if (doc.annotation)
+                            heading += `<span class="annotation">${doc.annotation}</span>`;
+                        if (doc.default_value)
+                            heading += `<span class="default_value">${doc.default_value}</span>`;
+                        break;
+                    default:
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        break;
+                }
+                html += `
+                        <section class="search-result">
+                        <a href="${url}" class="attr ${doc.type}">${heading}</a>
+                        <div class="docstring">${doc.doc}</div>
+                        </section>
+                    `;
+
+            }
+            return html;
+        })());
+    }
+
+    if (getSearchTerm()) {
+        initialize();
+        searchBox.value = getSearchTerm();
+        onInput();
+    } else {
+        searchBox.addEventListener("focus", initialize, {once: true});
+    }
+
+    searchBox.addEventListener("keydown", e => {
+        if (["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+            let focused = currentContent.querySelector(".search-result.focused");
+            if (!focused) {
+                currentContent.querySelector(".search-result").classList.add("focused");
+            } else if (
+                e.key === "ArrowDown"
+                && focused.nextElementSibling
+                && focused.nextElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.nextElementSibling.classList.add("focused");
+                focused.nextElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "ArrowUp"
+                && focused.previousElementSibling
+                && focused.previousElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.previousElementSibling.classList.add("focused");
+                focused.previousElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "Enter"
+            ) {
+                focused.querySelector("a").click();
+            }
+        }
+    });
+</script></body>
 </html>
