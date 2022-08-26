@@ -145,7 +145,12 @@ class EDID:
 
             # if previous method did not work, try taking last word of name
             if not model:
-                model = name.strip().rsplit(' ', 1)[1]
+                try:
+                    model = name.strip().rsplit(' ', 1)[1]
+                except IndexError:
+                    # If the name does not include model information then
+                    # give it somethign generic
+                    model = 'Generic Monitor'
 
         return mfg_id, manufacturer, model, name, serial
 
