@@ -344,7 +344,7 @@ class VCP:
                     if display_devices[monitor_index].StateFlags & win32con.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP:
                         # check if monitor is actually a laptop display
                         if display_devices[monitor_index].DeviceID.split('#')[2] not in laptop_displays:
-                            if user_index >= start:
+                            if start is None or user_index >= start:
                                 yield item.handle
                             # increment user index as a valid monitor was found
                             user_index += 1
@@ -413,10 +413,8 @@ class VCP:
         '''
         code = BYTE(0x10)
         values = []
-        for index, monitor in enumerate(
-            cls.iter_physical_monitors(start=display),
-            start=display if display is not None else 0
-        ):
+        start = display if display is not None else 0
+        for index, monitor in enumerate(cls.iter_physical_monitors(start=start), start=start):
             current = __cache__.get(f'vcp_brightness_{index}')
             if current is None:
                 cur_out = DWORD()
@@ -466,10 +464,8 @@ class VCP:
         __cache__.expire(startswith='vcp_brightness_')
         code = BYTE(0x10)
         value = DWORD(value)
-        for index, monitor in enumerate(
-            cls.iter_physical_monitors(start=display),
-            start=display if display is not None else 0
-        ):
+        start = display if display is not None else 0
+        for index, monitor in enumerate(cls.iter_physical_monitors(start=start), start=start):
             if display is None or display == index:
                 handle = HANDLE(monitor)
                 for attempt in range(max_tries):
