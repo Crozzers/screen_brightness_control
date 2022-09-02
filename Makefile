@@ -15,7 +15,7 @@ docs:
 
 .PHONY: release
 release: docs
-	[ ! -z "`git diff`" ] && echo "Git diff is not empty. Commit changes before releasing" && exit 1
+	if [ ! -z "`git diff`" ]; then echo "Git diff is not empty. Commit changes before releasing" && exit 1; fi
 	python -m pip install --upgrade build
 	python -m build
 
