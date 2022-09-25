@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, flatten_list, logarithmic_range
