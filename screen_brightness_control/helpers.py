@@ -8,6 +8,8 @@ import time
 from functools import lru_cache
 from typing import Any, List, Tuple, Union
 
+from ._debug import log
+
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
 else:
@@ -411,25 +413,31 @@ class __Cache(dict):
             value, expires, orig_args, orig_kwargs = self[key]
             if time.time() < expires:
                 if orig_args == args and orig_kwargs == kwargs:
+                    log.debug(f'cache get {repr(key)}')
                     return value
             else:
+                log.debug(f'cache get {repr(key)} = [expired]')
                 del self[key]
         except KeyError:
+            log.debug(f'cache get {repr(key)} = [KeyError]')
             pass
 
     def store(self, key, value, *args, expires=1, **kwargs):
         self[key] = (value, expires + time.time(), args, kwargs)
+        log.debug(f'cache set {repr(key)}, expires={expires}')
 
     def expire(self, key=None, startswith=None):
         if key is not None:
             try:
                 del self[key]
+                log.debug(f'cache expire key {repr(key)}')
             except KeyError:
                 pass
         elif startswith is not None:
             for i in tuple(self.keys()):
                 if i.startswith(startswith):
                     del self[i]
+                    log.debug(f'cache expire key {repr(i)}')
 
 
 __cache__ = __Cache()

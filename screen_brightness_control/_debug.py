@@ -1,8 +1,15 @@
 '''
 A small helper module to assist with debugging the screen_brightness_control library
 '''
+import logging
 import platform
 import traceback
+
+from . import __name__ as __parent_name__
+
+# configure logging
+log = logging.getLogger(__parent_name__)
+log.addHandler(logging.NullHandler())
 
 
 def info() -> dict:
