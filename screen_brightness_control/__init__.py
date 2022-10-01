@@ -187,7 +187,10 @@ def fade_brightness(
         if start > finish:
             increment = -increment
 
-        log.debug(f'fade display {monitor.index} of {monitor.method} {start}->{finish}:{increment}:logarithmic={logarithmic}')
+        log.debug(
+            f'fade display {monitor.index} of {monitor.method}'
+            + ' {start}->{finish}:{increment}:logarithmic={logarithmic}'
+        )
         for value in range_func(start, finish, increment):
             monitor.set_brightness(value, no_return=True)
             time.sleep(interval)
