@@ -5,6 +5,7 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
+from ._debug import log
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, flatten_list, logarithmic_range
@@ -186,6 +187,7 @@ def fade_brightness(
         if start > finish:
             increment = -increment
 
+        log.debug(f'fade display {monitor.index} of {monitor.method} {start}->{finish}:{increment}:logarithmic={logarithmic}')
         for value in range_func(start, finish, increment):
             monitor.set_brightness(value, no_return=True)
             time.sleep(interval)
@@ -717,6 +719,8 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
+
+    log.debug(f"brightness {meta_method} request display {display} with method {method}")
 
     def format_exc(name, e):
         errors.append((
