@@ -182,8 +182,9 @@ def fade_brightness(
     def fade(start, finish, increment, monitor):
         range_func = logarithmic_range if logarithmic else range
 
+        increment = abs(increment)
         if start > finish:
-            increment = -abs(increment)
+            increment = -increment
 
         for value in range_func(start, finish, increment):
             monitor.set_brightness(value, no_return=True)
