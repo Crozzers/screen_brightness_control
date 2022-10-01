@@ -788,7 +788,5 @@ if platform.system() == 'Windows':
 elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
-elif platform.system() == 'Darwin':
-    raise NotImplementedError('MAC is not yet supported')
 else:
-    raise NotImplementedError(f'{platform.system()} is not yet supported')
+    log.warning(f'package imported on unsupported platform ({platform.system()})')
