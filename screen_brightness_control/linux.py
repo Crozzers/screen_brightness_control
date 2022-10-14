@@ -1,14 +1,11 @@
+import fcntl
 import functools
 import glob
 import operator
 import os
-import platform
 import re
 import time
 from typing import List, Optional, Tuple, Union
-
-if platform.system() == 'Linux':
-    import fcntl
 
 from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
