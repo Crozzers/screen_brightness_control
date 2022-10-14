@@ -8,6 +8,7 @@ import time
 from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
+from ._debug import log
 from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
 
 
@@ -87,7 +88,11 @@ class SysFiles:
                         device['name'] = folder
                         device['path'] = f'/sys/class/backlight/{folder}'
                         device['scale'] = scale
-                except (FileNotFoundError, TypeError):
+                except (FileNotFoundError, TypeError) as e:
+                    log.debug(
+                        f'SysFiles: error getting highest resolution scale for {folder}'
+                        f' - {type(e).__name__}: {e}'
+                    )
                     continue
 
             if os.path.isfile('%s/device/edid' % device['path']):
@@ -345,6 +350,7 @@ class I2C:
                 'length': len(ba) >= (ba[1] & ~self.PROTOCOL_FLAG) + 3
             }
             if False in checks.values():
+                log.debug('i2c read check failed: ' + repr(checks))
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
             return ba[2:-1]
@@ -371,6 +377,7 @@ class I2C:
                 'answer matches request': ba[2] == vcp_code
             }
             if False in checks.values():
+                log.debug('i2c read check failed: ' + repr(checks))
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
             # current and max values
@@ -418,7 +425,8 @@ class I2C:
                     device = cls.I2CDevice(i2c_path, cls.HOST_ADDR_R)
                     # read some 512 bytes from the device
                     data = device.read(512)
-                except IOError:
+                except IOError as e:
+                    log.debug(f'I2C: IOError reading from device {i2c_path}: {e}')
                     continue
 
                 # search for the EDID header within our 512 read bytes
@@ -1021,7 +1029,8 @@ class DDCUtil:
                 __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
             try:
                 res.append(value)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
+                log.debug(f'Error appending value {value} to result - {type(e).__name__}: {e}')
                 pass
         return res
 
@@ -1111,6 +1120,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     if method is not None:
         method = method.lower()
         if method not in all_methods:
+            log.debug(f'requested method {repr(method)} invalid')
             raise ValueError(f'method must be one of: {list(all_methods)}')
 
     all_methods = all_methods.values()
@@ -1121,7 +1131,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             continue
         try:
             haystack += method_class.get_display_info()
-        except Exception:
+        except Exception as e:
+            log.debug(f'error grabbing display info from {method_class} - {type(e).__name__}: {e}')
             pass
 
     if allow_duplicates:
