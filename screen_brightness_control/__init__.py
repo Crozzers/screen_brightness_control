@@ -8,7 +8,8 @@ from ._debug import info as debug_info  # noqa: F401
 from ._debug import log
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
-from .helpers import ScreenBrightnessError, flatten_list, logarithmic_range
+from .helpers import ScreenBrightnessError, logarithmic_range
+from .helpers import flatten_list  # noqa: F401  - deprecated.
 
 
 def get_brightness(
@@ -101,16 +102,18 @@ def set_brightness(
             output = []
             for monitor in monitors:
                 identifier = Monitor.get_identifier(monitor)[1]
-                output.append(
-                    set_brightness(
-                        get_brightness(display=identifier)[0] + value,
-                        display=identifier,
-                        force=force,
-                        verbose_error=verbose_error,
-                        no_return=no_return
-                    )
+                tmp = set_brightness(
+                    get_brightness(display=identifier)[0] + value,
+                    display=identifier,
+                    force=force,
+                    verbose_error=verbose_error,
+                    no_return=no_return
                 )
-            return flatten_list(output)
+                if isinstance(tmp, list):
+                    output += tmp
+                else:  # otherwise the output should be None
+                    output.append(tmp)
+            return output
 
         value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])[0]
     else:
@@ -748,12 +751,10 @@ def __brightness(
                         output.append(None)
                         continue
 
-                output.append(monitor['method'].get_brightness(display=monitor['index'], **kwargs))
+                output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
             except Exception as e:
                 output.append(None)
                 format_exc(monitor, e)
-
-    output = flatten_list(output)
 
     if output:
         output_is_none = set(output) == {None}

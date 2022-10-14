@@ -307,7 +307,10 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
 
 def flatten_list(thick_list: List[Any]) -> List[Any]:
     '''
-    Internal function I use to flatten lists, because I do that often
+    .. warning:: Deprecated
+       This function has been deprecated and will be removed in version 0.17.0
+
+    Internal function I use to flatten lists, because I do that often.
 
     Args:
         thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
