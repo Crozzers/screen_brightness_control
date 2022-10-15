@@ -611,8 +611,11 @@ class Monitor():
         try:
             self.get_brightness()
             return True
-        except Exception:
-            logging.debug(f'Monitor.is_active: {self.get_identifier()} failed get_brightness call - {type(e).__name__}: {e}')
+        except Exception as e:
+            log.debug(
+                f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
+                f' - {type(e).__name__}: {e}'
+            )
             return False
 
 

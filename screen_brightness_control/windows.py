@@ -116,7 +116,7 @@ def get_display_info() -> List[dict]:
                         if name is None:
                             raise Exception('parsed EDID returned invalid monitor name')
                     except Exception as e:
-                        log.debug(f'exception parsing edid string for {monitor.InstanceName} - {type(e).__name__}: {e}')
+                        log.debug(f'exception parsing edid str for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
                         man_id = devid[1][:3]
@@ -332,7 +332,7 @@ class VCP:
                 i.InstanceName.replace('_0', '').split('\\')[2]
                 for i in wmi.WmiMonitorBrightness()
             ]
-        except Exception:
+        except Exception as e:
             log.debug(f'iter_physical_monitors: failed to gather list of laptop displays - {e}')
             laptop_displays = []
 
