@@ -151,7 +151,7 @@ class EDID:
                     model = name.strip().rsplit(' ', 1)[1]
                 except IndexError:
                     # If the name does not include model information then
-                    # give it somethign generic
+                    # give it something generic
                     model = 'Generic Monitor'
 
         return mfg_id, manufacturer, model, name, serial
@@ -188,6 +188,7 @@ MONITOR_MANUFACTURER_CODES = {
     "ACT": "Targa",
     "ADI": "ADI Corporation",
     "AIC": "AG Neovo",
+    "ALX": "Anrecson",
     "AMW": "AMW",
     "AOC": "AOC",
     "API": "Acer America Corp.",
