@@ -244,7 +244,8 @@ def fade_brightness(
             t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
             t1.start()
             threads.append(t1)
-        except Exception:
+        except Exception as e:
+            log.debug(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
             pass
 
     if not blocking:
@@ -611,6 +612,7 @@ class Monitor():
             self.get_brightness()
             return True
         except Exception:
+            logging.debug(f'Monitor.is_active: {self.get_identifier()} failed get_brightness call - {type(e).__name__}: {e}')
             return False
 
 
