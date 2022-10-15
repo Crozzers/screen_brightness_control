@@ -13,6 +13,7 @@ import win32con
 import wmi
 
 from . import filter_monitors, get_methods
+from ._debug import log
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
@@ -45,6 +46,7 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
             try:
                 device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
             except Exception:
+                log.debug(f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
                 pass
             else:
                 yield device
@@ -83,7 +85,8 @@ def get_display_info() -> List[dict]:
                     i.InstanceName
                     for i in wmi.WmiMonitorBrightness()
                 ]
-            except Exception:
+            except Exception as e:
+                log.debug(f'get_display_info: failed to gather list of laptop displays - {e}')
                 laptop_displays = []
 
             extras, desktop, laptop = [], 0, 0
@@ -97,20 +100,23 @@ def get_display_info() -> List[dict]:
                     # get the EDID
                     try:
                         edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
-                    except Exception:
+                    except Exception as e:
+                        log.debug(f'failed to get EDID string for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         edid = None
 
                     # get serial, model, manufacturer and manufacturer ID
                     try:
                         if edid is None:
-                            raise Exception
+                            # we already log the EDID exception earlier so don't log it again here
+                            raise Exception('invalid EDID. Cannot parse')
                         # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                         # takes too long
                         parsed = EDID.parse(edid)
                         man_id, manufacturer, model, name, serial = parsed
                         if name is None:
-                            raise Exception
-                    except Exception:
+                            raise Exception('parsed EDID returned invalid monitor name')
+                    except Exception as e:
+                        log.debug(f'exception parsing edid string for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
                         man_id = devid[1][:3]
@@ -145,7 +151,8 @@ def get_display_info() -> List[dict]:
                             uid_keys[uid_keys.index(instance_name)] = data
                         else:
                             extras.append(data)
-                except Exception:
+                except Exception as e:
+                    log.debug(f'exception getting device info for {monitor.InstanceName} - {type(e).__name__}: {e}')
                     pass
 
             info = uid_keys + extras
@@ -156,7 +163,8 @@ def get_display_info() -> List[dict]:
                     if item['method'] == VCP:
                         item['index'] = count
                         count += 1
-        except Exception:
+        except Exception as e:
+            log.debug(f'error gathering display information - {type(e).__name__}: {e}', exc_info=True)
             pass
 
         # return info only which has correct data
@@ -325,18 +333,19 @@ class VCP:
                 for i in wmi.WmiMonitorBrightness()
             ]
         except Exception:
+            log.debug(f'iter_physical_monitors: failed to gather list of laptop displays - {e}')
             laptop_displays = []
 
         for monitor in monitors:
             # Get physical monitor count
             count = DWORD()
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
-                raise WinError()
+                raise WinError('call to GetNumberOfPhysicalMonitorsFromHMONITOR returned invalid result')
             if count.value > 0:
                 # Get physical monitor handles
                 physical_array = (cls._PHYSICAL_MONITOR * count.value)()
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
-                    raise WinError()
+                    raise WinError('call to GetPhysicalMonitorsFromHMONITOR returned invalid result')
                 for item in physical_array:
                     # check that the monitor is not a pseudo monitor by
                     # checking it's StateFlags for the
@@ -522,6 +531,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
     if method is not None:
         method = method.lower()
         if method not in all_methods:
+            log.debug(f'requested method {repr(method)} invalid')
             raise ValueError(f'method must be one of: {list(all_methods)}')
         info = [i for i in info if i['method'].__name__.lower() == method]
 
