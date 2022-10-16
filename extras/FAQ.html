@@ -33,10 +33,9 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
 
         <h2>Contents</h2>
         <ul>
-  <li><a href="#the-model-of-my-monitordisplay-is-not-what-the-program-says-it-is-windows">The model of my monitor/display is not what the program says it is (Windows)</a></li>
-  <li><a href="#when-i-call-get_brightness-the-returned-value-isnt-what-i-set-it-to-windows">When I call <code>get_brightness()</code> the returned value isn't what I set it to (Windows)</a></li>
-  <li><a href="#why-do-i-always-get-screenbrightnesserror-linux">Why do I always get <code>ScreenBrightnessError</code> (Linux)?</a></li>
-  <li><a href="#why-doesnt-the-library-support-mac">Why doesn't the library support Mac?</a></li>
+  <li><a href="#general-faq">General FAQ</a></li>
+  <li><a href="#windows-faq">Windows FAQ</a></li>
+  <li><a href="#linux-faq">Linux FAQ</a></li>
   <li><a href="#none-of-these-answered-my-question">None of these answered my question</a></li>
 </ul>
 
@@ -61,7 +60,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.15.5</footer>
+                <footer>screen_brightness_control v0.16.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev">
@@ -78,12 +77,32 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
             <h1 class="modulename">
             FAQ
             </h1>
-                <div class="docstring"><h2 id="the-model-of-my-monitordisplay-is-not-what-the-program-says-it-is-windows">The model of my monitor/display is not what the program says it is (Windows)</h2>
+                <div class="docstring"><h2 id="general-faq">General FAQ</h2>
+
+<h3 id="why-doesnt-the-library-support-mac">Why doesn't the library support Mac?</h3>
+
+<p>I don't have a Mac to develop the library on so I have no way to test if the code works.
+If you have a Mac and you would like to contribute, please do not hesitate to <a href="https://github.com/Crozzers/screen_brightness_control/pulls">create a pull request</a>.</p>
+
+<h3 id="library-throws-exception-nameerror-name-_os_module-is-not-defined">Library throws exception - <code>NameError: name '_OS_MODULE' is not defined</code></h3>
+
+<p>This error is thown when attempting to use the library on unsupported platforms.</p>
+
+<p>Upon import, the library will check which OS it is running on and will attempt to import the
+relevant, OS specific sub-modules. When running on an unsupported OS, this will not be possible and
+so <code>_OS_MODULE</code> will not be defined.</p>
+
+<p>In the past, a <code>NotImplementedError</code> would have been raised at this stage, letting you know the issue.
+This behaviour was changed in v0.16.0 to simply log a warning.</p>
+
+<h2 id="windows-faq">Windows FAQ</h2>
+
+<h3 id="the-model-of-my-monitordisplay-is-not-what-the-program-says-it-is">The model of my monitor/display is not what the program says it is</h3>
 
 <p>If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
 If you know how this might be done, feel free to <a href="https://github.com/Crozzers/screen_brightness_control/pulls">create a pull request</a> or to ping me an email <a href="mailto:captaincrozzers@gmail.com">captaincrozzers@gmail.com</a></p>
 
-<h2 id="when-i-call-get_brightness-the-returned-value-isnt-what-i-set-it-to-windows">When I call <code>get_brightness()</code> the returned value isn't what I set it to (Windows)</h2>
+<h3 id="when-i-call-get_brightness-the-returned-value-isnt-what-i-set-it-to">When I call <code>get_brightness()</code> the returned value isn't what I set it to</h3>
 
 <p>Not all monitors can set the brightness for every value between 0 and 100. Some of them have a number of 'levels' that they can be set to.
 You can likely see this if you open your display settings and very slowly move the brightness slider. <br />
@@ -97,17 +116,14 @@ You can find out your brightness 'levels' by running the following python code:<
 <span class="nb">print</span><span class="p">(</span><span class="n">monitor</span><span class="o">.</span><span class="n">Level</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="why-do-i-always-get-screenbrightnesserror-linux">Why do I always get <code>ScreenBrightnessError</code> (Linux)?</h2>
+<h2 id="linux-faq">Linux FAQ</h2>
+
+<h3 id="why-do-i-always-get-screenbrightnesserror">Why do I always get <code>ScreenBrightnessError</code>?</h3>
 
 <p>Linux often requires a bit of tweaking to get working out of the box. This either means installing a 3rd party program or
 granting extra permissions to the user.</p>
 
 <p>These steps are covered in detail on the <a href="Installing%20On%20Linux.html">Installing On Linux</a> page.</p>
-
-<h2 id="why-doesnt-the-library-support-mac">Why doesn't the library support Mac?</h2>
-
-<p>I don't have a Mac to develop the library on so I have no way to test if the code works.
-If you have a Mac and you would like to contribute, please do not hesitate to <a href="https://github.com/Crozzers/screen_brightness_control/pulls">create a pull request</a>.</p>
 
 <h2 id="none-of-these-answered-my-question">None of these answered my question</h2>
 
