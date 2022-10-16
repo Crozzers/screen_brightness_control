@@ -46,7 +46,10 @@ def configure_pdoc(**kwargs):
 
 
 def run_pdoc(source, output):
-    pdoc.pdoc(source, output_directory=output, format='html')
+    if version.Version(pdoc.__version__) >= version.Version('12.2.0'):
+        pdoc.pdoc(source, output_directory=output)
+    else:
+        pdoc.pdoc(source, output_directory=output, format='html')
 
 
 def get_documentation_versions(directory):
