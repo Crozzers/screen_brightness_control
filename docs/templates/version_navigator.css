@@ -46,3 +46,6 @@ div#custom-version-navigation summary {
 div#custom-version-navigation summary:hover {
     background-color: var(--nav-hover);
 }
+h1.modulename {
+    display: inline;
+}

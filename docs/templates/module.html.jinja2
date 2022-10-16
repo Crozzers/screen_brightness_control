@@ -1,5 +1,14 @@
 {% extends "default/module.html.jinja2" %}
 
+{% if env["PDOC_DEFINE_VIEW_SOURCE_MACRO"] == "1" %}
+    {% defaultmacro view_source(doc) %}
+        {{ view_source_state(doc) }}
+        {{ view_source_button(doc) }}
+        {{ view_source_code(doc) }}
+        <br />
+    {% enddefaultmacro %}
+{% endif %}
+
 {% block title %}
     {% if env["BUILD_DOCS_LEVEL"] == "homepage" %}
 screen_brightness_control Documentation
