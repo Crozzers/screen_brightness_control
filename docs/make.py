@@ -159,6 +159,11 @@ if __name__ == '__main__':
     configure_pdoc(footer_text=f'screen_brightness_control v{path_version}')
     run_pdoc(args.path, OUTPUT_DIR / 'docs' / path_version)
 
+    # remove files for un-documented modules, like __main__ and _version
+    for file in os.listdir(OUTPUT_DIR / 'docs' / path_version / 'screen_brightness_control'):
+        if file.startswith('_') and file.endswith('.html'):
+            os.remove(OUTPUT_DIR / 'docs' / path_version / 'screen_brightness_control' / file)
+
     # clear up dummy imports
     dummy_imports.clear_dummy_modules()
 
