@@ -96,6 +96,21 @@ class TestLogarithmicRange(unittest.TestCase):
 
             self.assertTrue(all(isinstance(i, int) for i in l_range))
 
+    def test_skip_intervals(self):
+        for l_bound, u_bound in (
+            (0, 100), (0, 50), (50, 100), (0, 25), (25, 50), (50, 75), (75, 100)
+        ):
+            l_range = list(sbc.helpers.logarithmic_range(l_bound, u_bound))
+
+            # assert the lower value items have a lower diff than higher items
+            self.assertLessEqual(l_range[1] - l_range[0], l_range[-1] - l_range[-2])
+
+            l_range = list(sbc.helpers.logarithmic_range(u_bound, l_bound, -1))
+            print(l_range)
+
+            # assert higher value items have higher diff than lower items
+            self.assertGreaterEqual(l_range[0] - l_range[1], l_range[-2] - l_range[-1])
+
 
 if __name__ == '__main__':
     if '--synthetic' in sys.argv:
