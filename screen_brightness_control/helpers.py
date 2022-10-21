@@ -356,11 +356,6 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
     Yields:
         int
     '''
-    if step < 0:
-        for i in reversed(list(logarithmic_range(stop, start, abs(step)))):
-            yield i
-        return
-
     start = int(max(0, start))
     stop = int(min(100, stop))
 
