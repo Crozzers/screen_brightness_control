@@ -29,12 +29,16 @@ def info() -> dict:
         'file': sbc.__file__
     }
 
+    log.debug('_debug.info: gathering list of all monitors')
+
     try:
         all_monitors = sbc.list_monitors_info(allow_duplicates=True)
     except Exception:
         all_monitors = traceback.format_exc()
     finally:
         debug_info['all_monitors'] = [{'info': i} for i in all_monitors]
+
+    log.debug('_debug.info: filtering the list of monitors')
 
     try:
         if isinstance(all_monitors, list):
@@ -56,12 +60,16 @@ def info() -> dict:
                 else:
                     monitor_entry['global_index'] = None
 
+            log.debug(f'_debug.info: get_brightness for monitor {monitor["method"].__name__}:{monitor["index"]}')
+
             try:
                 brightness = monitor['method'].get_brightness(display=monitor['index'])
             except Exception:
                 brightness = traceback.format_exc()
             finally:
                 monitor_entry['get_brightness'] = brightness
+
+            log.debug(f'_debug.info: set_brightness for monitor {monitor["method"].__name__}:{monitor["index"]}')
 
             try:
                 output = monitor['method'].set_brightness(
@@ -75,6 +83,7 @@ def info() -> dict:
 
     debug_info['methods'] = []
     for name, method in sbc.get_methods().items():
+        log.debug(f'_debug.info: getting display info for method: {name}')
         current = {
             'name': name,
             'class': repr(method)
@@ -101,6 +110,7 @@ def info() -> dict:
         debug_info['methods'].append(current)
 
     if platform.system() == 'Windows':  # windows specific debug info
+        log.debug('_debug.info: windows specific debug info')
         debug_info['windows'] = {
             'wmi_monitor_id_output': sbc._OS_MODULE.wmi.WMI(namespace='wmi').WmiMonitorID()
         }
