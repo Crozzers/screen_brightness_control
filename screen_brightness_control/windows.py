@@ -120,7 +120,7 @@ def get_display_info() -> List[dict]:
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
                         man_id = devid[1][:3]
-                        model = devid[3]
+                        model = devid[1][3:] or 'Generic Monitor'
                         del devid
                         try:
                             man_id, manufacturer = _monitor_brand_lookup(man_id)
