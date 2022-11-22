@@ -188,7 +188,20 @@ class FakeMethodTest3(FakeMethodTest):
         return displays
 
 
-FAKE_METHODS = [FakeMethodTest, FakeMethodTest2, FakeMethodTest3]
+class FakeMethodTest4(FakeMethodTest):
+    # this FakeMethodTest is slightly different from 1-3. Those all return
+    # duplicate displays with the method changed. This one returns no displays.
+    # See #21
+    @classmethod
+    def generate_fake_displays(cls, *args, **kwargs):
+        return []
+
+    @classmethod
+    def get_display_info(cls, *args, **kwargs):
+        return []
+
+
+FAKE_METHODS = [FakeMethodTest, FakeMethodTest2, FakeMethodTest3, FakeMethodTest4]
 
 
 class TestCase(unittest.TestCase):

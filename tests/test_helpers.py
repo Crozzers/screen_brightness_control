@@ -106,7 +106,6 @@ class TestLogarithmicRange(unittest.TestCase):
             self.assertLessEqual(l_range[1] - l_range[0], l_range[-1] - l_range[-2])
 
             l_range = list(sbc.helpers.logarithmic_range(u_bound, l_bound, -1))
-            print(l_range)
 
             # assert higher value items have higher diff than lower items
             self.assertGreaterEqual(l_range[0] - l_range[1], l_range[-2] - l_range[-1])
