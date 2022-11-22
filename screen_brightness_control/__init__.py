@@ -662,7 +662,7 @@ def filter_monitors(
     def get_monitor_list():
         # if we have been provided with a list of monitors to sift through then use that
         # otherwise, get the info ourselves
-        if haystack:
+        if haystack is not None:
             monitors_with_duplicates = haystack
             if method is not None:
                 monitors_with_duplicates = [i for i in haystack if method.lower() == i['method'].__name__.lower()]
@@ -705,7 +705,7 @@ def filter_monitors(
     monitors_with_duplicates = get_monitor_list()
     monitors = filter_monitor_list()
     for _ in range(3):
-        if monitors == [] and not haystack:
+        if monitors == [] and haystack is not None:
             # try again
             time.sleep(0.4)
             monitors_with_duplicates = get_monitor_list()
