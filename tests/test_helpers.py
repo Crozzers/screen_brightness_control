@@ -69,21 +69,6 @@ class TestMonitorBrandLookup(unittest.TestCase):
             self.assertEqual(sbc.helpers._monitor_brand_lookup(item), None)
 
 
-class TestFlattenList(unittest.TestCase):
-    def test_normal(self):
-        # test flat list
-        test_list = list(range(0, 100))
-        self.assertEqual(sbc.helpers.flatten_list(test_list), test_list)
-        # test unflattened list
-        test_list = [1, [[[[2, 3, 4], 5, 6, [7, 8], 9], 10]], 11, 12, [13, 14], 15]
-        self.assertEqual(sbc.helpers.flatten_list(test_list), list(range(1, 16)))
-        # test list with other types of iterable
-        test_list = [(1, 2, 3), (4, 5, 6), [7, 8, 9]]
-        self.assertEqual(sbc.helpers.flatten_list(test_list), [(1, 2, 3), (4, 5, 6), 7, 8, 9])
-        # test with not a list
-        self.assertEqual(sbc.helpers.flatten_list((1, 2, 3)), [1, 2, 3])
-
-
 class TestLogarithmicRange(unittest.TestCase):
     def test_normal(self):
         for l_bound, u_bound in ((0, 100), (0, 10), (29, 77), (99, 100)):

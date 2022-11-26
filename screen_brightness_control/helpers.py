@@ -6,7 +6,7 @@ import struct
 import subprocess
 import time
 from functools import lru_cache
-from typing import Any, List, Tuple, Union
+from typing import Tuple, Union
 
 from ._debug import log
 
@@ -304,36 +304,6 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
         else:
             return None
     return keys[index], values[index]
-
-
-def flatten_list(thick_list: List[Any]) -> List[Any]:
-    '''
-    .. warning:: Deprecated
-       This function has been deprecated and will be removed in version 0.17.0
-
-    Internal function I use to flatten lists, because I do that often.
-
-    Args:
-        thick_list (list): The list to be flattened. Can be as deep as you wish (within recursion limits)
-
-    Returns:
-        list: one dimensional
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-        thick_list = [1, [2, [3, 4, 5], 6, 7], 8, [9, 10]]
-        flat_list = sbc.flatten_list(thick_list)
-        # Output: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        ```
-    '''
-    flat_list = []
-    for item in thick_list:
-        if isinstance(item, list):
-            flat_list += flatten_list(item)
-        else:
-            flat_list.append(item)
-    return flat_list
 
 
 def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, None, None]:

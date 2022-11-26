@@ -9,7 +9,6 @@ from ._debug import log
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, logarithmic_range
-from .helpers import flatten_list  # noqa: F401  - deprecated.
 
 
 def get_brightness(
