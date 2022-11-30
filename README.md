@@ -64,7 +64,7 @@ python -m screen_brightness_control --help
 
 # See Also
 * [API Documentation](https://crozzers.github.io/screen_brightness_control)
-    * [FAQ](https://crozzers.github.io/screen_brightness_control/source/FAQ.html)
+    * [FAQ](https://crozzers.github.io/screen_brightness_control/extras/FAQ.html)
     * [Quick Start Guide](https://crozzers.github.io/screen_brightness_control/extras/Quick%20Start%20Guide.html)
 * [GitHub page](https://github.com/Crozzers/screen_brightness_control)
 * [PyPi page](https://pypi.org/project/screen-brightness-control/)
