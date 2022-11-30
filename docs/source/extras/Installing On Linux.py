@@ -76,5 +76,6 @@ DDCUtil also supports communicating with monitors that implement the [Monitor Co
     * Light: `sudo apt install light`
 * Fedora
     * Xrandr: `sudo dnf install libXrandr`
+    * DDCUtil: `sudo dnf install ddcutil`
     * Light: `sudo dnf install light`
 '''
