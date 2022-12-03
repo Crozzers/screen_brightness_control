@@ -849,6 +849,100 @@ class DDCUtil:
     '''Cache for monitors and their maximum brightness values'''
 
     @classmethod
+    def _gdi(cls):
+        '''
+        .. warning:: Don't use this
+           This function isn't final and I will probably make breaking changes to it.
+           You have been warned
+
+        Gets all displays reported by DDCUtil even if they're not supported
+        '''
+        raw_ddcutil_output = str(
+            check_output(
+                [
+                    cls.executable, 'detect', '-v', '--async',
+                    f'--sleep-multiplier={cls.sleep_multiplier}'
+                ], max_tries=10
+            )
+        )[2:-1].split('\\n')
+        # Use -v to get EDID string but this means output cannot be decoded.
+        # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
+        # Use str()[2:-1] workaround
+
+        # include "Invalid display" sections because they tell us where one displays metadata ends
+        # and another begins. We filter out invalid displays later on
+        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
+        tmp_display = {}
+        display_count = 0
+
+        for line_index, line in enumerate(ddcutil_output):
+            if not line.startswith(('\t', ' ')):
+                if tmp_display:
+                    yield tmp_display
+
+                tmp_display = {
+                    'method': cls,
+                    'index': display_count,
+                    'model': None,
+                    'serial': None,
+                    'bin_serial': None,
+                    'manufacturer': None,
+                    'manufacturer_id': None,
+                    'edid': None,
+                    'unsupported': 'invalid display' in line.lower()
+                }
+                display_count += 1
+
+            elif 'I2C bus' in line:
+                tmp_display['i2c_bus'] = line[line.index('/'):]
+                tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
+
+            elif 'Mfg id' in line:
+                # Recently ddcutil has started reporting manufacturer IDs like
+                # 'BNQ - UNK' or 'MSI - Microstep' so we have to split the line
+                # into chunks of alpha chars and check for a valid mfg id
+                for code in re.split(r'[^A-Za-z]', line.replace('Mfg id:', '').replace(' ', '')):
+                    if len(code) != 3:
+                        # all mfg ids are 3 chars long
+                        continue
+
+                    try:
+                        (
+                            tmp_display['manufacturer_id'],
+                            tmp_display['manufacturer']
+                        ) = _monitor_brand_lookup(code)
+                    except TypeError:
+                        continue
+                    else:
+                        break
+
+            elif 'Model' in line:
+                # the split() removes extra spaces
+                name = line.replace('Model:', '').split()
+                try:
+                    tmp_display['model'] = name[1]
+                except IndexError:
+                    pass
+                tmp_display['name'] = ' '.join(name)
+
+            elif 'Serial number' in line:
+                tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
+
+            elif 'Binary serial number:' in line:
+                tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
+
+            elif 'EDID hex dump:' in line:
+                try:
+                    tmp_display['edid'] = ''.join(
+                        ''.join(i.split()[1:17]) for i in ddcutil_output[line_index + 2: line_index + 10]
+                    )
+                except Exception:
+                    pass
+
+        if tmp_display:
+            yield tmp_display
+
+    @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Returns information about all DDC compatible monitors shown by DDCUtil
@@ -879,99 +973,15 @@ class DDCUtil:
             benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
-        def check_display(tmp_display):
-            if tmp_display and 'Invalid display' not in tmp_display['line']:
-                del tmp_display['line']
-                return True
-            return False
-
         valid_displays = __cache__.get('ddcutil_monitors_info')
         if valid_displays is None:
-            raw_ddcutil_output = str(
-                check_output(
-                    [
-                        cls.executable, 'detect', '-v', '--async',
-                        f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ], max_tries=10
-                )
-            )[2:-1].split('\\n')
-            # Use -v to get EDID string but this means output cannot be decoded.
-            # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
-            # Use str()[2:-1] workaround
-
-            # include "Invalid display" sections because they tell us where one displays metadata ends
-            # and another begins. We filter out invalid displays later on
-            ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
             valid_displays = []
-            tmp_display = {}
-            display_count = 0
+            for item in cls._gdi():
+                if item['unsupported']:
+                    continue
+                del item['unsupported']
+                valid_displays.append(item)
 
-            for line_index, line in enumerate(ddcutil_output):
-                if not line.startswith(('\t', ' ')):
-                    if check_display(tmp_display):
-                        valid_displays.append(tmp_display)
-
-                    tmp_display = {
-                        'line': line,
-                        'method': cls,
-                        'index': display_count,
-                        'model': None,
-                        'serial': None,
-                        'bin_serial': None,
-                        'manufacturer': None,
-                        'manufacturer_id': None,
-                        'edid': None
-                    }
-                    display_count += 1
-
-                elif 'I2C bus' in line:
-                    tmp_display['i2c_bus'] = line[line.index('/'):]
-                    tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
-
-                elif 'Mfg id' in line:
-                    # Recently ddcutil has started reporting manufacturer IDs like
-                    # 'BNQ - UNK' or 'MSI - Microstep' so we have to split the line
-                    # into chunks of alpha chars and check for a valid mfg id
-                    for code in re.split(r'[^A-Za-z]', line.replace('Mfg id:', '').replace(' ', '')):
-                        if len(code) != 3:
-                            # all mfg ids are 3 chars long
-                            continue
-
-                        try:
-                            (
-                                tmp_display['manufacturer_id'],
-                                tmp_display['manufacturer']
-                            ) = _monitor_brand_lookup(code)
-                        except TypeError:
-                            continue
-                        else:
-                            break
-
-                elif 'Model' in line:
-                    # the split() removes extra spaces
-                    name = line.replace('Model:', '').split()
-                    try:
-                        tmp_display['model'] = name[1]
-                    except IndexError:
-                        pass
-                    tmp_display['name'] = ' '.join(name)
-
-                elif 'Serial number' in line:
-                    tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
-
-                elif 'Binary serial number:' in line:
-                    tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
-
-                elif 'EDID hex dump:' in line:
-                    try:
-                        tmp_display['edid'] = ''.join(
-                            ''.join(i.split()[1:17]) for i in ddcutil_output[line_index + 2: line_index + 10]
-                        )
-                    except Exception:
-                        pass
-
-            if check_display(tmp_display):
-                valid_displays.append(tmp_display)
             if valid_displays:
                 __cache__.store('ddcutil_monitors_info', valid_displays)
 
