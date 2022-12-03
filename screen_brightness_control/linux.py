@@ -716,11 +716,15 @@ class XRandr:
             ```
         '''
         def check_display(display):
-            if display:
-                if 'line' in display:
-                    del display['line']
-                return display['serial'] is None or '\\x' not in display['serial']
-            return False
+            if not display:
+                return False
+            if 'line' in display:
+                del display['line']
+            if display['name'].startswith('XWAYLAND'):
+                return False
+            if display['serial'] and '\\x' in display['serial']:
+                return False
+            return True
 
         xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
 
