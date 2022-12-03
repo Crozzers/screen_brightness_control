@@ -684,6 +684,63 @@ class XRandr:
     '''the xrandr executable to be called'''
 
     @classmethod
+    def _gdi(cls):
+        '''
+        .. warning:: Don't use this
+           This function isn't final and I will probably make breaking changes to it.
+           You have been warned
+
+        Gets all displays reported by XRandr even if they're not supported
+        '''
+        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
+
+        display_count = 0
+        tmp_display = {}
+
+        for line_index, line in enumerate(xrandr_output):
+            if line == '':
+                continue
+
+            if not line.startswith((' ', '\t')) and 'connected' in line and 'disconnected' not in line:
+                if tmp_display:
+                    yield tmp_display
+
+                tmp_display = {
+                    'name': line.split(' ')[0],
+                    'interface': line.split(' ')[0],
+                    'method': cls,
+                    'index': display_count,
+                    'model': None,
+                    'serial': None,
+                    'manufacturer': None,
+                    'manufacturer_id': None,
+                    'edid': None,
+                    'unsupported': line.startswith('XWAYLAND')
+                }
+                display_count += 1
+
+            elif 'EDID:' in line:
+                # extract the edid from the chunk of the output that will contain the edid
+                edid = ''.join(
+                    i.replace('\t', '') for i in xrandr_output[line_index + 1: line_index + 9]
+                )
+                tmp_display['edid'] = edid
+
+                for key, value in zip(
+                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                    EDID.parse(tmp_display['edid'])
+                ):
+                    if value is None:
+                        continue
+                    tmp_display[key] = value
+
+            elif 'Brightness:' in line:
+                tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
+
+        if tmp_display:
+            yield tmp_display
+
+    @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None, brightness: bool = False) -> List[dict]:
         '''
         Returns info about all detected monitors as reported by xrandr
@@ -715,66 +772,14 @@ class XRandr:
             benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
-        def check_display(display):
-            if not display:
-                return False
-            if 'line' in display:
-                del display['line']
-            if display['name'].startswith('XWAYLAND'):
-                return False
-            if display['serial'] and '\\x' in display['serial']:
-                return False
-            return True
-
-        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
-
         valid_displays = []
-        display_count = 0
-        tmp_display = {}
-
-        for line_index, line in enumerate(xrandr_output):
-            if line == '':
+        for item in cls._gdi():
+            if item['unsupported']:
                 continue
-
-            if not line.startswith((' ', '\t')) and 'connected' in line and 'disconnected' not in line:
-                if check_display(tmp_display):
-                    valid_displays.append(tmp_display)
-
-                tmp_display = {
-                    'interface': line.split(' ')[0],
-                    'name': line.split(' ')[0],
-                    'line': line,
-                    'method': cls,
-                    'index': display_count,
-                    'model': None,
-                    'serial': None,
-                    'manufacturer': None,
-                    'manufacturer_id': None,
-                    'edid': None
-                }
-                display_count += 1
-
-            elif 'EDID:' in line:
-                # extract the edid from the chunk of the output that will contain the edid
-                edid = ''.join(
-                    i.replace('\t', '') for i in xrandr_output[line_index + 1: line_index + 9]
-                )
-                tmp_display['edid'] = edid
-
-                for key, value in zip(
-                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                    EDID.parse(tmp_display['edid'])
-                ):
-                    if value is None:
-                        continue
-                    tmp_display[key] = value
-
-            elif 'Brightness:' in line and brightness:
-                tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
-
-        if check_display(tmp_display):
-            valid_displays.append(tmp_display)
-
+            if not brightness:
+                del item['brightness']
+            del item['unsupported']
+            valid_displays.append(item)
         if display is not None:
             valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['interface'])
         return valid_displays
