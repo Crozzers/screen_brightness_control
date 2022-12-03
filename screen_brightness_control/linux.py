@@ -1091,7 +1091,9 @@ class DDCUtil:
             )
 
 
-def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
+def list_monitors_info(
+    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+) -> List[dict]:
     '''
     Lists detailed information about all detected monitors
 
@@ -1099,6 +1101,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
+        unsupported (bool): include detected displays that are invalid or unsupported
 
     Returns:
         list: list of dicts
@@ -1144,7 +1147,10 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         if method is not None and method != method_class.__name__.lower():
             continue
         try:
-            haystack += method_class.get_display_info()
+            if unsupported and hasattr(method_class, '_gdi'):
+                haystack += method_class._gdi()
+            else:
+                haystack += method_class.get_display_info()
         except Exception as e:
             log.debug(f'error grabbing display info from {method_class} - {type(e).__name__}: {e}')
             pass

@@ -483,7 +483,9 @@ class VCP:
                     time.sleep(0.02 if attempt < 20 else 0.1)
 
 
-def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
+def list_monitors_info(
+    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+) -> List[dict]:
     '''
     Lists detailed information about all detected monitors
 
@@ -491,6 +493,8 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
+        unsupported (bool): include detected displays that are invalid or unsupported.
+            This argument does nothing on Windows
 
     Returns:
         list: list of dicts upon success, empty list upon failure

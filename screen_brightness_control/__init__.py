@@ -255,7 +255,9 @@ def fade_brightness(
     return get_brightness(**kwargs)
 
 
-def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
+def list_monitors_info(
+    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+) -> List[dict]:
     '''
     list detailed information about all monitors that are controllable by this library
 
@@ -263,6 +265,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         method (str): the method to use to list the available monitors. See `get_methods` for
             more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays or not
+        unsupported (bool): include detected displays that are invalid or unsupported
 
     Returns:
         list: list of dictionaries
@@ -291,7 +294,9 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', monitor['edid'])
         ```
     '''
-    return _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
+    return _OS_MODULE.list_monitors_info(
+        method=method, allow_duplicates=allow_duplicates, unsupported=unsupported
+    )
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
