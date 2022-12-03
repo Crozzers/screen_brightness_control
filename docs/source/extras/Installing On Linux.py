@@ -50,8 +50,8 @@ Here is an outline of all of the external programs that `screen_brightness_contr
 
 Program       | Works on laptop displays | Works on external monitors | Per-display brightness control        | Requires Special Permissions After Install
 --------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------
-ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*`
-xrandr        | Yes                      | Yes           [2]          | Yes                                   | No
+ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*` [2]
+xrandr        | Yes                      | Yes           [3]          | Yes                                   | No
 light         | Yes                      | No                         | Yes                                   | User must be in the `video` group [3]
 [No program]  | Yes                      | Yes (slow)                 | Yes                                   | Read/write access for `/dev/i2c*` and `/sys/class/backlight`
 
@@ -59,9 +59,11 @@ light         | Yes                      | No                         | Yes     
 [1] While both DDCUtil and the 1st party `linux.I2C` class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the [Monitor Control Command Set over USB](https://www.ddcutil.com/usb)
 
-[2] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+[2] Read/write access for the `i2c` bus can be granted via the steps outlined in the [Desktop displays](#desktop-displays) section or by running the script using `sudo`.
 
-[3] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
+[3] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+
+[4] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
 
 
 ## Install Instructions
