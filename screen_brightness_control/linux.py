@@ -501,6 +501,7 @@ class I2C:
             cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
+                log.debug(f'I2C {cache_ident} max brightness:{max_value} (current: {value})')
 
             if max_value != 100:
                 # if max value is not 100 then we have to adjust the scale to be
@@ -1044,6 +1045,7 @@ class DDCUtil:
                 cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
                 if cache_ident not in cls._max_brightness_cache:
                     cls._max_brightness_cache[cache_ident] = max_value
+                    log.debug(f'DDCUtil: {cache_ident} max brightness:{max_value} (current: {value})')
 
                 __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
             try:
