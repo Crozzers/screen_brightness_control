@@ -32,7 +32,7 @@ def info() -> dict:
     log.debug('_debug.info: gathering list of all monitors')
 
     try:
-        all_monitors = sbc.list_monitors_info(allow_duplicates=True)
+        all_monitors = sbc.list_monitors_info(allow_duplicates=True, unsupported=True)
     except Exception:
         all_monitors = traceback.format_exc()
     finally:
@@ -42,6 +42,7 @@ def info() -> dict:
 
     try:
         if isinstance(all_monitors, list):
+            all_monitors = [i for i in all_monitors if not i.get('unsupported')]
             monitor_info = sbc.filter_monitors(haystack=all_monitors)
         else:
             monitor_info = []
