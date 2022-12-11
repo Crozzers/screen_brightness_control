@@ -175,6 +175,7 @@ class TestListMonitorsInfo(TestCase):
 
             self.assertIsInstance(monitor['index'], int)
             self.assertIn(monitor['method'], methods)
+            self.assertNotIn('unsupported', monitor)
 
     def test_method_kwarg(self):
         methods = get_methods()
@@ -185,6 +186,19 @@ class TestListMonitorsInfo(TestCase):
                     self.assertEqual(monitor['method'], method)
             except LookupError:
                 pass
+
+    def test_unsupported_kwarg(self):
+        supported = sbc.list_monitors_info(allow_duplicates=True)
+        incl_unsupported = sbc.list_monitors_info(allow_duplicates=True, unsupported=True)
+
+        for display in supported:
+            self.assertNotIn('unsupported', display)
+
+        for display in incl_unsupported:
+            if 'unsupported' in display:
+                self.assertIsInstance(display['unsupported'], bool)
+                display.pop('unsupported')
+                self.assertIn(display, supported)
 
 
 class TestListMonitors(TestCase):
