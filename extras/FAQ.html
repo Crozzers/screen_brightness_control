@@ -60,7 +60,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.17.0</footer>
+                <footer>screen_brightness_control v0.18.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -95,12 +95,24 @@ so <code>_OS_MODULE</code> will not be defined.</p>
 <p>In the past, a <code>NotImplementedError</code> would have been raised at this stage, letting you know the issue.
 This behaviour was changed in v0.16.0 to simply log a warning.</p>
 
+<h3 id="my-monitor-isnt-supported">My monitor isn't supported</h3>
+
+<p>This library supports most laptop displays and desktop monitors. Desktop monitors must support DDC/CI and have it
+enabled (try checking your monitor's on screen display menu).</p>
+
+<p>If your display meets these conditions but isn't showing up, you can check if the library doesn't support your
+display like so:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span> <span class="nn">screen_brightness_control</span> <span class="k">as</span> <span class="nn">sbc</span>
+<span class="c1"># print all detected but unsupported monitors</span>
+<span class="k">for</span> <span class="n">display</span> <span class="ow">in</span> <span class="n">sbc</span><span class="o">.</span><span class="n">list_monitors_info</span><span class="p">(</span><span class="n">allow_duplicates</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">unsupported</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">display</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unsupported&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">display</span><span class="p">)</span>
+</code></pre>
+</div>
+
 <h2 id="windows-faq">Windows FAQ</h2>
-
-<h3 id="the-model-of-my-monitordisplay-is-not-what-the-program-says-it-is">The model of my monitor/display is not what the program says it is</h3>
-
-<p>If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
-If you know how this might be done, feel free to <a href="https://github.com/Crozzers/screen_brightness_control/pulls">create a pull request</a> or to ping me an email <a href="mailto:captaincrozzers@gmail.com">captaincrozzers@gmail.com</a></p>
 
 <h3 id="when-i-call-get_brightness-the-returned-value-isnt-what-i-set-it-to">When I call <code>get_brightness()</code> the returned value isn't what I set it to</h3>
 

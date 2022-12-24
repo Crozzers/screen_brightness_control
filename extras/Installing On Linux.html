@@ -66,7 +66,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.17.0</footer>
+                <footer>screen_brightness_control v0.18.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -150,12 +150,12 @@ users to adjust the backlight without having to manually fiddle with permissions
   <td>No</td>
   <td>Yes (slowest) [1]</td>
   <td>Yes</td>
-  <td>Read/write access for <code>/dev/i2c*</code></td>
+  <td>Read/write access for <code>/dev/i2c*</code> [2]</td>
 </tr>
 <tr>
   <td>xrandr</td>
   <td>Yes</td>
-  <td>Yes           [2]</td>
+  <td>Yes           [3]</td>
   <td>Yes</td>
   <td>No</td>
 </tr>
@@ -181,9 +181,11 @@ users to adjust the backlight without having to manually fiddle with permissions
 <p>[1] While both DDCUtil and the 1st party <code>linux.I2C</code> class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the <a href="https://www.ddcutil.com/usb">Monitor Control Command Set over USB</a></p>
 
-<p>[2] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
+<p>[2] Read/write access for the <code>i2c</code> bus can be granted via the steps outlined in the <a href="#desktop-displays">Desktop displays</a> section or by running the script using <code>sudo</code>.</p>
 
-<p>[3] You can add yourself to the video user group by running <code>sudo usermod -a -G video [your username]</code> and then logging out and back in again for the changes to take effect.</p>
+<p>[3] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
+
+<p>[4] You can add yourself to the video user group by running <code>sudo usermod -a -G video [your username]</code> and then logging out and back in again for the changes to take effect.</p>
 
 <h2 id="install-instructions">Install Instructions</h2>
 
@@ -203,6 +205,7 @@ DDCUtil also supports communicating with monitors that implement the <a href="ht
 <li>Fedora
 <ul>
 <li>Xrandr: <code>sudo dnf install libXrandr</code></li>
+<li>DDCUtil: <code>sudo dnf install ddcutil</code></li>
 <li>Light: <code>sudo dnf install light</code></li>
 </ul></li>
 </ul>
