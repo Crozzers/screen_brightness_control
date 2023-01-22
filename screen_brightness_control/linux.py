@@ -864,6 +864,7 @@ class DDCUtil(BrightnessMethodAdv):
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
     cmd_max_tries: int = 10
     '''max number of retries when calling the ddcutil'''
+    enable_async = True
     _max_brightness_cache: dict = {}
     '''Cache for displays and their maximum brightness values'''
 
@@ -879,9 +880,9 @@ class DDCUtil(BrightnessMethodAdv):
         raw_ddcutil_output = str(
             check_output(
                 [
-                    cls.executable, 'detect', '-v', '--async',
+                    cls.executable, 'detect', '-v',
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ], max_tries=cls.cmd_max_tries
+                ] + ['--async'] if cls.enable_async else [], max_tries=cls.cmd_max_tries
             )
         )[2:-1].split('\\n')
         # Use -v to get EDID string but this means output cannot be decoded.
