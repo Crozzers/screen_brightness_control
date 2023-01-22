@@ -368,12 +368,16 @@ def check_output(command: list, max_tries: int = 1):
     tries = 1
     while True:
         try:
-            return subprocess.check_output(command, stderr=subprocess.PIPE)
+            output = subprocess.check_output(command, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError:
             if tries >= max_tries:
                 raise
             tries += 1
             time.sleep(0.04 if tries < 5 else 0.5)
+        else:
+            if tries > 1:
+                log.debug(f'command {command} took {tries}/{max_tries} tries')
+            return output
 
 
 class __Cache(dict):
