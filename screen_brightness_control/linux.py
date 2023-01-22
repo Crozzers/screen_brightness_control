@@ -851,6 +851,8 @@ class DDCUtil:
     sleep_multiplier: float = 0.5
     '''how long ddcutil should sleep between each DDC request (lower is shorter).
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
+    cmd_max_tries: int = 10
+    '''max number of retries when calling the ddcutil'''
     _max_brightness_cache: dict = {}
     '''Cache for monitors and their maximum brightness values'''
 
@@ -868,7 +870,7 @@ class DDCUtil:
                 [
                     cls.executable, 'detect', '-v', '--async',
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ], max_tries=10
+                ], max_tries=cls.cmd_max_tries
             )
         )[2:-1].split('\\n')
         # Use -v to get EDID string but this means output cannot be decoded.
@@ -1031,7 +1033,7 @@ class DDCUtil:
                         'getvcp', '10', '-t',
                         '-b', str(monitor['bus_number']),
                         f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ], max_tries=10
+                    ], max_tries=cls.cmd_max_tries
                 ).decode().split(' ')
 
                 value = int(cmd_out[-2])
@@ -1094,7 +1096,7 @@ class DDCUtil:
                     cls.executable, 'setvcp', '10', str(value),
                     '-b', str(monitor['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}'
-                ], max_tries=10
+                ], max_tries=cls.cmd_max_tries
             )
 
 
