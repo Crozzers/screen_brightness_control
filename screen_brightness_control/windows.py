@@ -1,4 +1,5 @@
 import ctypes
+import logging
 import platform
 import threading
 import time
@@ -13,7 +14,6 @@ import win32con
 import wmi
 
 from . import filter_monitors, get_methods
-from ._debug import log
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
@@ -22,6 +22,8 @@ if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
 else:
     from collections.abc import Generator
+
+logger = logging.getLogger(__name__)
 
 
 def _wmi_init():
@@ -46,7 +48,7 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
             try:
                 device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
             except Exception:
-                log.debug(f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
+                logger.debug(f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
                 pass
             else:
                 yield device
@@ -86,7 +88,7 @@ def get_display_info() -> List[dict]:
                     for i in wmi.WmiMonitorBrightness()
                 ]
             except Exception as e:
-                log.debug(f'get_display_info: failed to gather list of laptop displays - {e}')
+                logger.warning(f'get_display_info: failed to gather list of laptop displays - {e}')
                 laptop_displays = []
 
             extras, desktop, laptop = [], 0, 0
@@ -101,7 +103,7 @@ def get_display_info() -> List[dict]:
                     try:
                         edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
                     except Exception as e:
-                        log.debug(f'failed to get EDID string for {monitor.InstanceName} - {type(e).__name__}: {e}')
+                        logger.error(f'failed to get EDID string for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         edid = None
 
                     # get serial, model, manufacturer and manufacturer ID
@@ -116,7 +118,8 @@ def get_display_info() -> List[dict]:
                         if name is None:
                             raise Exception('parsed EDID returned invalid monitor name')
                     except Exception as e:
-                        log.debug(f'exception parsing edid str for {monitor.InstanceName} - {type(e).__name__}: {e}')
+                        logger.warning(
+                            f'exception parsing edid str for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         devid = pydevice.DeviceID.split('#')
                         serial = devid[2]
                         man_id = devid[1][:3]
@@ -152,7 +155,7 @@ def get_display_info() -> List[dict]:
                         else:
                             extras.append(data)
                 except Exception as e:
-                    log.debug(f'exception getting device info for {monitor.InstanceName} - {type(e).__name__}: {e}')
+                    logger.error(f'exception getting device info for {monitor.InstanceName} - {type(e).__name__}: {e}')
                     pass
 
             info = uid_keys + extras
@@ -164,7 +167,7 @@ def get_display_info() -> List[dict]:
                         item['index'] = count
                         count += 1
         except Exception as e:
-            log.debug(f'error gathering display information - {type(e).__name__}: {e}', exc_info=True)
+            logger.error(f'error gathering display information - {type(e).__name__}: {e}', exc_info=True)
             pass
 
         # return info only which has correct data
@@ -291,6 +294,8 @@ class VCP:
     '''Collection of screen brightness related methods using the DDC/CI commands'''
     _MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
 
+    logger = logger.getChild('VCP')
+
     class _PHYSICAL_MONITOR(Structure):
         '''internal class, do not call'''
         _fields_ = [('handle', HANDLE),
@@ -318,6 +323,7 @@ class VCP:
 
         monitors = []
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
+            cls.logger.error('EnumDisplayMonitors failed')
             raise WinError('EnumDisplayMonitors failed')
 
         # user index keeps track of valid monitors
@@ -333,7 +339,7 @@ class VCP:
                 for i in wmi.WmiMonitorBrightness()
             ]
         except Exception as e:
-            log.debug(f'iter_physical_monitors: failed to gather list of laptop displays - {e}')
+            cls.logger.warning(f'failed to gather list of laptop displays - {e}')
             laptop_displays = []
 
         for monitor in monitors:
@@ -434,6 +440,8 @@ class VCP:
                         break
                     current = None
                     time.sleep(0.02 if attempt < 20 else 0.1)
+                else:
+                    cls.logger.error(f'failed to get VCP feature reply for display:{index} after {attempt} tries')
 
             if current is not None:
                 __cache__.store(f'vcp_brightness_{index}', current, expires=0.1)
@@ -481,6 +489,8 @@ class VCP:
                     if windll.dxva2.SetVCPFeature(handle, code, value):
                         break
                     time.sleep(0.02 if attempt < 20 else 0.1)
+                else:
+                    cls.logger.error(f'failed to set display:{index}->{value} after {attempt} tries')
 
 
 def list_monitors_info(
@@ -535,7 +545,7 @@ def list_monitors_info(
     if method is not None:
         method = method.lower()
         if method not in all_methods:
-            log.debug(f'requested method {repr(method)} invalid')
+            logger.debug(f'requested method {repr(method)} invalid')
             raise ValueError(f'method must be one of: {list(all_methods)}')
         info = [i for i in info if i['method'].__name__.lower() == method]
 

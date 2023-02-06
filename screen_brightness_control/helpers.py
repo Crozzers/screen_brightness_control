@@ -1,6 +1,7 @@
 '''
 Helper functions for the library
 '''
+import logging
 import platform
 import struct
 import subprocess
@@ -8,12 +9,12 @@ import time
 from functools import lru_cache
 from typing import Tuple, Union
 
-from ._debug import log
-
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
 else:
     from collections.abc import Generator
+
+logger = logging.getLogger(__name__)
 
 
 class ScreenBrightnessError(Exception):
@@ -376,7 +377,7 @@ def check_output(command: list, max_tries: int = 1):
             time.sleep(0.04 if tries < 5 else 0.5)
         else:
             if tries > 1:
-                log.debug(f'command {command} took {tries}/{max_tries} tries')
+                logger.debug(f'command {command} took {tries}/{max_tries} tries')
             return output
 
 
@@ -394,31 +395,31 @@ class __Cache(dict):
             value, expires, orig_args, orig_kwargs = self[key]
             if time.time() < expires:
                 if orig_args == args and orig_kwargs == kwargs:
-                    log.debug(f'cache get {repr(key)}')
+                    logger.debug(f'cache get {repr(key)}')
                     return value
             else:
-                log.debug(f'cache get {repr(key)} = [expired]')
+                logger.debug(f'cache get {repr(key)} = [expired]')
                 del self[key]
         except KeyError:
-            log.debug(f'cache get {repr(key)} = [KeyError]')
+            logger.debug(f'cache get {repr(key)} = [KeyError]')
             pass
 
     def store(self, key, value, *args, expires=1, **kwargs):
         self[key] = (value, expires + time.time(), args, kwargs)
-        log.debug(f'cache set {repr(key)}, expires={expires}')
+        logger.debug(f'cache set {repr(key)}, expires={expires}')
 
     def expire(self, key=None, startswith=None):
         if key is not None:
             try:
                 del self[key]
-                log.debug(f'cache expire key {repr(key)}')
+                logger.debug(f'cache expire key {repr(key)}')
             except KeyError:
                 pass
         elif startswith is not None:
             for i in tuple(self.keys()):
                 if i.startswith(startswith):
                     del self[i]
-                    log.debug(f'cache expire key {repr(i)}')
+                    logger.debug(f'cache expire key {repr(i)}')
 
 
 __cache__ = __Cache()

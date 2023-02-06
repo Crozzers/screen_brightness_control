@@ -1,6 +1,7 @@
 import fcntl
 import functools
 import glob
+import logging
 import operator
 import os
 import re
@@ -8,8 +9,9 @@ import time
 from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
-from ._debug import log
 from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
+
+logger = logging.getLogger(__name__)
 
 
 class SysFiles:
@@ -24,6 +26,8 @@ class SysFiles:
     `/sys/class/backlight/*/brightness` or you will need to run the program
     as root.
     '''
+    logger = logger.getChild('SysFiles')
+
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
@@ -89,8 +93,8 @@ class SysFiles:
                         device['path'] = f'/sys/class/backlight/{folder}'
                         device['scale'] = scale
                 except (FileNotFoundError, TypeError) as e:
-                    log.debug(
-                        f'SysFiles: error getting highest resolution scale for {folder}'
+                    cls.logger.error(
+                        f'error getting highest resolution scale for {folder}'
                         f' - {type(e).__name__}: {e}'
                     )
                     continue
@@ -206,6 +210,8 @@ class I2C:
         * [ddcci.py](https://github.com/siemer/ddcci)
         * [DDCCI Spec](https://milek7.pl/ddcbacklight/ddcci.pdf)
     '''
+    logger = logger.getChild('I2C')
+
     # vcp commands
     GET_VCP_CMD = 0x01
     '''VCP command to get the value of a feature (eg: brightness)'''
@@ -284,6 +290,7 @@ class I2C:
             Args:
                 i2c_path (str): the path to the I2C device, eg: `/dev/i2c-2`
             '''
+            self.logger = logger.getChild(self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
 
         def write(self, *args) -> int:
@@ -350,7 +357,7 @@ class I2C:
                 'length': len(ba) >= (ba[1] & ~self.PROTOCOL_FLAG) + 3
             }
             if False in checks.values():
-                log.debug('i2c read check failed: ' + repr(checks))
+                self.logger.error('i2c read check failed: ' + repr(checks))
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
             return ba[2:-1]
@@ -377,7 +384,7 @@ class I2C:
                 'answer matches request': ba[2] == vcp_code
             }
             if False in checks.values():
-                log.debug('i2c read check failed: ' + repr(checks))
+                self.logger.error('i2c read check failed: ' + repr(checks))
                 raise ValueError('i2c read check failed: ' + repr(checks))
 
             # current and max values
@@ -426,7 +433,7 @@ class I2C:
                     # read some 512 bytes from the device
                     data = device.read(512)
                 except IOError as e:
-                    log.debug(f'I2C: IOError reading from device {i2c_path}: {e}')
+                    cls.logger.error(f'IOError reading from device {i2c_path}: {e}')
                     continue
 
                 # search for the EDID header within our 512 read bytes
@@ -501,7 +508,7 @@ class I2C:
             cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
-                log.debug(f'I2C {cache_ident} max brightness:{max_value} (current: {value})')
+                cls.logger.info(f'{cache_ident} max brightness:{max_value} (current: {value})')
 
             if max_value != 100:
                 # if max value is not 100 then we have to adjust the scale to be
@@ -845,6 +852,7 @@ class XRandr:
 
 class DDCUtil:
     '''collection of screen brightness related methods using the ddcutil executable'''
+    logger = logger.getChild('DDCUtil')
 
     executable: str = 'ddcutil'
     '''the ddcutil executable to be called'''
@@ -1047,14 +1055,10 @@ class DDCUtil:
                 cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
                 if cache_ident not in cls._max_brightness_cache:
                     cls._max_brightness_cache[cache_ident] = max_value
-                    log.debug(f'DDCUtil: {cache_ident} max brightness:{max_value} (current: {value})')
+                    cls.logger.debug(f'{cache_ident} max brightness:{max_value} (current: {value})')
 
                 __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
-            try:
-                res.append(value)
-            except (TypeError, ValueError) as e:
-                log.debug(f'Error appending value {value} to result - {type(e).__name__}: {e}')
-                pass
+            res.append(value)
         return res
 
     @classmethod
@@ -1146,7 +1150,7 @@ def list_monitors_info(
     if method is not None:
         method = method.lower()
         if method not in all_methods:
-            log.debug(f'requested method {repr(method)} invalid')
+            logger.debug(f'requested method {repr(method)} invalid')
             raise ValueError(f'method must be one of: {list(all_methods)}')
 
     all_methods = all_methods.values()
@@ -1161,7 +1165,7 @@ def list_monitors_info(
             else:
                 haystack += method_class.get_display_info()
         except Exception as e:
-            log.debug(f'error grabbing display info from {method_class} - {type(e).__name__}: {e}')
+            logger.warning(f'error grabbing display info from {method_class} - {type(e).__name__}: {e}')
             pass
 
     if allow_duplicates:

@@ -1,3 +1,4 @@
+import logging
 import platform
 import threading
 import time
@@ -5,10 +6,12 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
-from ._debug import log
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, logarithmic_range
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def get_brightness(
@@ -189,7 +192,7 @@ def fade_brightness(
         if start > finish:
             increment = -increment
 
-        log.debug(
+        logger.debug(
             f'fade display {monitor.index} of {monitor.method}'
             f' {start}->{finish}:{increment}:logarithmic={logarithmic}'
         )
@@ -244,7 +247,7 @@ def fade_brightness(
             t1.start()
             threads.append(t1)
         except Exception as e:
-            log.debug(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
+            logger.error(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
             pass
 
     if not blocking:
@@ -417,6 +420,8 @@ class Monitor():
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
         self.edid: str = info.pop('edid')
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
+
+        self.logger = logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier())[:20])
 
         # this assigns any extra info that is returned to this class
         # eg: the 'interface' key in XRandr monitors on Linux
@@ -616,7 +621,7 @@ class Monitor():
             self.get_brightness()
             return True
         except Exception as e:
-            log.debug(
+            self.logger.error(
                 f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
                 f' - {type(e).__name__}: {e}'
             )
@@ -734,8 +739,7 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
-
-    log.debug(f"brightness {meta_method} request display {display} with method {method}")
+    logger.debug(f"brightness {meta_method} request display {display} with method {method}")
 
     def format_exc(name, e):
         errors.append((
@@ -802,4 +806,4 @@ elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
 else:
-    log.warning(f'package imported on unsupported platform ({platform.system()})')
+    logger.warning(f'package imported on unsupported platform ({platform.system()})')
