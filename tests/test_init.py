@@ -227,7 +227,8 @@ class TestMonitor(TestCase):
         primary = sbc.list_monitors_info()[0]
         monitor = sbc.Monitor(0)
         self.assertDictEqual(monitor.get_info(), primary)
-        self.assertDictEqual(vars(sbc.Monitor(primary['name'])), primary)
+        monitor_vars = {k: v for k, v in vars(sbc.Monitor(primary['name'])).items() if not k.startswith('_')}
+        self.assertDictEqual(monitor_vars, primary)
 
     def test_get_identifier(self):
         monitor = sbc.Monitor(0)

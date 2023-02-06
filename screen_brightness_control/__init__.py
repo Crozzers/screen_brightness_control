@@ -421,7 +421,7 @@ class Monitor():
         self.edid: str = info.pop('edid')
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
 
-        self.logger = logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier())[:20])
+        self._logger = logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier()[1])[:20])
 
         # this assigns any extra info that is returned to this class
         # eg: the 'interface' key in XRandr monitors on Linux
@@ -587,8 +587,11 @@ class Monitor():
             info = primary.get_info()
             ```
         '''
+        def vars_self():
+            return {k: v for k, v in vars(self).items() if not k.startswith('_')}
+
         if not refresh:
-            return vars(self)
+            return vars_self()
 
         identifier = self.get_identifier()
 
@@ -599,7 +602,7 @@ class Monitor():
                 if value is not None:
                     setattr(self, key, value)
 
-        return vars(self)
+        return vars_self()
 
     def is_active(self) -> bool:
         '''
@@ -621,7 +624,7 @@ class Monitor():
             self.get_brightness()
             return True
         except Exception as e:
-            self.logger.error(
+            self._logger.error(
                 f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
                 f' - {type(e).__name__}: {e}'
             )
