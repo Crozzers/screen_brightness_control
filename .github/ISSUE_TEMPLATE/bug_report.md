@@ -19,9 +19,15 @@ A clear and concise description of what you expected to happen.
 **Debug info**
 Please run the following code and attach the output in a fenced code block:
 ```python
+import logging
 from pprint import pprint
 from screen_brightness_control import _debug
+logging.basicConfig(filename='test.log', level=logging.DEBUG, filemode='w')
+print('================DEBUG INFO================')
 pprint(_debug.info())
+print('===================LOGS===================')
+with open('test.log', 'r') as f:
+    print(f.read())
 ```
 
 **Additional context**
