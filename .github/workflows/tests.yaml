@@ -3,6 +3,11 @@ on:
   push:
     branches-ignore:
       - gh-pages
+    paths:
+      - screen_brightness_control/**
+      - docs/**
+      - tests/**
+      - .github/**
   pull_request:
     branches-ignore:
       - gh-pages
