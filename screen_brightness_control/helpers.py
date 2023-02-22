@@ -219,6 +219,7 @@ MONITOR_MANUFACTURER_CODES = {
     "FUS": "Fujitsu-Siemens",
     "GSM": "LG Electronics",
     "GWY": "Gateway 2000",
+    "GBT": "Gigabyte",
     "HEI": "Hyundai",
     "HIQ": "Hyundai ImageQuest",
     "HIT": "Hyundai",
