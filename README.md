@@ -60,7 +60,8 @@ python -m screen_brightness_control --help
 >   -v, --verbose                      some messages will be more detailed
 >   -V, --version                      print the current version
 ```
-
+### Contributing
+Contributions are welcome. Issues, ideas and pull requests are all appreciated. For more information [see here](https://github.com/Crozzers/screen_brightness_control/blob/main/CONTRIBUTING.md)
 
 # See Also
 * [API Documentation](https://crozzers.github.io/screen_brightness_control)
