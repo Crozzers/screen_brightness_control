@@ -45,3 +45,10 @@ dmypy.json
 
 # local files (binary test files, images etc.)
 testing/
+
+# documentation generation
+docs/docs
+docs/temp
+
+# IDE stuff
+.vscode
