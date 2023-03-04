@@ -85,6 +85,8 @@ class FakeMethodTest():
                     'method': cls
                 }
             )
+        fakes.append(deepcopy(fakes[-1]))
+        fakes[-1]['unsupported'] = True
         return fakes
 
     def __enter__(self):
@@ -100,7 +102,13 @@ class FakeMethodTest():
             if not hasattr(sbc._OS_MODULE, '_old_get_display_info'):
                 sbc._OS_MODULE._old_get_display_info = sbc._OS_MODULE.get_display_info
 
-            sbc._OS_MODULE.get_display_info = lambda: list(itertools.chain.from_iterable(i.generate_fake_displays() for i in FAKE_METHODS))
+            def get_display_info():
+                displays = itertools.chain.from_iterable(i.generate_fake_displays() for i in FAKE_METHODS)
+                if os.name == 'nt':
+                    return self._remove_unsupported_displays(displays)
+                return displays
+
+            sbc._OS_MODULE.get_display_info = get_display_info
 
     def __exit__(self, *args):
         # change the sbc get_methods function
@@ -115,7 +123,7 @@ class FakeMethodTest():
     cached_brightness = {}
 
     @classmethod
-    def get_display_info(cls, display=None):
+    def _gdi(cls):
         if not cls.cached_display_info:
             for method in sbc._old_get_methods().values():
                 try:
@@ -131,7 +139,23 @@ class FakeMethodTest():
 
             cls.cached_display_info = sbc.filter_monitors(haystack=cls.cached_display_info)
 
-        return sbc.filter_monitors(display=display, haystack=cls.cached_display_info)
+        return cls.cached_display_info
+
+    @staticmethod
+    def _remove_unsupported_displays(displays):
+        result = []
+        for display in displays:
+            if display.get('unsupported'):
+                continue
+            if 'unsupported' in display:
+                display.pop('unsupported')
+            result.append(display)
+        return result
+
+    @classmethod
+    def get_display_info(cls, display=None):
+        display_info = cls._remove_unsupported_displays(cls._gdi())
+        return sbc.filter_monitors(display=display, haystack=display_info)
 
     @classmethod
     def get_brightness(cls, display=None):
@@ -162,14 +186,14 @@ class FakeMethodTest2(FakeMethodTest):
         displays = deepcopy(FakeMethodTest.generate_fake_displays(*args, **kwargs))
         for display in displays:
             display['method'] = cls
-        return displays
+        return cls._remove_unsupported_displays(displays)
 
     @classmethod
     def get_display_info(cls, *args, **kwargs):
         displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
         for display in displays:
             display['method'] = cls
-        return displays
+        return cls._remove_unsupported_displays(displays)
 
 
 class FakeMethodTest3(FakeMethodTest):
@@ -178,14 +202,14 @@ class FakeMethodTest3(FakeMethodTest):
         displays = deepcopy(FakeMethodTest.generate_fake_displays(*args, **kwargs))
         for display in displays:
             display['method'] = cls
-        return displays
+        return cls._remove_unsupported_displays(displays)
 
     @classmethod
     def get_display_info(cls, *args, **kwargs):
         displays = deepcopy(FakeMethodTest.get_display_info(*args, **kwargs))
         for display in displays:
             display['method'] = cls
-        return displays
+        return cls._remove_unsupported_displays(displays)
 
 
 class FakeMethodTest4(FakeMethodTest):

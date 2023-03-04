@@ -8,3 +8,5 @@ Thanks to these people for contributing to this project
 * [Mathias Johansson](https://github.com/Mathias9807)
 * [Melek REBAI](https://github.com/shadoWalker89)
 * [Ved Rathi](https://github.com/Ved-programmer)
+* [TrellixVulnTeam](https://github.com/TrellixVulnTeam)
+* [Ujjawal Kumar](https://github.com/ujjukumar)

@@ -1,3 +1,4 @@
+import logging
 import platform
 import threading
 import time
@@ -5,10 +6,12 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
-from ._debug import log
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, logarithmic_range
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def get_brightness(
@@ -189,7 +192,7 @@ def fade_brightness(
         if start > finish:
             increment = -increment
 
-        log.debug(
+        logger.debug(
             f'fade display {monitor.index} of {monitor.method}'
             f' {start}->{finish}:{increment}:logarithmic={logarithmic}'
         )
@@ -244,7 +247,7 @@ def fade_brightness(
             t1.start()
             threads.append(t1)
         except Exception as e:
-            log.debug(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
+            logger.error(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
             pass
 
     if not blocking:
@@ -255,7 +258,9 @@ def fade_brightness(
     return get_brightness(**kwargs)
 
 
-def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = False) -> List[dict]:
+def list_monitors_info(
+    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+) -> List[dict]:
     '''
     list detailed information about all monitors that are controllable by this library
 
@@ -263,6 +268,7 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
         method (str): the method to use to list the available monitors. See `get_methods` for
             more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays or not
+        unsupported (bool): include detected displays that are invalid or unsupported
 
     Returns:
         list: list of dictionaries
@@ -291,7 +297,9 @@ def list_monitors_info(method: Optional[str] = None, allow_duplicates: bool = Fa
             print('EDID:', monitor['edid'])
         ```
     '''
-    return _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates)
+    return _OS_MODULE.list_monitors_info(
+        method=method, allow_duplicates=allow_duplicates, unsupported=unsupported
+    )
 
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
@@ -412,6 +420,8 @@ class Monitor():
         '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
         self.edid: str = info.pop('edid')
         '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
+
+        self._logger = logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier()[1])[:20])
 
         # this assigns any extra info that is returned to this class
         # eg: the 'interface' key in XRandr monitors on Linux
@@ -577,8 +587,11 @@ class Monitor():
             info = primary.get_info()
             ```
         '''
+        def vars_self():
+            return {k: v for k, v in vars(self).items() if not k.startswith('_')}
+
         if not refresh:
-            return vars(self)
+            return vars_self()
 
         identifier = self.get_identifier()
 
@@ -589,7 +602,7 @@ class Monitor():
                 if value is not None:
                     setattr(self, key, value)
 
-        return vars(self)
+        return vars_self()
 
     def is_active(self) -> bool:
         '''
@@ -611,7 +624,7 @@ class Monitor():
             self.get_brightness()
             return True
         except Exception as e:
-            log.debug(
+            self._logger.error(
                 f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
                 f' - {type(e).__name__}: {e}'
             )
@@ -729,8 +742,7 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
-
-    log.debug(f"brightness {meta_method} request display {display} with method {method}")
+    logger.debug(f"brightness {meta_method} request display {display} with method {method}")
 
     def format_exc(name, e):
         errors.append((
@@ -797,4 +809,4 @@ elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
 else:
-    log.warning(f'package imported on unsupported platform ({platform.system()})')
+    logger.warning(f'package imported on unsupported platform ({platform.system()})')

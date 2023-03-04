@@ -14,12 +14,23 @@ so `_OS_MODULE` will not be defined.
 In the past, a `NotImplementedError` would have been raised at this stage, letting you know the issue.
 This behaviour was changed in v0.16.0 to simply log a warning.
 
+### My monitor isn't supported
+
+This library supports most laptop displays and desktop monitors. Desktop monitors must support DDC/CI and have it
+enabled (try checking your monitor's on screen display menu).
+
+If your display meets these conditions but isn't showing up, you can check if the library doesn't support your
+display like so:
+
+```python
+import screen_brightness_control as sbc
+# print all detected but unsupported monitors
+for display in sbc.list_monitors_info(allow_duplicates=True, unsupported=True):
+    if display.get('unsupported'):
+        print(display)
+```
+
 ## Windows FAQ
-### The model of my monitor/display is not what the program says it is
-If your display is a laptop screen and can be adjusted via a Windows brightness slider then there is no easy way to get the monitor model that I am aware of.
-If you know how this might be done, feel free to [create a pull request](https://github.com/Crozzers/screen_brightness_control/pulls) or to ping me an email [captaincrozzers@gmail.com](mailto:captaincrozzers@gmail.com)
-
-
 ### When I call `get_brightness()` the returned value isn't what I set it to
 Not all monitors can set the brightness for every value between 0 and 100. Some of them have a number of 'levels' that they can be set to.
 You can likely see this if you open your display settings and very slowly move the brightness slider.  
