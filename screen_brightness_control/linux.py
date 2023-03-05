@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
+from .exceptions import I2CValidationError, NoValidDisplayError
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +359,7 @@ class I2C:
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise ValueError('i2c read check failed: ' + repr(checks))
+                raise I2CValidationError('i2c read check failed: ' + repr(checks))
 
             return ba[2:-1]
 
@@ -385,7 +386,7 @@ class I2C:
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise ValueError('i2c read check failed: ' + repr(checks))
+                raise I2CValidationError('i2c read check failed: ' + repr(checks))
 
             # current and max values
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
@@ -1174,5 +1175,5 @@ def list_monitors_info(
     try:
         # use filter_monitors to remove duplicates
         return filter_monitors(haystack=haystack)
-    except LookupError:
+    except NoValidDisplayError:
         return []

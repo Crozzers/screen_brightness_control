@@ -9,31 +9,14 @@ import time
 from functools import lru_cache
 from typing import Tuple, Union
 
+from .exceptions import ScreenBrightnessError  # noqa:F401
+
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
 else:
     from collections.abc import Generator
 
 logger = logging.getLogger(__name__)
-
-
-class ScreenBrightnessError(Exception):
-    '''
-    Generic error class designed to make catching errors under one umbrella easy.
-    Raised when the brightness cannot be set/retrieved.
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-        try:
-            sbc.set_brightness(50)
-        except sbc.ScreenBrightnessError as error:
-            print(error)
-        ```
-    '''
-    def __init__(self, message="Cannot set/retrieve brightness level"):
-        self.message = message
-        super().__init__(self.message)
 
 
 class EDID:
@@ -99,6 +82,7 @@ class EDID:
             print('Name:', name or 'Unknown')
             ```
         '''
+        # TODO: wrap in try/except and raise EDIDParseError from this
         # see https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#EDID_1.4_data_format
         if not isinstance(edid, bytes):
             edid = bytes.fromhex(edid)

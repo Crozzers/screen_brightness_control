@@ -11,9 +11,11 @@ from typing import List, Optional, Union
 import pythoncom
 import win32api
 import win32con
+import pywintypes
 import wmi
 
 from . import filter_monitors, get_methods
+from .exceptions import EDIDParseError, NoValidDisplayError
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
@@ -47,9 +49,8 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
         for adaptor_index in range(5):
             try:
                 device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
-            except Exception:
+            except pywintypes.error:
                 logger.debug(f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
-                pass
             else:
                 yield device
                 break
@@ -87,7 +88,7 @@ def get_display_info() -> List[dict]:
                     i.InstanceName
                     for i in wmi.WmiMonitorBrightness()
                 ]
-            except Exception as e:
+            except wmi.x_wmi as e:
                 logger.warning(f'get_display_info: failed to gather list of laptop displays - {e}')
                 laptop_displays = []
 
@@ -106,18 +107,20 @@ def get_display_info() -> List[dict]:
                         logger.error(f'failed to get EDID string for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         edid = None
 
+                    # TODO: compact these two try/excepts into one block
+
                     # get serial, model, manufacturer and manufacturer ID
                     try:
                         if edid is None:
                             # we already log the EDID exception earlier so don't log it again here
-                            raise Exception('invalid EDID. Cannot parse')
+                            raise EDIDParseError('invalid EDID. Cannot parse')
                         # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                         # takes too long
                         parsed = EDID.parse(edid)
                         man_id, manufacturer, model, name, serial = parsed
                         if name is None:
-                            raise Exception('parsed EDID returned invalid monitor name')
-                    except Exception as e:
+                            raise EDIDParseError('parsed EDID returned invalid monitor name')
+                    except EDIDParseError as e:
                         logger.warning(
                             f'exception parsing edid str for {monitor.InstanceName} - {type(e).__name__}: {e}')
                         devid = pydevice.DeviceID.split('#')
@@ -555,5 +558,5 @@ def list_monitors_info(
     try:
         # use filter_monitors to remove duplicates
         return filter_monitors(haystack=info)
-    except LookupError:
+    except NoValidDisplayError:
         return []

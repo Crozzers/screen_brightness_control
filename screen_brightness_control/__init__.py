@@ -5,6 +5,8 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from .exceptions import NoValidDisplayError
+
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
@@ -203,18 +205,12 @@ def fade_brightness(
         if monitor.get_brightness() != finish:
             monitor.set_brightness(finish, no_return=True)
 
-    def err_msg(e):
-        return f'\n\tfilter_monitors -> {type(e).__name__}: {e}'
-
-    try:
-        # make sure only compatible kwargs are passed to filter_monitors
-        available_monitors = filter_monitors(
-            **{k: v for k, v in kwargs.items() if k in (
-                'display', 'haystack', 'method', 'include'
-            )}
-        )
-    except Exception as e:
-        raise ScreenBrightnessError(err_msg(e)) from e
+    # make sure only compatible kwargs are passed to filter_monitors
+    available_monitors = filter_monitors(
+        **{k: v for k, v in kwargs.items() if k in (
+            'display', 'haystack', 'method', 'include'
+        )}
+    )
 
     # minimum brightness value
     if platform.system() == 'Linux' and not force:
@@ -229,26 +225,27 @@ def fade_brightness(
 
             # same effect as monitor.is_active()
             current = monitor.get_brightness()
-            st, fi = start, finish
-            # convert strings like '+5' to an actual brightness value
-            if isinstance(fi, str):
-                if "+" in fi or "-" in fi:
-                    fi = current + int(float(fi))
-            if isinstance(st, str):
-                if "+" in st or "-" in st:
-                    st = current + int(float(st))
-
-            st = current if st is None else st
-            # make sure both values are within the correct range
-            fi = min(max(int(float(fi)), lower_bound), 100)
-            st = min(max(int(float(st)), lower_bound), 100)
-
-            t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-            t1.start()
-            threads.append(t1)
         except Exception as e:
             logger.error(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
-            pass
+            continue
+
+        st, fi = start, finish
+        # convert strings like '+5' to an actual brightness value
+        if isinstance(fi, str):
+            if "+" in fi or "-" in fi:
+                fi = current + int(float(fi))
+        if isinstance(st, str):
+            if "+" in st or "-" in st:
+                st = current + int(float(st))
+
+        st = current if st is None else st
+        # make sure both values are within the correct range
+        fi = min(max(int(float(fi)), lower_bound), 100)
+        st = min(max(int(float(st)), lower_bound), 100)
+
+        t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
+        t1.start()
+        threads.append(t1)
 
     if not blocking:
         return threads
@@ -683,11 +680,11 @@ def filter_monitors(
 
         return monitors_with_duplicates
 
-    def filter_monitor_list():
+    def filter_monitor_list(to_filter):
         # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
         unique_identifiers = []
         monitors = []
-        for monitor in monitors_with_duplicates:
+        for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
             for identifier in ['edid', 'serial', 'name', 'model'] + include:
@@ -714,25 +711,27 @@ def filter_monitors(
                         break
         return monitors
 
-    monitors_with_duplicates = get_monitor_list()
-    monitors = filter_monitor_list()
+    duplicates = []
     for _ in range(3):
-        if monitors == [] and haystack is not None:
-            # try again
-            time.sleep(0.4)
-            monitors_with_duplicates = get_monitor_list()
-            monitors = filter_monitor_list()
-        else:
+        duplicates = get_monitor_list()
+        if duplicates:
             break
-
-    if not monitors:
-        # if no monitors matched the query
-        msg = 'no monitors found'
-        if display is not None:
-            msg += f' with name/serial/model/edid/index of {repr(display)}'
+        time.sleep(0.4)
+    else:
+        msg = 'no displays detected'
         if method is not None:
-            msg += f' with method of "{method}"'
-        raise LookupError(msg)
+            msg += f' with method: {method!r}'
+        raise NoValidDisplayError(msg)
+
+    monitors = filter_monitor_list(duplicates)
+    if not monitors:
+        # if no displays matched the query
+        msg = 'no displays found'
+        if display is not None:
+            msg += f' with name/serial/model/edid/index of {display!r}'
+        if method is not None:
+            msg += f' with method of {method!r}'
+        raise NoValidDisplayError(msg)
 
     return monitors
 
