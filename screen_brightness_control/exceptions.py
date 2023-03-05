@@ -1,3 +1,6 @@
+import subprocess
+
+
 def format_exc(e: Exception) -> str:
     return f'{type(e).__name__}: {e}'
 
@@ -18,4 +21,8 @@ class NoValidDisplayError(ScreenBrightnessError, LookupError):
 
 
 class I2CValidationError(ScreenBrightnessError):
+    ...
+
+
+class MaxRetriesExceededError(ScreenBrightnessError, subprocess.CalledProcessError):
     ...

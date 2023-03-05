@@ -9,7 +9,7 @@ import time
 from functools import lru_cache
 from typing import Tuple, Union
 
-from .exceptions import ScreenBrightnessError  # noqa:F401
+from .exceptions import EDIDParseError, MaxRetriesExceededError, ScreenBrightnessError  # noqa:F401
 
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
@@ -52,6 +52,8 @@ class EDID:
         "B"     # checksum (1 byte)
     )
     '''The byte structure for EDID strings'''
+    SERIAL_DESCRIPTOR = bytes.fromhex('00 00 00 ff 00')
+    NAME_DESCRIPTOR = bytes.fromhex('00 00 00 fc 00')
 
     @classmethod
     def parse(cls, edid: Union[bytes, str]) -> Tuple[Union[str, None], ...]:
@@ -70,6 +72,9 @@ class EDID:
                 If any of these values are unable to be determined, they will be None.
                 Otherwise, expect a string
 
+        Raises:
+            EDIDParseError
+
         Example:
             ```python
             import screen_brightness_control as sbc
@@ -82,12 +87,14 @@ class EDID:
             print('Name:', name or 'Unknown')
             ```
         '''
-        # TODO: wrap in try/except and raise EDIDParseError from this
         # see https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#EDID_1.4_data_format
         if not isinstance(edid, bytes):
             edid = bytes.fromhex(edid)
 
-        blocks = struct.unpack(cls.EDID_FORMAT, edid)
+        try:
+            blocks = struct.unpack(cls.EDID_FORMAT, edid)
+        except struct.error as e:
+            raise EDIDParseError('cannot unpack edid') from e
 
         mfg_id_block = blocks[1]
         # split mfg_id (2 bytes) into 3 letters, 5 bits each (ignoring reserved bit)
@@ -106,21 +113,19 @@ class EDID:
         else:
             manufacturer = None
 
-        SERIAL_DESCRIPTOR = bytes.fromhex('00 00 00 ff 00')
         serial = None
-        NAME_DESCRIPTOR = bytes.fromhex('00 00 00 FC 00')
         name = None
         for descriptor_block in blocks[17:21]:
             # decode the serial
-            if descriptor_block.startswith(SERIAL_DESCRIPTOR):
+            if descriptor_block.startswith(cls.SERIAL_DESCRIPTOR):
                 # strip descriptor bytes and trailing whitespace
-                serial_bytes = descriptor_block[len(SERIAL_DESCRIPTOR):].rstrip()
+                serial_bytes = descriptor_block[len(cls.SERIAL_DESCRIPTOR):].rstrip()
                 serial = serial_bytes.decode()
 
             # decode the monitor name
-            elif descriptor_block.startswith(NAME_DESCRIPTOR):
+            elif descriptor_block.startswith(cls.NAME_DESCRIPTOR):
                 # strip descriptor bytes and trailing whitespace
-                name_bytes = descriptor_block[len(NAME_DESCRIPTOR):].rstrip()
+                name_bytes = descriptor_block[len(cls.NAME_DESCRIPTOR):].rstrip()
                 name = name_bytes.decode()
 
         # now try to figure out what model the display is
@@ -355,9 +360,9 @@ def check_output(command: list, max_tries: int = 1):
     while True:
         try:
             output = subprocess.check_output(command, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             if tries >= max_tries:
-                raise
+                raise MaxRetriesExceededError(f'process failed after {tries} tries') from e
             tries += 1
             time.sleep(0.04 if tries < 5 else 0.5)
         else:
