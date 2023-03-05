@@ -466,7 +466,7 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, value: str, no_return: bool = True, force: bool = False) -> Union[None, int]:
+    def set_brightness(self, value: Union[int, str], no_return: bool = True, force: bool = False) -> Union[None, int]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 

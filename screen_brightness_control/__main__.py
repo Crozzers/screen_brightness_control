@@ -1,4 +1,5 @@
 import argparse
+from typing import Union
 import time
 import screen_brightness_control as SBC
 
@@ -12,8 +13,8 @@ def get_monitors(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='screen_brightness_control')
     parser.add_argument('-d', '--display', help='the display to be used')
-    parser.add_argument('-s', '--set', type=str,
-                        help='set the brightness to value between 0 to 100 or in increment as string "+5" or "-5"',
+    parser.add_argument('-s', '--set', type=Union[int, str],
+                        help='set the brightness value as a percentage or increment (eg:"+5" or "-5")',
                         metavar='VALUE')
     parser.add_argument('-g', '--get', action='store_true', help='get the current screen brightness')
     parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value', metavar='VALUE')
