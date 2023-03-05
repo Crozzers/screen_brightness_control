@@ -11,6 +11,7 @@ from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
 from .helpers import ScreenBrightnessError, logarithmic_range
+from .exceptions import format_exc
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -226,7 +227,7 @@ def fade_brightness(
             # same effect as monitor.is_active()
             current = monitor.get_brightness()
         except Exception as e:
-            logger.error(f'exception when preparing to fade monitor {i} - {type(e).__name__}: {e}')
+            logger.error(f'exception when preparing to fade monitor {i} - {format_exc(e)}')
             continue
 
         st, fi = start, finish
@@ -623,7 +624,7 @@ class Monitor():
         except Exception as e:
             self._logger.error(
                 f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
-                f' - {type(e).__name__}: {e}'
+                f' - {format_exc(e)}'
             )
             return False
 

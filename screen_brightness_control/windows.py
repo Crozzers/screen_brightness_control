@@ -15,7 +15,7 @@ import pywintypes
 import wmi
 
 from . import filter_monitors, get_methods
-from .exceptions import EDIDParseError, NoValidDisplayError
+from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
 from .helpers import EDID, __cache__, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
@@ -342,7 +342,7 @@ class VCP:
                 for i in wmi.WmiMonitorBrightness()
             ]
         except Exception as e:
-            cls.logger.warning(f'failed to gather list of laptop displays - {e}')
+            cls.logger.warning(f'failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
         for monitor in monitors:

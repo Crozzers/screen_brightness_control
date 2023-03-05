@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
 from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
-from .exceptions import I2CValidationError, NoValidDisplayError
+from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SysFiles:
                 except (FileNotFoundError, TypeError) as e:
                     cls.logger.error(
                         f'error getting highest resolution scale for {folder}'
-                        f' - {type(e).__name__}: {e}'
+                        f' - {format_exc(e)}'
                     )
                     continue
 
@@ -1166,7 +1166,7 @@ def list_monitors_info(
             else:
                 haystack += method_class.get_display_info()
         except Exception as e:
-            logger.warning(f'error grabbing display info from {method_class} - {type(e).__name__}: {e}')
+            logger.warning(f'error grabbing display info from {method_class} - {format_exc(e)}')
             pass
 
     if allow_duplicates:
