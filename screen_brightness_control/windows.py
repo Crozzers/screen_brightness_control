@@ -75,103 +75,90 @@ def get_display_info() -> List[dict]:
     info = __cache__.get('windows_monitors_info_raw')
     if info is None:
         info = []
+        # collect all monitor UIDs (derived from DeviceID)
+        monitor_uids = {}
+        for device in enum_display_devices():
+            monitor_uids[device.DeviceID.split('#')[2]] = device
+
+        # gather list of laptop displays to check against later
+        wmi = _wmi_init()
         try:
-            # collect all monitor UIDs (derived from DeviceID)
-            monitor_uids = {}
-            for device in enum_display_devices():
-                monitor_uids[device.DeviceID.split('#')[2]] = device
+            laptop_displays = [
+                i.InstanceName
+                for i in wmi.WmiMonitorBrightness()
+            ]
+        except wmi.x_wmi as e:
+            logger.warning(f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
+            laptop_displays = []
 
-            # gather list of laptop displays to check against later
-            wmi = _wmi_init()
+        extras, desktop, laptop = [], 0, 0
+        uid_keys = list(monitor_uids.keys())
+        for monitor in wmi.WmiMonitorDescriptorMethods():
+            model, serial, manufacturer, man_id, edid = None, None, None, None, None
+            instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
+            pydevice = monitor_uids[instance_name]
+
+            # get the EDID
             try:
-                laptop_displays = [
-                    i.InstanceName
-                    for i in wmi.WmiMonitorBrightness()
-                ]
-            except wmi.x_wmi as e:
-                logger.warning(f'get_display_info: failed to gather list of laptop displays - {e}')
-                laptop_displays = []
-
-            extras, desktop, laptop = [], 0, 0
-            uid_keys = list(monitor_uids.keys())
-            for monitor in wmi.WmiMonitorDescriptorMethods():
-                try:
-                    model, serial, manufacturer, man_id, edid = None, None, None, None, None
-                    instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
-                    pydevice = monitor_uids[instance_name]
-
-                    # get the EDID
+                edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
+                # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
+                # takes too long
+                parsed = EDID.parse(edid)
+                man_id, manufacturer, model, name, serial = parsed
+                if name is None:
+                    raise EDIDParseError('parsed EDID returned invalid monitor name')
+            except EDIDParseError as e:
+                edid = None
+                logger.warning(
+                    f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
+            except Exception as e:
+                edid = None
+                logger.error(f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
+            finally:
+                if edid is None:
+                    devid = pydevice.DeviceID.split('#')
+                    serial = devid[2]
+                    man_id = devid[1][:3]
+                    model = devid[1][3:] or 'Generic Monitor'
+                    del devid
                     try:
-                        edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
-                    except Exception as e:
-                        logger.error(f'failed to get EDID string for {monitor.InstanceName} - {type(e).__name__}: {e}')
-                        edid = None
+                        man_id, manufacturer = _monitor_brand_lookup(man_id)
+                    except TypeError:
+                        manufacturer = None
 
-                    # TODO: compact these two try/excepts into one block
+            if (serial, model) != (None, None):
+                data = {
+                    'name': f'{manufacturer} {model}',
+                    'model': model,
+                    'serial': serial,
+                    'manufacturer': manufacturer,
+                    'manufacturer_id': man_id,
+                    'edid': edid
+                }
+                if monitor.InstanceName in laptop_displays:
+                    data['index'] = laptop
+                    data['method'] = WMI
+                    laptop += 1
+                else:
+                    data['method'] = VCP
+                    desktop += 1
 
-                    # get serial, model, manufacturer and manufacturer ID
-                    try:
-                        if edid is None:
-                            # we already log the EDID exception earlier so don't log it again here
-                            raise EDIDParseError('invalid EDID. Cannot parse')
-                        # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
-                        # takes too long
-                        parsed = EDID.parse(edid)
-                        man_id, manufacturer, model, name, serial = parsed
-                        if name is None:
-                            raise EDIDParseError('parsed EDID returned invalid monitor name')
-                    except EDIDParseError as e:
-                        logger.warning(
-                            f'exception parsing edid str for {monitor.InstanceName} - {type(e).__name__}: {e}')
-                        devid = pydevice.DeviceID.split('#')
-                        serial = devid[2]
-                        man_id = devid[1][:3]
-                        model = devid[1][3:] or 'Generic Monitor'
-                        del devid
-                        try:
-                            man_id, manufacturer = _monitor_brand_lookup(man_id)
-                        except TypeError:
-                            manufacturer = None
+                if instance_name in uid_keys:
+                    # insert the data into the uid_keys list because
+                    # uid_keys has the monitors sorted correctly. This
+                    # means we don't have to re-sort the list later
+                    uid_keys[uid_keys.index(instance_name)] = data
+                else:
+                    extras.append(data)
 
-                    if (serial, model) != (None, None):
-                        data = {
-                            'name': f'{manufacturer} {model}',
-                            'model': model,
-                            'serial': serial,
-                            'manufacturer': manufacturer,
-                            'manufacturer_id': man_id,
-                            'edid': edid
-                        }
-                        if monitor.InstanceName in laptop_displays:
-                            data['index'] = laptop
-                            data['method'] = WMI
-                            laptop += 1
-                        else:
-                            data['method'] = VCP
-                            desktop += 1
-
-                        if instance_name in uid_keys:
-                            # insert the data into the uid_keys list because
-                            # uid_keys has the monitors sorted correctly. This
-                            # means we don't have to re-sort the list later
-                            uid_keys[uid_keys.index(instance_name)] = data
-                        else:
-                            extras.append(data)
-                except Exception as e:
-                    logger.error(f'exception getting device info for {monitor.InstanceName} - {type(e).__name__}: {e}')
-                    pass
-
-            info = uid_keys + extras
-            if desktop:
-                # now make sure desktop monitors have the correct index
-                count = 0
-                for item in info:
-                    if item['method'] == VCP:
-                        item['index'] = count
-                        count += 1
-        except Exception as e:
-            logger.error(f'error gathering display information - {type(e).__name__}: {e}', exc_info=True)
-            pass
+        info = uid_keys + extras
+        if desktop:
+            # now make sure desktop monitors have the correct index
+            count = 0
+            for item in info:
+                if item['method'] == VCP:
+                    item['index'] = count
+                    count += 1
 
         # return info only which has correct data
         info = [i for i in info if isinstance(i, dict)]
