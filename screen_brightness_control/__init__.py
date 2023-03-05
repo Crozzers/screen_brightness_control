@@ -466,12 +466,12 @@ class Monitor():
             if value is not None:
                 return key, value
 
-    def set_brightness(self, value: int, no_return: bool = True, force: bool = False) -> Union[None, int]:
+    def set_brightness(self, value: str, no_return: bool = True, force: bool = False) -> Union[None, int]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            value (int): the brightness value to set the display to (from 0 to 100)
+            value (str): the brightness value to set the display to (from 0 to 100) or in increment as string '+5' or '-5'
             no_return (bool): if true, this function returns `None`
                 Otherwise it returns the result of `Monitor.get_brightness`
             force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
@@ -499,6 +499,13 @@ class Monitor():
             lower_bound = 1
         else:
             lower_bound = 0
+
+        # changing string value to int
+        if isinstance(value, str) and ('+' in value or '-' in value):
+            value = int(float(value))
+            value += self.method.get_brightness(display=self.index)[0]
+        else:
+            value = int(float(str(value)))
         value = max(lower_bound, min(value, 100))
         self.method.set_brightness(value, display=self.index)
         if no_return:
