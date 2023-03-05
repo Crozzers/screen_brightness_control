@@ -38,6 +38,8 @@ to the I2C buses without needing to use `sudo`. To add youself to the `i2c` grou
 usermod -a -G i2c [your username here]
 ```
 
+The [I2C permissions section](https://www.ddcutil.com/i2c_permissions/) of the DDCUtil docs has some more details on this process.
+
 # Using 3rd Party Programs
 
 ## Supported Programs
