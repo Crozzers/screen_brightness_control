@@ -7,6 +7,7 @@ from timeit import timeit
 
 import helpers
 from helpers import TestCase, get_method_names, get_methods
+from screen_brightness_control.exceptions import NoValidDisplayError
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
@@ -155,11 +156,11 @@ class TestFadeBrightness(TestCase):
                 pass
 
     def test_abnormal(self):
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.fade_brightness, 100, method='non-existant method')
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.fade_brightness, 100, display='non-existant display')
+        self.assertRaises(ValueError, sbc.fade_brightness, 100, method='non-existant method')
+        self.assertRaises(NoValidDisplayError, sbc.fade_brightness, 100, display='non-existant display')
         # test wrong types
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.fade_brightness, 100, method=0.0)
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.fade_brightness, 100, display=0.0)
+        self.assertRaises(Exception, sbc.fade_brightness, 100, method=0.0)
+        self.assertRaises(TypeError, sbc.fade_brightness, 100, display=0.0)
 
 
 class TestListMonitorsInfo(TestCase):
