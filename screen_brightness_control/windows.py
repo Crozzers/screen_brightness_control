@@ -499,9 +499,6 @@ def list_monitors_info(
     Returns:
         list: list of dicts upon success, empty list upon failure
 
-    Raises:
-        ValueError: if the method kwarg is invalid
-
     Example:
         ```python
         import screen_brightness_control as sbc
@@ -530,14 +527,10 @@ def list_monitors_info(
     # no caching here because get_display_info caches its results
     info = get_display_info()
 
-    all_methods = get_methods()
+    all_methods = get_methods(method).values()
 
     if method is not None:
-        method = method.lower()
-        if method not in all_methods:
-            logger.debug(f'requested method {repr(method)} invalid')
-            raise ValueError(f'method must be one of: {list(all_methods)}')
-        info = [i for i in info if i['method'].__name__.lower() == method]
+        info = [i for i in info if i['method'] in all_methods]
 
     if allow_duplicates:
         return info

@@ -90,13 +90,11 @@ class FakeMethodTest():
         return fakes
 
     def __enter__(self):
-        if not hasattr(sbc, '_old_get_methods'):
-            sbc._old_get_methods = sbc.get_methods
+        if not hasattr(sbc, '_old_methods'):
+            sbc._old_os_methods = sbc._OS_METHODS
 
-        # change the sbc get_methods function
-        sbc.get_methods = lambda: {i.__name__.lower(): i for i in FAKE_METHODS}
-        # change that same function which was imported by the os specific module
-        sbc._OS_MODULE.get_methods = sbc.get_methods
+        # change the sbc get_methods function output
+        sbc._OS_METHODS = FAKE_METHODS
         # on windows we also need to override the module level `get_display_info`
         if os.name == 'nt':
             if not hasattr(sbc._OS_MODULE, '_old_get_display_info'):
@@ -111,10 +109,8 @@ class FakeMethodTest():
             sbc._OS_MODULE.get_display_info = get_display_info
 
     def __exit__(self, *args):
-        # change the sbc get_methods function
-        sbc.get_methods = sbc._old_get_methods
-        # change that same function which was imported by the os specific module
-        sbc._OS_MODULE.get_methods = sbc.get_methods
+        # change the sbc get_methods function output
+        sbc._OS_METHODS = sbc._old_os_methods
         # on windows we also need to override the module level `get_display_info`
         if os.name == 'nt':
             sbc._OS_MODULE.get_display_info = sbc._OS_MODULE._old_get_display_info
@@ -125,7 +121,7 @@ class FakeMethodTest():
     @classmethod
     def _gdi(cls):
         if not cls.cached_display_info:
-            for method in sbc._old_get_methods().values():
+            for method in sbc._old_os_methods:
                 try:
                     for d in method.get_display_info():
                         d['method'] = cls

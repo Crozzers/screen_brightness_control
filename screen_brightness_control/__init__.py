@@ -321,14 +321,20 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     return [i['name'] for i in list_monitors_info(method=method)]
 
 
-def get_methods() -> Dict[str, object]:
+def get_methods(name: str = None) -> Dict[str, object]:
     '''
     Returns all available brightness method names and their associated classes.
+
+    Args:
+        name (str): if specified, return the method corresponding to this name
 
     Returns:
         dict: keys are the method names. This is what you would use
             if a function has a `method` kwarg.
             Values are the classes themselves
+
+    Raises:
+        ValueError: if the given name is incorrect
 
     Example:
         ```python
@@ -342,20 +348,22 @@ def get_methods() -> Dict[str, object]:
             print('Associated monitors:', sbc.list_monitors(method=method_name))
         ```
     '''
-    if platform.system() == 'Windows':
-        methods = (_OS_MODULE.WMI, _OS_MODULE.VCP)
-    else:  # linux
-        methods = (
-            _OS_MODULE.SysFiles, _OS_MODULE.I2C,
-            _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
-            _OS_MODULE.Light
-        )
+    methods = {i.__name__.lower(): i for i in _OS_METHODS}
 
-    return {i.__name__.lower(): i for i in methods}
+    if name is None:
+        return methods
+
+    name = name.lower()
+    if name in methods:
+        return {name: methods[name]}
+
+    logger.debug(f'requested method {name!r} invalid')
+    raise ValueError(f'invalid method name, must be one of: {list(methods)}')
 
 
 class Monitor():
     '''A class to manage a single monitor and its relevant information'''
+
     def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
@@ -675,7 +683,9 @@ def filter_monitors(
         if haystack is not None:
             monitors_with_duplicates = haystack
             if method is not None:
-                monitors_with_duplicates = [i for i in haystack if method.lower() == i['method'].__name__.lower()]
+                method_class = next(get_methods(method).values())
+                monitors_with_duplicates = [
+                    i for i in haystack if i['method'] == method_class]
         else:
             monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
@@ -805,8 +815,14 @@ def __brightness(
 if platform.system() == 'Windows':
     from . import windows
     _OS_MODULE = windows
+    _OS_METHODS = (_OS_MODULE.WMI, _OS_MODULE.VCP)
 elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
+    _OS_METHODS = (
+        _OS_MODULE.SysFiles, _OS_MODULE.I2C,
+        _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
+        _OS_MODULE.Light
+    )
 else:
     logger.warning(f'package imported on unsupported platform ({platform.system()})')

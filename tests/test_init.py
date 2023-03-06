@@ -222,6 +222,15 @@ class TestGetMethods(TestCase):
 
             self.assertEqual(name.lower(), method.__name__.lower())
 
+    def test_lookup(self):
+        all_methods = sbc.get_methods()
+
+        for name in all_methods.keys():
+            self.assertEqual(sbc.get_methods(name), {name: all_methods[name]})
+
+    def test_lookup_abnormal(self):
+        self.assertRaises(ValueError, sbc.get_methods, 'not a method')
+
 
 class TestMonitor(TestCase):
     def test_normal(self):
@@ -359,6 +368,9 @@ class TestFilterMonitors(TestCase):
             except LookupError:
                 # if we don't have monitors of a certain method then pass
                 pass
+
+        self.assertRaises(ValueError, sbc.filter_monitors, method='not a method')
+        self.assertRaises(ValueError, sbc.filter_monitors, method='not a method', haystack=[])
 
     def test_include_kwarg(self):
         monitors = sbc.list_monitors_info()

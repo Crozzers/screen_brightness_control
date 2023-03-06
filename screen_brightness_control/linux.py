@@ -1120,9 +1120,6 @@ def list_monitors_info(
     Returns:
         list: list of dicts
 
-    Raises:
-        ValueError: if the method kwarg is invalid
-
     Example:
         ```python
         import screen_brightness_control as sbc
@@ -1146,20 +1143,9 @@ def list_monitors_info(
             print('Method:', monitor['method'])
         ```
     '''
-    all_methods = get_methods()
-
-    if method is not None:
-        method = method.lower()
-        if method not in all_methods:
-            logger.debug(f'requested method {repr(method)} invalid')
-            raise ValueError(f'method must be one of: {list(all_methods)}')
-
-    all_methods = all_methods.values()
-
+    all_methods = get_methods(method).values()
     haystack = []
     for method_class in all_methods:
-        if method is not None and method != method_class.__name__.lower():
-            continue
         try:
             if unsupported and hasattr(method_class, '_gdi'):
                 haystack += method_class._gdi()
