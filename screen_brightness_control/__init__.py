@@ -351,12 +351,15 @@ def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
     if name is None:
         return methods
 
+    if not isinstance(name, str):
+        raise TypeError(f'name must be of type str, not {type(name)!r}')
+
     name = name.lower()
     if name in methods:
         return {name: methods[name]}
 
     logger.debug(f'requested method {name!r} invalid')
-    raise ValueError(f'invalid method name, must be one of: {list(methods)}')
+    raise ValueError(f'invalid method {name!r}, must be one of: {list(methods)}')
 
 
 class Monitor():
