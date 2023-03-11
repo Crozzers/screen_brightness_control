@@ -9,9 +9,10 @@ import time
 from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
-from .helpers import EDID, __cache__, _monitor_brand_lookup, check_output
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
+from .helpers import EDID, __Cache, _monitor_brand_lookup, check_output
 
+__cache__ = __Cache()
 logger = logging.getLogger(__name__)
 
 

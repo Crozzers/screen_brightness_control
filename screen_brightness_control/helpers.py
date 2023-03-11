@@ -18,6 +18,152 @@ else:
 
 logger = logging.getLogger(__name__)
 
+MONITOR_MANUFACTURER_CODES = {
+    "AAC": "AcerView",
+    "ACI": "Asus (ASUSTeK Computer Inc.)",
+    "ACR": "Acer",
+    "ACT": "Targa",
+    "ADI": "ADI Corporation",
+    "AIC": "AG Neovo",
+    "ALX": "Anrecson",
+    "AMW": "AMW",
+    "AOC": "AOC",
+    "API": "Acer America Corp.",
+    "APP": "Apple Computer",
+    "ART": "ArtMedia",
+    "AST": "AST Research",
+    "AUO": "Asus",
+    "BMM": "BMM",
+    "BNQ": "BenQ",
+    "BOE": "BOE Display Technology",
+    "CMO": "Acer",
+    "CPL": "Compal",
+    "CPQ": "Compaq",
+    "CPT": "Chunghwa Pciture Tubes, Ltd.",
+    "CTX": "CTX",
+    "DEC": "DEC",
+    "DEL": "Dell",
+    "DPC": "Delta",
+    "DWE": "Daewoo",
+    "ECS": "ELITEGROUP Computer Systems",
+    "EIZ": "EIZO",
+    "ELS": "ELSA",
+    "ENC": "EIZO",
+    "EPI": "Envision",
+    "FCM": "Funai",
+    "FUJ": "Fujitsu",
+    "FUS": "Fujitsu-Siemens",
+    "GSM": "LG Electronics",
+    "GWY": "Gateway 2000",
+    "GBT": "Gigabyte",
+    "HEI": "Hyundai",
+    "HIQ": "Hyundai ImageQuest",
+    "HIT": "Hyundai",
+    "HPN": "HP",
+    "HSD": "Hannspree Inc",
+    "HSL": "Hansol",
+    "HTC": "Hitachi/Nissei",
+    "HWP": "HP",
+    "IBM": "IBM",
+    "ICL": "Fujitsu ICL",
+    "IFS": "InFocus",
+    "IQT": "Hyundai",
+    "IVM": "Iiyama",
+    "KDS": "Korea Data Systems",
+    "KFC": "KFC Computek",
+    "LEN": "Lenovo",
+    "LGD": "Asus",
+    "LKM": "ADLAS / AZALEA",
+    "LNK": "LINK Technologies, Inc.",
+    "LPL": "Fujitsu",
+    "LTN": "Lite-On",
+    "MAG": "MAG InnoVision",
+    "MAX": "Belinea",
+    "MEI": "Panasonic",
+    "MEL": "Mitsubishi Electronics",
+    "MIR": "miro Computer Products AG",
+    "MSI": "MSI",
+    "MS_": "Panasonic",
+    "MTC": "MITAC",
+    "NAN": "Nanao",
+    "NEC": "NEC",
+    "NOK": "Nokia Data",
+    "NVD": "Fujitsu",
+    "OPT": "Optoma",
+    "OQI": "OPTIQUEST",
+    "PBN": "Packard Bell",
+    "PCK": "Daewoo",
+    "PDC": "Polaroid",
+    "PGS": "Princeton Graphic Systems",
+    "PHL": "Philips",
+    "PRT": "Princeton",
+    "REL": "Relisys",
+    "SAM": "Samsung",
+    "SAN": "Samsung",
+    "SBI": "Smarttech",
+    "SEC": "Hewlett-Packard",
+    "SGI": "SGI",
+    "SMC": "Samtron",
+    "SMI": "Smile",
+    "SNI": "Siemens Nixdorf",
+    "SNY": "Sony",
+    "SPT": "Sceptre",
+    "SRC": "Shamrock",
+    "STN": "Samtron",
+    "STP": "Sceptre",
+    "SUN": "Sun Microsystems",
+    "TAT": "Tatung",
+    "TOS": "Toshiba",
+    "TRL": "Royal Information Company",
+    "TSB": "Toshiba",
+    "UNK": "Unknown",
+    "UNM": "Unisys Corporation",
+    "VSC": "ViewSonic",
+    "WTC": "Wen Technology",
+    "ZCM": "Zenith",
+    "_YV": "Fujitsu"
+}
+
+class __Cache(dict):
+    '''class to cache data with a short shelf life'''
+    def __init__(self):
+        self.enabled = True
+        super().__init__()
+
+    def get(self, key, *args, **kwargs):
+        if not self.enabled:
+            return None
+
+        try:
+            value, expires, orig_args, orig_kwargs = self[key]
+            if time.time() < expires:
+                if orig_args == args and orig_kwargs == kwargs:
+                    logger.debug(f'cache get {repr(key)}')
+                    return value
+            else:
+                logger.debug(f'cache get {repr(key)} = [expired]')
+                del self[key]
+        except KeyError:
+            logger.debug(f'cache get {repr(key)} = [KeyError]')
+            pass
+
+    def store(self, key, value, *args, expires=1, **kwargs):
+        self[key] = (value, expires + time.time(), args, kwargs)
+        logger.debug(f'cache set {repr(key)}, expires={expires}')
+
+    def expire(self, key=None, startswith=None):
+        if key is not None:
+            try:
+                del self[key]
+                logger.debug(f'cache expire key {repr(key)}')
+            except KeyError:
+                pass
+        elif startswith is not None:
+            for i in tuple(self.keys()):
+                if i.startswith(startswith):
+                    del self[i]
+                    logger.debug(f'cache expire key {repr(i)}')
+
 
 class EDID:
     '''
@@ -171,130 +317,30 @@ class EDID:
         return hex_str
 
 
-MONITOR_MANUFACTURER_CODES = {
-    "AAC": "AcerView",
-    "ACI": "Asus (ASUSTeK Computer Inc.)",
-    "ACR": "Acer",
-    "ACT": "Targa",
-    "ADI": "ADI Corporation",
-    "AIC": "AG Neovo",
-    "ALX": "Anrecson",
-    "AMW": "AMW",
-    "AOC": "AOC",
-    "API": "Acer America Corp.",
-    "APP": "Apple Computer",
-    "ART": "ArtMedia",
-    "AST": "AST Research",
-    "AUO": "Asus",
-    "BMM": "BMM",
-    "BNQ": "BenQ",
-    "BOE": "BOE Display Technology",
-    "CMO": "Acer",
-    "CPL": "Compal",
-    "CPQ": "Compaq",
-    "CPT": "Chunghwa Pciture Tubes, Ltd.",
-    "CTX": "CTX",
-    "DEC": "DEC",
-    "DEL": "Dell",
-    "DPC": "Delta",
-    "DWE": "Daewoo",
-    "ECS": "ELITEGROUP Computer Systems",
-    "EIZ": "EIZO",
-    "ELS": "ELSA",
-    "ENC": "EIZO",
-    "EPI": "Envision",
-    "FCM": "Funai",
-    "FUJ": "Fujitsu",
-    "FUS": "Fujitsu-Siemens",
-    "GSM": "LG Electronics",
-    "GWY": "Gateway 2000",
-    "GBT": "Gigabyte",
-    "HEI": "Hyundai",
-    "HIQ": "Hyundai ImageQuest",
-    "HIT": "Hyundai",
-    "HPN": "HP",
-    "HSD": "Hannspree Inc",
-    "HSL": "Hansol",
-    "HTC": "Hitachi/Nissei",
-    "HWP": "HP",
-    "IBM": "IBM",
-    "ICL": "Fujitsu ICL",
-    "IFS": "InFocus",
-    "IQT": "Hyundai",
-    "IVM": "Iiyama",
-    "KDS": "Korea Data Systems",
-    "KFC": "KFC Computek",
-    "LEN": "Lenovo",
-    "LGD": "Asus",
-    "LKM": "ADLAS / AZALEA",
-    "LNK": "LINK Technologies, Inc.",
-    "LPL": "Fujitsu",
-    "LTN": "Lite-On",
-    "MAG": "MAG InnoVision",
-    "MAX": "Belinea",
-    "MEI": "Panasonic",
-    "MEL": "Mitsubishi Electronics",
-    "MIR": "miro Computer Products AG",
-    "MSI": "MSI",
-    "MS_": "Panasonic",
-    "MTC": "MITAC",
-    "NAN": "Nanao",
-    "NEC": "NEC",
-    "NOK": "Nokia Data",
-    "NVD": "Fujitsu",
-    "OPT": "Optoma",
-    "OQI": "OPTIQUEST",
-    "PBN": "Packard Bell",
-    "PCK": "Daewoo",
-    "PDC": "Polaroid",
-    "PGS": "Princeton Graphic Systems",
-    "PHL": "Philips",
-    "PRT": "Princeton",
-    "REL": "Relisys",
-    "SAM": "Samsung",
-    "SAN": "Samsung",
-    "SBI": "Smarttech",
-    "SEC": "Hewlett-Packard",
-    "SGI": "SGI",
-    "SMC": "Samtron",
-    "SMI": "Smile",
-    "SNI": "Siemens Nixdorf",
-    "SNY": "Sony",
-    "SPT": "Sceptre",
-    "SRC": "Shamrock",
-    "STN": "Samtron",
-    "STP": "Sceptre",
-    "SUN": "Sun Microsystems",
-    "TAT": "Tatung",
-    "TOS": "Toshiba",
-    "TRL": "Royal Information Company",
-    "TSB": "Toshiba",
-    "UNK": "Unknown",
-    "UNM": "Unisys Corporation",
-    "VSC": "ViewSonic",
-    "WTC": "Wen Technology",
-    "ZCM": "Zenith",
-    "_YV": "Fujitsu"
-}
+def check_output(command: list, max_tries: int = 1):
+    '''
+    Run a command with retry management built in.
 
+    Args:
+        command (list[str]): the command to run
+        max_retries (int): the maximum number of retries to allow before raising an error
 
-@lru_cache(maxsize=None)
-def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
-    '''internal function to search the monitor manufacturer codes dict'''
-    keys = tuple(MONITOR_MANUFACTURER_CODES.keys())
-    keys_lower = tuple(map(str.lower, keys))
-    values = tuple(MONITOR_MANUFACTURER_CODES.values())
-    search = search.lower()
-
-    if search in keys_lower:
-        index = keys_lower.index(search)
-    else:
-        values_lower = tuple(map(str.lower, values))
-        if search in values_lower:
-            index = values_lower.index(search)
+    Returns:
+        str: the command output
+    '''
+    tries = 1
+    while True:
+        try:
+            output = subprocess.check_output(command, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            if tries >= max_tries:
+                raise MaxRetriesExceededError(f'process failed after {tries} tries') from e
+            tries += 1
+            time.sleep(0.04 if tries < 5 else 0.5)
         else:
-            return None
-    return keys[index], values[index]
+            if tries > 1:
+                logger.debug(f'command {command} took {tries}/{max_tries} tries')
+            return output
 
 
 def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, None, None]:
@@ -345,71 +391,20 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
             last_yielded = x
 
 
-def check_output(command: list, max_tries: int = 1):
-    '''
-    Run a command with retry management built in.
+@lru_cache(maxsize=None)
+def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
+    '''internal function to search the monitor manufacturer codes dict'''
+    keys = tuple(MONITOR_MANUFACTURER_CODES.keys())
+    keys_lower = tuple(map(str.lower, keys))
+    values = tuple(MONITOR_MANUFACTURER_CODES.values())
+    search = search.lower()
 
-    Args:
-        command (list[str]): the command to run
-        max_retries (int): the maximum number of retries to allow before raising an error
-
-    Returns:
-        str: the command output
-    '''
-    tries = 1
-    while True:
-        try:
-            output = subprocess.check_output(command, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            if tries >= max_tries:
-                raise MaxRetriesExceededError(f'process failed after {tries} tries') from e
-            tries += 1
-            time.sleep(0.04 if tries < 5 else 0.5)
+    if search in keys_lower:
+        index = keys_lower.index(search)
+    else:
+        values_lower = tuple(map(str.lower, values))
+        if search in values_lower:
+            index = values_lower.index(search)
         else:
-            if tries > 1:
-                logger.debug(f'command {command} took {tries}/{max_tries} tries')
-            return output
-
-
-class __Cache(dict):
-    '''class to cache data with a short shelf life'''
-    def __init__(self):
-        self.enabled = True
-        super().__init__()
-
-    def get(self, key, *args, **kwargs):
-        if not self.enabled:
             return None
-
-        try:
-            value, expires, orig_args, orig_kwargs = self[key]
-            if time.time() < expires:
-                if orig_args == args and orig_kwargs == kwargs:
-                    logger.debug(f'cache get {repr(key)}')
-                    return value
-            else:
-                logger.debug(f'cache get {repr(key)} = [expired]')
-                del self[key]
-        except KeyError:
-            logger.debug(f'cache get {repr(key)} = [KeyError]')
-            pass
-
-    def store(self, key, value, *args, expires=1, **kwargs):
-        self[key] = (value, expires + time.time(), args, kwargs)
-        logger.debug(f'cache set {repr(key)}, expires={expires}')
-
-    def expire(self, key=None, startswith=None):
-        if key is not None:
-            try:
-                del self[key]
-                logger.debug(f'cache expire key {repr(key)}')
-            except KeyError:
-                pass
-        elif startswith is not None:
-            for i in tuple(self.keys()):
-                if i.startswith(startswith):
-                    del self[i]
-                    logger.debug(f'cache expire key {repr(i)}')
-
-
-__cache__ = __Cache()
+    return keys[index], values[index]

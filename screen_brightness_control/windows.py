@@ -9,14 +9,14 @@ from ctypes.wintypes import (BOOL, BYTE, DWORD, HANDLE, HDC, HMONITOR, LPARAM,
 from typing import List, Optional, Union
 
 import pythoncom
+import pywintypes
 import win32api
 import win32con
-import pywintypes
 import wmi
 
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
-from .helpers import EDID, __cache__, _monitor_brand_lookup
+from .helpers import EDID, __Cache, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
@@ -25,6 +25,7 @@ if int(platform.python_version_tuple()[1]) < 9:
 else:
     from collections.abc import Generator
 
+__cache__ = __Cache()
 logger = logging.getLogger(__name__)
 
 
