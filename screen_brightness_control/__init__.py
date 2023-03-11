@@ -762,23 +762,18 @@ def __brightness(
     errors = []
     method = method.lower() if isinstance(method, str) else method
 
-    try:
-        monitors = filter_monitors(display=display, method=method)
-    except Exception as e:
-        format_exc('filter_monitors', e)
-    else:
-        for monitor in monitors:
-            try:
-                if meta_method == 'set':
-                    monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
-                    if no_return:
-                        output.append(None)
-                        continue
+    for monitor in filter_monitors(display=display, method=method):
+        try:
+            if meta_method == 'set':
+                monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
+                if no_return:
+                    output.append(None)
+                    continue
 
-                output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
-            except Exception as e:
-                output.append(None)
-                format_exc(monitor, e)
+            output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
+        except Exception as e:
+            output.append(None)
+            format_exc(monitor, e)
 
     if output:
         output_is_none = set(output) == {None}
