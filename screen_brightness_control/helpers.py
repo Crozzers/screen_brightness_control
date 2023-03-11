@@ -6,10 +6,12 @@ import platform
 import struct
 import subprocess
 import time
+from abc import ABC, abstractclassmethod
 from functools import lru_cache
-from typing import Tuple, Union
+from typing import List, Optional, Tuple, Union
 
-from .exceptions import EDIDParseError, MaxRetriesExceededError, ScreenBrightnessError  # noqa:F401
+from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
+                         ScreenBrightnessError)
 
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
@@ -123,6 +125,44 @@ MONITOR_MANUFACTURER_CODES = {
     "ZCM": "Zenith",
     "_YV": "Fujitsu"
 }
+
+
+class BrightnessMethod(ABC):
+    @abstractclassmethod
+    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+        '''
+        Return information about detected displays.
+        Each returned dict must have the following keys:
+         - name (str): the name of the display
+         - model (str): the model of the display
+         - manufacturer (str): the name of the display manufacturer
+         - manufacturer_id (str): the three letter manufacturer code (see `MONITOR_MANUFACTURER_CODES`)
+         - serial (str): the serial of the display OR some other unique identifier
+         - edid (str): the EDID string for the monitor
+         - method (BrightnessMethod): the brightness method associated with this display
+         - index (int): the index of the monitor, relative to the brightness method
+        '''
+        ...
+
+    @abstractclassmethod
+    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+        ...
+
+    @abstractclassmethod
+    def set_brightness(cls, value: int, display: Optional[int] = None):
+        ...
+
+
+class BrightnessMethodAdv(BrightnessMethod):
+    @abstractclassmethod
+    def _gdi(cls) -> List[dict]:
+        '''
+        Similar to `BrightnessMethod.get_display_info` except this method will also
+        return unsupported displays, indicated by an `unsupported: bool` property
+        in the returned dict
+        '''
+        ...
+
 
 class __Cache(dict):
     '''class to cache data with a short shelf life'''

@@ -10,13 +10,14 @@ from typing import List, Optional, Tuple, Union
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
-from .helpers import EDID, __Cache, _monitor_brand_lookup, check_output
+from .helpers import (EDID, BrightnessMethod, BrightnessMethodAdv, __Cache,
+                      _monitor_brand_lookup, check_output)
 
 __cache__ = __Cache()
 logger = logging.getLogger(__name__)
 
 
-class SysFiles:
+class SysFiles(BrightnessMethod):
     '''
     A way of getting display information and adjusting the brightness
     that does not rely on any 3rd party software.
@@ -193,7 +194,7 @@ class SysFiles:
                 f.write(str(int(value * device['scale'])))
 
 
-class I2C:
+class I2C(BrightnessMethod):
     '''
     In the same spirit as `SysFiles`, this class serves as a way of getting
     display information and adjusting the brightness without relying on any
@@ -563,7 +564,7 @@ class I2C:
             interface.setvcp(0x10, value)
 
 
-class Light:
+class Light(BrightnessMethod):
     '''collection of screen brightness related methods using the light executable'''
 
     executable: str = 'light'
@@ -687,7 +688,7 @@ class Light:
         return results
 
 
-class XRandr:
+class XRandr(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the xrandr executable'''
 
     executable: str = 'xrandr'
@@ -852,7 +853,7 @@ class XRandr:
             check_output([cls.executable, '--output', i['interface'], '--brightness', value])
 
 
-class DDCUtil:
+class DDCUtil(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the ddcutil executable'''
     logger = logger.getChild('DDCUtil')
 
@@ -1148,7 +1149,7 @@ def list_monitors_info(
     haystack = []
     for method_class in all_methods:
         try:
-            if unsupported and hasattr(method_class, '_gdi'):
+            if unsupported and issubclass(method_class, BrightnessMethodAdv):
                 haystack += method_class._gdi()
             else:
                 haystack += method_class.get_display_info()

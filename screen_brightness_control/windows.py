@@ -16,7 +16,7 @@ import wmi
 
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
-from .helpers import EDID, __Cache, _monitor_brand_lookup
+from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
 
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
@@ -169,7 +169,7 @@ def get_display_info() -> List[dict]:
     return info
 
 
-class WMI:
+class WMI(BrightnessMethod):
     '''
     A collection of screen brightness related methods using the WMI API.
     This class primarily works with laptop displays.
@@ -281,7 +281,7 @@ class WMI:
         return values
 
 
-class VCP:
+class VCP(BrightnessMethod):
     '''Collection of screen brightness related methods using the DDC/CI commands'''
     _MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
 

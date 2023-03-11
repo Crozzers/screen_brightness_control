@@ -5,13 +5,11 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from .exceptions import NoValidDisplayError
-
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
+from .exceptions import NoValidDisplayError, format_exc
 from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
-from .helpers import ScreenBrightnessError, logarithmic_range
-from .exceptions import format_exc
+from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -321,7 +319,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     return [i['name'] for i in list_monitors_info(method=method)]
 
 
-def get_methods(name: str = None) -> Dict[str, object]:
+def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
     '''
     Returns all available brightness method names and their associated classes.
 
