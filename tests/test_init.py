@@ -30,16 +30,15 @@ class TestGetBrightness(TestCase):
             try:
                 value = sbc.get_brightness(method=method)
                 self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
-            except sbc.ScreenBrightnessError:
-                # likely no monitors of that method
+            except NoValidDisplayError:
                 pass
 
     def test_abnormal(self):
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.get_brightness, method='non-existant method')
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.get_brightness, display='non-existant display')
+        self.assertRaises(ValueError, sbc.get_brightness, method='non-existant method')
+        self.assertRaises(NoValidDisplayError, sbc.get_brightness, display='non-existant display')
         # test wrong types
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.get_brightness, method=0.0)
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.get_brightness, display=0.0)
+        self.assertRaises(TypeError, sbc.get_brightness, method=0.0)
+        self.assertRaises(TypeError, sbc.get_brightness, display=0.0)
 
 
 class TestSetBrightness(TestCase):
@@ -82,16 +81,15 @@ class TestSetBrightness(TestCase):
             try:
                 value = sbc.set_brightness(90, method=method, no_return=False)
                 self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
-            except sbc.ScreenBrightnessError:
-                # likely no monitors of that method
+            except NoValidDisplayError:
                 pass
 
     def test_abnormal(self):
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.set_brightness, 100, method='non-existant method')
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.set_brightness, 100, display='non-existant display')
+        self.assertRaises(ValueError, sbc.set_brightness, 100, method='non-existant method')
+        self.assertRaises(NoValidDisplayError, sbc.set_brightness, 100, display='non-existant display')
         # test wrong types
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.set_brightness, 100, method=0.0)
-        self.assertRaises(sbc.ScreenBrightnessError, sbc.set_brightness, 100, display=0.0)
+        self.assertRaises(TypeError, sbc.set_brightness, 100, method=0.0)
+        self.assertRaises(TypeError, sbc.set_brightness, 100, display=0.0)
 
 
 class TestFadeBrightness(TestCase):
@@ -151,7 +149,7 @@ class TestFadeBrightness(TestCase):
             try:
                 value = sbc.fade_brightness(90, method=method)
                 self.assertBrightnessValid(value, target_length=len(sbc.list_monitors_info(method=method)))
-            except sbc.ScreenBrightnessError:
+            except NoValidDisplayError:
                 # likely no monitors of that method
                 pass
 
@@ -159,7 +157,7 @@ class TestFadeBrightness(TestCase):
         self.assertRaises(ValueError, sbc.fade_brightness, 100, method='non-existant method')
         self.assertRaises(NoValidDisplayError, sbc.fade_brightness, 100, display='non-existant display')
         # test wrong types
-        self.assertRaises(Exception, sbc.fade_brightness, 100, method=0.0)
+        self.assertRaises(TypeError, sbc.fade_brightness, 100, method=0.0)
         self.assertRaises(TypeError, sbc.fade_brightness, 100, display=0.0)
 
 
@@ -182,11 +180,8 @@ class TestListMonitorsInfo(TestCase):
         methods = get_methods()
         method_names = get_method_names()
         for name, method in zip(method_names, methods):
-            try:
-                for monitor in sbc.list_monitors_info(method=name):
-                    self.assertEqual(monitor['method'], method)
-            except LookupError:
-                pass
+            for monitor in sbc.list_monitors_info(method=name):
+                self.assertEqual(monitor['method'], method)
 
     def test_unsupported_kwarg(self):
         supported = sbc.list_monitors_info(allow_duplicates=True)
@@ -339,7 +334,7 @@ class TestFilterMonitors(TestCase):
         self.assertRaises(TypeError, sbc.filter_monitors, display=0.0)
         self.assertRaises(TypeError, sbc.filter_monitors, display=[])
         self.assertRaises(
-            LookupError, sbc.filter_monitors, display="doesn't exist"
+            NoValidDisplayError, sbc.filter_monitors, display="doesn't exist"
         )
 
     def test_haystack_kwarg(self):
@@ -365,7 +360,7 @@ class TestFilterMonitors(TestCase):
             try:
                 for monitor in sbc.filter_monitors(method=name):
                     self.assertEqual(monitor['method'], method)
-            except LookupError:
+            except NoValidDisplayError:
                 # if we don't have monitors of a certain method then pass
                 pass
 
@@ -385,7 +380,7 @@ class TestFilterMonitors(TestCase):
             )[0], haystack[-1]
         )
         self.assertRaises(
-            LookupError,
+            NoValidDisplayError,
             sbc.filter_monitors,
             display='Extra info',
             haystack=haystack

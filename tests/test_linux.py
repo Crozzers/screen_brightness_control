@@ -65,11 +65,8 @@ class TestListMonitorsInfo(unittest.TestCase):
         methods = get_methods()
         method_names = get_method_names()
         for name, method in zip(method_names, methods):
-            try:
-                for monitor in linux.list_monitors_info(method=name):
-                    self.assertEqual(monitor['method'], method)
-            except LookupError:
-                pass
+            for monitor in linux.list_monitors_info(method=name):
+                self.assertEqual(monitor['method'], method)
 
 
 if __name__ == '__main__':
