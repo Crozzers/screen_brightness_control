@@ -693,35 +693,36 @@ def filter_monitors(
         return monitors_with_duplicates
 
     def filter_monitor_list(to_filter):
-        # This loop does two things: 1. Filters out duplicate monitors and 2. Matches the display kwarg (if applicable)
-        unique_identifiers = []
-        monitors = []
+        # This loop does two things:
+        # 1. Filters out duplicate monitors
+        # 2. Matches the display kwarg (if applicable)
+        filtered_displays = {}
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
             for identifier in ['edid', 'serial', 'name', 'model'] + include:
-                if monitor.get(identifier, None) is not None:
-                    # check we haven't already added the monitor
-                    if monitor[identifier] not in unique_identifiers:
-                        # check if the display kwarg (if str) matches this monitor
-                        if monitor[identifier] == display or not isinstance(display, str):
-                            # if valid and monitor[identifier] not in unique_identifiers:
-                            if not added:
-                                monitors.append(monitor)
-                                unique_identifiers.append(monitor[identifier])
-                                added = True
+                # check we haven't already added the monitor
+                if monitor.get(identifier, None) is None:
+                    continue
 
-                            # if the display kwarg is an integer and we are currently at that index
-                            if isinstance(display, int) and len(monitors) - 1 == display:
-                                return [monitor]
-                            if added:
-                                break
-                    else:
-                        # if we have already added a monitor with the same identifier
-                        # then any info matching this monitor will match the other one
-                        # so exit the checking now
-                        break
-        return monitors
+                m_id = monitor[identifier]
+                if m_id in filtered_displays:
+                    break
+
+                if isinstance(display, str) and m_id != display:
+                    continue
+
+                if not added:
+                    filtered_displays[m_id] = monitor
+                    added = True
+
+                # if the display kwarg is an integer and we are currently at that index
+                if isinstance(display, int) and len(filtered_displays) - 1 == display:
+                    return [monitor]
+
+                if added:
+                    break
+        return list(filtered_displays.values())
 
     duplicates = []
     for _ in range(3):
