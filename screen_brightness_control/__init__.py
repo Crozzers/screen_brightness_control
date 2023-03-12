@@ -146,12 +146,12 @@ def fade_brightness(
     **kwargs
 ) -> Union[List[threading.Thread], List[int]]:
     '''
-    A function to somewhat gently fade the screen brightness from `start` to `finish`
+    Gradually change the brightness of one or more displays
 
     Args:
         finish (int or str): the brightness level to end up on
         start (int or str): where the brightness should fade from.
-            If not specified the function starts from the current screen brightness
+            If not specified the function starts from the current brightness
         interval (float or int): the time delay between each step in brightness
         increment (int): the amount to change the brightness by per step
         blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
@@ -258,10 +258,10 @@ def list_monitors_info(
     method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
 ) -> List[dict]:
     '''
-    list detailed information about all monitors that are controllable by this library
+    List detailed information about all displays that are controllable by this library
 
     Args:
-        method (str): the method to use to list the available monitors. See `get_methods` for
+        method (str): the method to use to list the available displays. See `get_methods` for
             more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays or not
         unsupported (bool): include detected displays that are invalid or unsupported
@@ -272,25 +272,25 @@ def list_monitors_info(
     Example:
         ```python
         import screen_brightness_control as sbc
-        monitors = sbc.list_monitors_info()
-        for monitor in monitors:
+        displays = sbc.list_monitors_info()
+        for display in displays:
             print('=======================')
             # the manufacturer name plus the model
-            print('Name:', monitor['name'])
+            print('Name:', display['name'])
             # the general model of the display
-            print('Model:', monitor['model'])
+            print('Model:', display['model'])
             # the serial of the display
-            print('Serial:', monitor['serial'])
-            # the name of the brand of the monitor
-            print('Manufacturer:', monitor['manufacturer'])
+            print('Serial:', display['serial'])
+            # the name of the brand of the display
+            print('Manufacturer:', display['manufacturer'])
             # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Manufacturer ID:', monitor['manufacturer_id'])
+            print('Manufacturer ID:', display['manufacturer_id'])
             # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Index:', monitor['index'])
-            # the method this monitor can be addressed by
-            print('Method:', monitor['method'])
-            # the EDID string associated with that monitor
-            print('EDID:', monitor['edid'])
+            print('Index:', display['index'])
+            # the method this display can be addressed by
+            print('Method:', display['method'])
+            # the EDID string associated with that display
+            print('EDID:', display['edid'])
         ```
     '''
     return _OS_MODULE.list_monitors_info(
@@ -300,10 +300,10 @@ def list_monitors_info(
 
 def list_monitors(method: Optional[str] = None) -> List[str]:
     '''
-    List the names of all detected monitors
+    List the names of all detected displays
 
     Args:
-        method (str): the method to use to list the available monitors. See `get_methods` for
+        method (str): the method to use to list the available displays. See `get_methods` for
             more info on available methods
 
     Returns:
@@ -312,7 +312,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     Example:
         ```python
         import screen_brightness_control as sbc
-        monitor_names = sbc.list_monitors()
+        display_names = sbc.list_monitors()
         # eg: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
@@ -372,15 +372,11 @@ class Monitor():
                 of the display you wish to control. Is passed to `filter_monitors`
                 to decide which display to use.
 
-        Raises:
-            LookupError: if a matching display could not be found
-            TypeError: if the given display type is not int or str
-
         Example:
             ```python
             import screen_brightness_control as sbc
 
-            # create a class for the primary monitor and then a specifically named monitor
+            # create a class for the primary display and then a specifically named monitor
             primary = sbc.Monitor(0)
             benq_monitor = sbc.Monitor('BenQ GL2450H')
 
@@ -441,7 +437,7 @@ class Monitor():
 
     def get_identifier(self, monitor: dict = None) -> Tuple[str, Union[int, str]]:
         '''
-        Returns the piece of information used to identify this monitor.
+        Returns the piece of information used to identify this display.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
@@ -523,7 +519,7 @@ class Monitor():
             ```python
             import screen_brightness_control as sbc
 
-            # get the brightness of the primary monitor
+            # get the brightness of the primary display
             primary = sbc.Monitor(0)
             primary_brightness = primary.get_brightness()
             ```
@@ -551,7 +547,7 @@ class Monitor():
             ```python
             import screen_brightness_control as sbc
 
-            # fade the brightness of the primary monitor to 50%
+            # fade the brightness of the primary display to 50%
             primary = sbc.Monitor(0)
             primary.fade_brightness(50)
             ```
@@ -588,7 +584,7 @@ class Monitor():
             ```python
             import screen_brightness_control as sbc
 
-            # initialize class for primary monitor
+            # initialize class for primary display
             primary = sbc.Monitor(0)
             # get the info
             info = primary.get_info()
@@ -659,8 +655,7 @@ def filter_monitors(
         include (list): extra fields of information to sort by
 
     Raises:
-        TypeError: if the display kwarg is not an int, str or None
-        LookupError: if the display, does not have a match
+        NoValidDisplayError: if the display does not have a match
 
     Returns:
         list: list of dicts

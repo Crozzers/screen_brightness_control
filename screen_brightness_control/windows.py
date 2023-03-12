@@ -107,7 +107,7 @@ def get_display_info() -> List[dict]:
                 parsed = EDID.parse(edid)
                 man_id, manufacturer, model, name, serial = parsed
                 if name is None:
-                    raise EDIDParseError('parsed EDID returned invalid monitor name')
+                    raise EDIDParseError('parsed EDID returned invalid display name')
             except EDIDParseError as e:
                 edid = None
                 logger.warning(
@@ -177,10 +177,10 @@ class WMI(BrightnessMethod):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns a list of dictionaries of info about all detected monitors
+        Returns a list of dictionaries of info about all detected displays
 
         Args:
-            display (str or int): [*Optional*] the monitor to return info about.
+            display (str or int): The display to return info about.
                 Pass in the serial number, name, model, edid or index
 
         Returns:
@@ -196,10 +196,10 @@ class WMI(BrightnessMethod):
                 for key, value in i.items():
                     print(key, ':', value)
 
-            # get information about the first WMI addressable monitor
+            # get information about the first WMI addressable display
             primary_info = sbc.windows.WMI.get_display_info(0)
 
-            # get information about a monitor with a specific name
+            # get information about a display with a specific name
             benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
             ```
         '''
@@ -224,7 +224,7 @@ class WMI(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # set brightness of WMI addressable monitors to 50%
+            # set brightness of WMI addressable displays to 50%
             sbc.windows.WMI.set_brightness(50)
 
             # set the primary display brightness to 75%
@@ -259,7 +259,7 @@ class WMI(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # get brightness of all WMI addressable monitors
+            # get brightness of all WMI addressable displays
             current_brightness = sbc.windows.WMI.get_brightness()
             if type(current_brightness) is int:
                 print('There is only one detected display')
@@ -269,7 +269,7 @@ class WMI(BrightnessMethod):
             # get the primary display brightness
             primary_brightness = sbc.windows.WMI.get_brightness(display = 0)
 
-            # get the brightness of the secondary monitor
+            # get the brightness of the secondary display
             benq_brightness = sbc.windows.WMI.get_brightness(display = 1)
             ```
         '''
@@ -361,10 +361,10 @@ class VCP(BrightnessMethod):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns a dictionary of info about all detected monitors or a selection of monitors
+        Returns a dictionary of info about all detected displays
 
         Args:
-            display (int or str): [*Optional*] the monitor to return info about.
+            display (int or str): The display to return info about.
                 Pass in the serial number, name, model, edid or index
 
         Returns:
@@ -374,12 +374,12 @@ class VCP(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # get the information about all monitors
+            # get the information about all displays
             vcp_info = sbc.windows.VCP.get_display_info()
             print(vcp_info)
             # EG output: [{'name': 'BenQ GL2450H', ... }, {'name': 'Dell U2211H', ... }]
 
-            # get information about a monitor with this specific model
+            # get information about a display with this specific model
             bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
             # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
             ```
@@ -397,7 +397,7 @@ class VCP(BrightnessMethod):
         Args:
             display (int): The specific display you wish to query.
             max_tries (int): the maximum allowed number of attempts to
-                read the VCP output from the monitor
+                read the VCP output from the display
 
         Returns:
             list: list of ints (0 to 100)
@@ -453,7 +453,7 @@ class VCP(BrightnessMethod):
         Args:
             display (int): The specific display you wish to query.
             max_tries (int): the maximum allowed number of attempts to
-                send the VCP input to the monitor
+                send the VCP input to the display
 
         Examples:
             ```python
@@ -488,10 +488,10 @@ def list_monitors_info(
     method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
 ) -> List[dict]:
     '''
-    Lists detailed information about all detected monitors
+    Lists detailed information about all detected displays
 
     Args:
-        method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
+        method (str): the method the display can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
         unsupported (bool): include detected displays that are invalid or unsupported.
@@ -504,8 +504,8 @@ def list_monitors_info(
         ```python
         import screen_brightness_control as sbc
 
-        monitors = sbc.windows.list_monitors_info()
-        for info in monitors:
+        displays = sbc.windows.list_monitors_info()
+        for info in displays:
             print('=======================')
             # the manufacturer name plus the model
             print('Name:', info['name'])
@@ -513,15 +513,15 @@ def list_monitors_info(
             print('Model:', info['model'])
             # a unique string assigned by Windows to this display
             print('Serial:', info['serial'])
-            # the name of the brand of the monitor
+            # the name of the brand of the display
             print('Manufacturer:', info['manufacturer'])
             # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
             print('Manufacturer ID:', info['manufacturer_id'])
             # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
             print('Index:', info['index'])
-            # the method this monitor can be addressed by
+            # the method this display can be addressed by
             print('Method:', info['method'])
-            # the EDID string of the monitor
+            # the EDID string of the display
             print('EDID:', info['edid'])
         ```
     '''

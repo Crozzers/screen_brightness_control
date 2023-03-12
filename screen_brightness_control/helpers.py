@@ -138,9 +138,9 @@ class BrightnessMethod(ABC):
          - manufacturer (str): the name of the display manufacturer
          - manufacturer_id (str): the three letter manufacturer code (see `MONITOR_MANUFACTURER_CODES`)
          - serial (str): the serial of the display OR some other unique identifier
-         - edid (str): the EDID string for the monitor
+         - edid (str): the EDID string for the display
          - method (BrightnessMethod): the brightness method associated with this display
-         - index (int): the index of the monitor, relative to the brightness method
+         - index (int): the index of the display, relative to the brightness method
         '''
         ...
 
@@ -207,7 +207,7 @@ class __Cache(dict):
 
 class EDID:
     '''
-    Simple structure and method to extract monitor serial and name from an EDID string.
+    Simple structure and method to extract display serial and name from an EDID string.
 
     The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
     '''
@@ -253,7 +253,7 @@ class EDID:
                 a hex formatted string (00 ff ff ff ff...)
 
         Returns:
-            tuple[str | None]: A tuple of 5 items representing the monitor's manufacturer ID,
+            tuple[str | None]: A tuple of 5 items representing the display's manufacturer ID,
                 manufacturer, model, name, serial in that order.
                 If any of these values are unable to be determined, they will be None.
                 Otherwise, expect a string

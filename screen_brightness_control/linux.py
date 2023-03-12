@@ -38,7 +38,7 @@ class SysFiles(BrightnessMethod):
         `/sys/class/backlight` directory
 
         Args:
-            display (str or int): [*Optional*] The monitor to return info about.
+            display (str or int): The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
 
@@ -49,14 +49,14 @@ class SysFiles(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # get info about all monitors
+            # get info about all displays
             info = sbc.linux.SysFiles.get_display_info()
             # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
 
-            # get info about the primary monitor
+            # get info about the primary display
             primary_info = sbc.linux.SysFiles.get_display_info(0)[0]
 
-            # get info about a monitor called 'edp-backlight'
+            # get info about a display called 'edp-backlight'
             edp_info = sbc.linux.SysFiles.get_display_info('edp-backlight')[0]
             ```
         '''
@@ -399,7 +399,7 @@ class I2C(BrightnessMethod):
         Returns information about detected displays by querying the various I2C buses
 
         Args:
-            display (str or int): [*Optional*] The monitor to return info about.
+            display (str or int): The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
 
@@ -410,14 +410,14 @@ class I2C(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # get info about all monitors
+            # get info about all displays
             info = sbc.linux.I2C.get_display_info()
             # EG output: [{'name': 'Benq GL2450H', 'model': 'GL2450H', 'manufacturer': 'BenQ', 'edid': '00ffff...'}]
 
-            # get info about the primary monitor
+            # get info about the primary display
             primary_info = sbc.linux.I2C.get_display_info(0)[0]
 
-            # get info about a monitor called 'Benq GL2450H'
+            # get info about a display called 'Benq GL2450H'
             benq_info = sbc.linux.I2C.get_display_info('Benq GL2450H')[0]
             ```
         '''
@@ -579,7 +579,7 @@ class Light(BrightnessMethod):
         filtering out any displays that aren't supported by Light
 
         Args:
-            display (str or int): [*Optional*] The monitor to return info about.
+            display (str or int): The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
 
@@ -590,14 +590,14 @@ class Light(BrightnessMethod):
             ```python
             import screen_brightness_control as sbc
 
-            # get info about all monitors
+            # get info about all displays
             info = sbc.linux.Light.get_display_info()
             # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
 
-            # get info about the primary monitor
+            # get info about the primary display
             primary_info = sbc.linux.Light.get_display_info(0)[0]
 
-            # get info about a monitor called 'edp-backlight'
+            # get info about a display called 'edp-backlight'
             edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
             ```
         '''
@@ -754,10 +754,10 @@ class XRandr(BrightnessMethodAdv):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None, brightness: bool = False) -> List[dict]:
         '''
-        Returns info about all detected monitors as reported by xrandr
+        Returns info about all detected displays as reported by xrandr
 
         Args:
-            display (str or int): [*Optional*] The monitor to return info about.
+            display (str or int): The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
             brightness (bool): whether to include the current brightness
@@ -776,10 +776,10 @@ class XRandr(BrightnessMethodAdv):
                 for key, value in i.items():
                     print(key, ':', value)
 
-            # get information about the first XRandr addressable monitor
+            # get information about the first XRandr addressable display
             primary_info = sbc.linux.XRandr.get_display_info(0)[0]
 
-            # get information about a monitor with a specific name
+            # get information about a display with a specific name
             benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
@@ -865,7 +865,7 @@ class DDCUtil(BrightnessMethodAdv):
     cmd_max_tries: int = 10
     '''max number of retries when calling the ddcutil'''
     _max_brightness_cache: dict = {}
-    '''Cache for monitors and their maximum brightness values'''
+    '''Cache for displays and their maximum brightness values'''
 
     @classmethod
     def _gdi(cls):
@@ -964,11 +964,11 @@ class DDCUtil(BrightnessMethodAdv):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns information about all DDC compatible monitors shown by DDCUtil
+        Returns information about all DDC compatible displays shown by DDCUtil
         Works by calling the command 'ddcutil detect' and parsing the output.
 
         Args:
-            display (int or str): [*Optional*] The monitor to return info about.
+            display (int or str): The display to return info about.
                 Pass in the serial number, name, model, i2c bus, edid or index.
                 This is passed to `filter_monitors`
 
@@ -985,10 +985,10 @@ class DDCUtil(BrightnessMethodAdv):
                 for key, value in i.items():
                     print(key, ':', value)
 
-            # get information about the first DDCUtil addressable monitor
+            # get information about the first DDCUtil addressable display
             primary_info = sbc.linux.DDCUtil.get_display_info(0)[0]
 
-            # get information about a monitor with a specific name
+            # get information about a display with a specific name
             benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
             ```
         '''
@@ -1111,10 +1111,10 @@ def list_monitors_info(
     method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
 ) -> List[dict]:
     '''
-    Lists detailed information about all detected monitors
+    Lists detailed information about all detected displays
 
     Args:
-        method (str): the method the monitor can be addressed by. See `screen_brightness_control.get_methods`
+        method (str): the method the display can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
         allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
         unsupported (bool): include detected displays that are invalid or unsupported
@@ -1126,23 +1126,23 @@ def list_monitors_info(
         ```python
         import screen_brightness_control as sbc
 
-        monitors = sbc.linux.list_monitors_info()
-        for monitor in monitors:
+        displays = sbc.linux.list_monitors_info()
+        for display in displays:
             print('=======================')
-            # the manufacturer name plus the model OR a generic name for the monitor, depending on the method
-            print('Name:', monitor['name'])
+            # the manufacturer name plus the model OR a generic name for the display, depending on the method
+            print('Name:', display['name'])
             # the general model of the display
-            print('Model:', monitor['model'])
+            print('Model:', display['model'])
             # the serial of the display
-            print('Serial:', monitor['serial'])
-            # the name of the brand of the monitor
-            print('Manufacturer:', monitor['manufacturer'])
+            print('Serial:', display['serial'])
+            # the name of the brand of the display
+            print('Manufacturer:', display['manufacturer'])
             # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Manufacturer ID:', monitor['manufacturer_id'])
+            print('Manufacturer ID:', display['manufacturer_id'])
             # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Index:', monitor['index'])
-            # the method this monitor can be addressed by
-            print('Method:', monitor['method'])
+            print('Index:', display['index'])
+            # the method this display can be addressed by
+            print('Method:', display['method'])
         ```
     '''
     all_methods = get_methods(method).values()
