@@ -1,5 +1,4 @@
 import argparse
-from typing import Union
 import time
 import screen_brightness_control as SBC
 
