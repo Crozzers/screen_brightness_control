@@ -471,7 +471,7 @@ class Monitor():
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            value (str): the brightness value to set the display to (from 0 to 100) \
+            value (int or str): the brightness value to set the display to (from 0 to 100) \
                 or in increment as string '+5' or '-5'
             no_return (bool): if true, this function returns `None`
                 Otherwise it returns the result of `Monitor.get_brightness`
