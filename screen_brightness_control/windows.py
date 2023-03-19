@@ -88,7 +88,8 @@ def get_display_info() -> List[dict]:
                 i.InstanceName
                 for i in wmi.WmiMonitorBrightness()
             ]
-        except wmi.x_wmi as e:
+        except Exception as e:
+            # don't do specific exception classes here because WMI does not play ball with it
             logger.warning(f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 

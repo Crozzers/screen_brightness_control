@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
-from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
+from .helpers import MONITOR_MANUFACTURER_CODES, percentage  # noqa: F401
 from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range
 
 logger = logging.getLogger(__name__)
@@ -99,34 +99,32 @@ def set_brightness(
         ```
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
-        value = int(float(value))
-        monitors = filter_monitors(display=display, method=method)
-        if len(monitors) > 1:
-            output = []
-            for monitor in monitors:
-                identifier = Monitor.get_identifier(monitor)[1]
-                tmp = set_brightness(
-                    get_brightness(display=identifier)[0] + value,
-                    display=identifier,
-                    force=force,
-                    verbose_error=verbose_error,
-                    no_return=no_return
-                )
-                if isinstance(tmp, list):
-                    output += tmp
-                else:  # otherwise the output should be None
-                    output.append(tmp)
-            return output
+        output = []
+        for monitor in filter_monitors(display=display, method=method):
+            identifier = Monitor.get_identifier(monitor)[1]
+            current_value = get_brightness(display=identifier)[0]
+            result = set_brightness(
+                # don't need to calculate lower bound here because it will be
+                # done by the other path in `set_brightness`
+                percentage(value, current=current_value),
+                display=identifier,
+                force=force,
+                verbose_error=verbose_error,
+                no_return=no_return
+            )
+            if result is None:
+                output.append(result)
+            else:
+                output += result
 
-        value += get_brightness(display=Monitor.get_identifier(monitors[0])[1])[0]
-    else:
-        value = int(float(str(value)))
-
-    # make sure value is within bounds
-    value = max(min(100, value), 0)
+        return output
 
     if platform.system() == 'Linux' and not force:
-        value = max(1, value)
+        lower_bound = 1
+    else:
+        lower_bound = 0
+
+    value = percentage(value, lower_bound=lower_bound)
 
     return __brightness(
         value, display=display, method=method,
@@ -498,19 +496,18 @@ class Monitor():
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-        # min brightness value
+
+        # convert brightness value to percentage
         if platform.system() == 'Linux' and not force:
             lower_bound = 1
         else:
             lower_bound = 0
 
-        # changing string value to int
-        if isinstance(value, str) and ('+' in value or '-' in value):
-            value = int(float(value))
-            value += self.method.get_brightness(display=self.index)[0]
-        else:
-            value = int(float(str(value)))
-        value = max(lower_bound, min(value, 100))
+        value = percentage(
+            value,
+            current=lambda: self.method.get_brightness(display=self.index)[0],
+            lower_bound=lower_bound
+        )
         self.method.set_brightness(value, display=self.index)
         if no_return:
             return None

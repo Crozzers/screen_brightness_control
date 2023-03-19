@@ -96,6 +96,50 @@ class TestLogarithmicRange(unittest.TestCase):
             self.assertGreaterEqual(l_range[0] - l_range[1], l_range[-2] - l_range[-1])
 
 
+class TestPercentage(unittest.TestCase):
+    def test_normal(self):
+        percentage = sbc.helpers.percentage
+
+        # int
+        self.assertEqual(percentage(100), 100)
+        self.assertEqual(percentage(50), 50)
+        self.assertEqual(percentage(0), 0)
+        # float
+        self.assertEqual(percentage(59.3), 59)
+        self.assertEqual(percentage(24.999), 24)
+        # str
+        self.assertEqual(percentage('99'), 99)
+        self.assertEqual(percentage('12.125'), 12)
+
+    def test_relative(self):
+        percentage = sbc.helpers.percentage
+
+        self.assertEqual(percentage('+10', current=10), 20)
+        self.assertEqual(percentage('-5', current=30), 25)
+        self.assertEqual(percentage('-21', current=lambda: 99), 78)
+        self.assertEqual(percentage('+50', current=lambda: 50), 100)
+        self.assertEqual(percentage('-10.5', current=100, lower_bound=10), 90)
+
+    def test_bounds(self):
+        percentage = sbc.helpers.percentage
+
+        self.assertEqual(percentage(101), 100)
+        self.assertEqual(percentage(1000), 100)
+        self.assertEqual(percentage(-1), 0)
+        self.assertEqual(percentage(-19999), 0)
+        self.assertEqual(percentage('-100', current=0), 0)
+        self.assertEqual(percentage('+1000000', current=0), 100)
+
+        self.assertEqual(percentage(0, lower_bound=1), 1)
+        self.assertEqual(percentage('-10', current=10, lower_bound=1), 1)
+
+    def test_abnormal(self):
+        percentage = sbc.helpers.percentage
+
+        self.assertRaises(ValueError, percentage, [123])
+        self.assertRaises(ValueError, percentage, '1{2!3')
+
+
 if __name__ == '__main__':
     if '--synthetic' in sys.argv:
         sys.argv.remove('--synthetic')

@@ -8,7 +8,7 @@ import subprocess
 import time
 from abc import ABC, abstractclassmethod
 from functools import lru_cache
-from typing import List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
                          ScreenBrightnessError)
@@ -448,3 +448,30 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
         else:
             return None
     return keys[index], values[index]
+
+
+def percentage(value: Union[int, str], current: Union[int, Callable[[], int]] = None, lower_bound: int = 0) -> int:
+    '''
+    Convenience function to convert a brightness value into a percentage. Can handle
+    integers, floats and strings. Also can handle relative strings (eg: `'+10'` or `'-10'`)
+
+    Args:
+        value (int or str or float): the brightness value to convert
+        current (int or callable): the current brightness value or a function that returns the current brightness
+            value. Used when dealing with relative brightness values
+        lower_bound (int): the minimum value the brightness can be set to
+
+    Returns:
+        int: the new brightness percentage, between `lower_bound` and 100
+    '''
+    if isinstance(value, str) and ('+' in value or '-' in value):
+        if callable(current):
+            current = current()
+        value = int(float(value)) + int(float(str(current)))
+    else:
+        value = int(float(str(value)))
+
+    return min(
+        100,
+        max(lower_bound, value)
+    )
