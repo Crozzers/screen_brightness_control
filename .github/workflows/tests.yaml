@@ -1,4 +1,4 @@
-name: PythonCI
+name: Tests
 on:
   push:
     branches-ignore:
@@ -11,8 +11,11 @@ on:
   pull_request:
     branches-ignore:
       - gh-pages
+  workflow_dispatch:
+
+
 jobs:
-  build:
+  tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
