@@ -8,6 +8,8 @@ on:
       - docs/**
       - tests/**
       - .github/**
+    tags-ignore:
+      - '*'
   pull_request:
     branches-ignore:
       - gh-pages
