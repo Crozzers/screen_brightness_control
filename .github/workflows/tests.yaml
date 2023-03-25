@@ -12,7 +12,7 @@ on:
     branches-ignore:
       - gh-pages
   workflow_dispatch:
-
+  workflow_call:
 
 jobs:
   tests:
