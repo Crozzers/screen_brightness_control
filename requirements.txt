@@ -1,0 +1,2 @@
+wmi ; platform_system=="Windows"
+pywin32 ; platform_system=="Windows"

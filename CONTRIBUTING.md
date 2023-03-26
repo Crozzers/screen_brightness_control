@@ -9,8 +9,7 @@ This library is built for Python 3.7 and up.
 ```
 git clone https://github.com/Crozzers/screen_brightness_control
 cd screen_brightness_control
-pip install -r requirements.txt
-pip install -r docs/requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Testing

@@ -5,15 +5,15 @@ This directory contains the tools used to generate this [project's documentation
 
 ## Build instructions
 
-To build documentation for the current working tree (assuming same directory layout as git repo):
+To build documentation (from project root):
 ```
-pip install -r docs/requirements.txt
+pip install -r requirements-dev.txt
 python docs/make.py
 ```
 
 To build documentation for "all versions" of this project (assuming git tags are present):
 ```
-pip install -r docs/requirements.txt
+pip install -r requirements-dev.txt
 python docs/build_full_documentation.py
 ```
 By "all versions" I mean from v0.5.1 and up because that is the first version with docstrings that enable documentation.

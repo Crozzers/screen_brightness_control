@@ -10,7 +10,7 @@ testall:
 
 .PHONY: docs
 docs:
-	python -m pip install -r docs/requirements.txt
+	python -m pip install -r requirements-dev.txt
 	python docs/make.py
 
 .PHONY: release

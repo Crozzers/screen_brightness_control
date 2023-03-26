@@ -17,7 +17,7 @@ setup(
     author=__author__,
     author_email='captaincrozzers@gmail.com',
     packages=['screen_brightness_control'],
-    install_requires=['wmi ; platform_system=="Windows"', 'pywin32 ; platform_system=="Windows"'],
+    install_requires=open('requirements.txt').readlines(),
     description='A Python tool to control monitor brightness on Windows and Linux',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

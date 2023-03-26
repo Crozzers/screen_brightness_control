@@ -1,0 +1,8 @@
+-r requirements.txt
+pdoc>=11.0.0
+packaging
+jsmin
+build
+setuptools
+wheel
+flake8
