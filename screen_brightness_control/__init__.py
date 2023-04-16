@@ -384,7 +384,8 @@ class Monitor():
             else:
                 print('The primary display is', primary.name)
 
-            # this class can also be accessed like a dictionary
+            # DEPRECATED BEHAVIOUR
+            # Will be removed in v0.22.0
             print(primary['name'])
             print(benq_monitor['name'])
             ```
@@ -431,6 +432,10 @@ class Monitor():
                 setattr(self, key, value)
 
     def __getitem__(self, item: Any) -> Any:
+        '''
+        .. warning:: Deprecated
+           This behaviour is deprecated and will be removed in v0.22.0
+        '''
         return getattr(self, item)
 
     def get_identifier(self, monitor: dict = None) -> Tuple[str, Union[int, str]]:
