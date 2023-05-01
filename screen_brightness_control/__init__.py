@@ -8,8 +8,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
-from .helpers import MONITOR_MANUFACTURER_CODES, percentage  # noqa: F401
+from .helpers import MONITOR_MANUFACTURER_CODES, Display, percentage  # noqa: F401
 from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range
+from dataclasses import fields
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -357,10 +358,11 @@ def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
         return {name: methods[name]}
 
     logger.debug(f'requested method {name!r} invalid')
-    raise ValueError(f'invalid method {name!r}, must be one of: {list(methods)}')
+    raise ValueError(
+        f'invalid method {name!r}, must be one of: {list(methods)}')
 
 
-class Monitor():
+class Monitor(Display):
     '''A class to manage a single monitor and its relevant information'''
 
     def __init__(self, display: Union[int, str, dict]):
@@ -405,30 +407,13 @@ class Monitor():
         # make a copy so that we don't alter the dict in-place
         info = info.copy()
 
-        self.serial: str = info.pop('serial')
-        '''the serial number of the display or (if serial is not available) an ID assigned by the OS'''
-        self.name: str = info.pop('name')
-        '''the monitors manufacturer name plus its model'''
-        self.method = info.pop('method')
-        '''the method by which this monitor can be addressed.
-        This will be a class from either the windows or linux sub-module'''
-        self.manufacturer: str = info.pop('manufacturer')
-        '''the name of the brand of the monitor'''
-        self.manufacturer_id: str = info.pop('manufacturer_id')
-        '''the 3 letter manufacturing code corresponding to the manufacturer name'''
-        self.model: str = info.pop('model')
-        '''the general model of the display'''
-        self.index: int = info.pop('index')
-        '''the index of the monitor FOR THE SPECIFIC METHOD THIS MONITOR USES.'''
-        self.edid: str = info.pop('edid')
-        '''a unique string returned by the monitor that contains its DDC capabilities, serial and name'''
-
-        self._logger = logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier()[1])[:20])
+        kw = [i.name for i in fields(Display) if i.init]
+        super().__init__(**{k: v for k, v in info.items() if k in kw})
 
         # this assigns any extra info that is returned to this class
         # eg: the 'interface' key in XRandr monitors on Linux
         for key, value in info.items():
-            if value is not None:
+            if key not in kw and value is not None:
                 setattr(self, key, value)
 
     def __getitem__(self, item: Any) -> Any:
@@ -465,7 +450,7 @@ class Monitor():
             ```
         '''
         if monitor is None:
-            monitor = self
+            return super().get_identifier()
 
         for key in ('edid', 'serial', 'name', 'index'):
             value = monitor[key]
@@ -473,71 +458,16 @@ class Monitor():
                 return key, value
 
     def set_brightness(self, value: Union[int, str], no_return: bool = True, force: bool = False) -> Union[None, int]:
-        '''
-        Sets the brightness for this display. See `set_brightness` for the full docs
-
-        Args:
-            value (int or str): the brightness value to set the display to (from 0 to 100) \
-                or in increment as string '+5' or '-5'
-            no_return (bool): if true, this function returns `None`
-                Otherwise it returns the result of `Monitor.get_brightness`
-            force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
-                This is because on most displays a brightness of 0 will turn off the backlight.
-                If True, this check is bypassed
-
-        Returns:
-            None: if `no_return==True`
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness of the primary monitor to 50%
-            primary = sbc.Monitor(0)
-            primary.set_brightness(50)
-            ```
-        '''
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-
-        # convert brightness value to percentage
-        if platform.system() == 'Linux' and not force:
-            lower_bound = 1
-        else:
-            lower_bound = 0
-
-        value = percentage(
-            value,
-            current=lambda: self.method.get_brightness(display=self.index)[0],
-            lower_bound=lower_bound
-        )
-        self.method.set_brightness(value, display=self.index)
-        if no_return:
-            return None
-        return self.get_brightness()
+        return super().set_brightness(value, no_return, force)
 
     def get_brightness(self) -> int:
-        '''
-        Returns the brightness of this display.
-
-        Returns:
-            int: from 0 to 100
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the brightness of the primary display
-            primary = sbc.Monitor(0)
-            primary_brightness = primary.get_brightness()
-            ```
-        '''
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-        return self.method.get_brightness(display=self.index)[0]
+        return super().get_brightness()
 
     def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
         '''
@@ -610,38 +540,13 @@ class Monitor():
 
         if identifier is not None:
             # refresh the info we have on this monitor
-            info = filter_monitors(display=identifier[1], method=self.method.__name__)[0]
+            info = filter_monitors(
+                display=identifier[1], method=self.method.__name__)[0]
             for key, value in info.items():
                 if value is not None:
                     setattr(self, key, value)
 
         return vars_self()
-
-    def is_active(self) -> bool:
-        '''
-        Attempts to retrieve the brightness for this display. If it works the display is deemed active
-
-        Returns:
-            bool: True means active, False means inactive
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            primary = sbc.Monitor(0)
-            if primary.is_active():
-                primary.set_brightness(50)
-            ```
-        '''
-        try:
-            self.get_brightness()
-            return True
-        except Exception as e:
-            self._logger.error(
-                f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
-                f' - {format_exc(e)}'
-            )
-            return False
 
 
 def filter_monitors(
@@ -681,7 +586,8 @@ def filter_monitors(
         ```
     '''
     if display is not None and type(display) not in (str, int):
-        raise TypeError(f'display kwarg must be int or str, not "{type(display).__name__}"')
+        raise TypeError(
+            f'display kwarg must be int or str, not "{type(display).__name__}"')
 
     def get_monitor_list():
         # if we have been provided with a list of monitors to sift through then use that
@@ -693,7 +599,8 @@ def filter_monitors(
                 monitors_with_duplicates = [
                     i for i in haystack if i['method'] == method_class]
         else:
-            monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
+            monitors_with_duplicates = list_monitors_info(
+                method=method, allow_duplicates=True)
 
         return monitors_with_duplicates
 
@@ -759,7 +666,8 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
-    logger.debug(f"brightness {meta_method} request display {display} with method {method}")
+    logger.debug(
+        f"brightness {meta_method} request display {display} with method {method}")
 
     def format_exc(name, e):
         errors.append((
@@ -774,12 +682,14 @@ def __brightness(
     for monitor in filter_monitors(display=display, method=method):
         try:
             if meta_method == 'set':
-                monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
+                monitor['method'].set_brightness(
+                    *args, display=monitor['index'], **kwargs)
                 if no_return:
                     output.append(None)
                     continue
 
-            output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
+            output += monitor['method'].get_brightness(
+                display=monitor['index'], **kwargs)
         except Exception as e:
             output.append(None)
             format_exc(monitor, e)
@@ -827,4 +737,5 @@ elif platform.system() == 'Linux':
         _OS_MODULE.Light
     )
 else:
-    logger.warning(f'package imported on unsupported platform ({platform.system()})')
+    logger.warning(
+        f'package imported on unsupported platform ({platform.system()})')

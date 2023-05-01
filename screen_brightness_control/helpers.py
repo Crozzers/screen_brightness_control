@@ -1,17 +1,20 @@
 '''
 Helper functions for the library
 '''
+from __future__ import annotations
+
 import logging
 import platform
 import struct
 import subprocess
 import time
 from abc import ABC, abstractclassmethod
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Callable, List, Optional, Tuple, Union
 
 from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
-                         ScreenBrightnessError)
+                         ScreenBrightnessError, format_exc)
 
 if int(platform.python_version_tuple()[1]) < 9:
     from typing import Generator
@@ -166,6 +169,7 @@ class BrightnessMethodAdv(BrightnessMethod):
 
 class __Cache(dict):
     '''class to cache data with a short shelf life'''
+
     def __init__(self):
         self.enabled = True
         super().__init__()
@@ -203,6 +207,144 @@ class __Cache(dict):
                 if i.startswith(startswith):
                     del self[i]
                     logger.debug(f'cache expire key {repr(i)}')
+
+
+@dataclass
+class Display():
+    index: int
+    '''The index of the display relative to the method it uses.
+    So if the index is 0 and the method is `windows.VCP`, then this is the 1st
+    display reported by `windows.VCP`, not the first display overall.'''
+    method: BrightnessMethod
+    '''The method by which this monitor can be addressed.
+    This will be a class from either the windows or linux sub-module'''
+
+    edid: str = None
+    '''The EDID string for this monitor'''
+    manufacturer: str = None
+    '''Name of the display's manufacturer'''
+    manufacturer_id: str = None
+    '''3 letter code corresponding to the manufacturer name'''
+    model: str = None
+    '''Model name of the display'''
+    name: str = None
+    '''The name of the display, often the manufacturer name plus the model name'''
+    serial: str = None
+    '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
+
+    _logger: logging.Logger = field(init=False)
+
+    def __post_init__(self):
+        self._logger = logger.getChild(self.__class__.__name__).getChild(
+            str(self.get_identifier()[1])[:20])
+
+    def fade_brightness(
+        self,
+        fade_to: Union[int, str],
+        fade_from: Union[int, str] = None,
+        interval: float = 0.01,
+        increment: int = 1,
+        force: bool = False,
+        logarithmic: bool = True
+    ) -> int:
+        # minimum brightness value
+        if platform.system() == 'Linux' and not force:
+            lower_bound = 1
+        else:
+            lower_bound = 0
+
+        current = self.get_brightness()
+
+        fade_to = percentage(fade_to, current, lower_bound)
+        fade_from = percentage(
+            current if fade_from is None else fade_from, current, lower_bound)
+
+        range_func = logarithmic_range if logarithmic else range
+        increment = abs(increment)
+        if fade_from > fade_to:
+            increment = -increment
+
+        self._logger.debug(
+            f'fade {fade_from}->{fade_to}:{increment}:logarithmic={logarithmic}')
+
+        for value in range_func(fade_from, fade_to, increment):
+            self.set_brightness(value, no_return=True)
+            time.sleep(interval)
+
+        if self.get_brightness() != fade_to:
+            self.set_brightness(fade_to, no_return=True)
+
+        return self.get_brightness()
+
+    def get_brightness(self) -> int:
+        '''
+        Returns the brightness of this display.
+
+        Returns:
+            int: the brightness value of the display, as a percentage
+        '''
+        return self.method.get_brightness(display=self.index)[0]
+
+    def get_identifier(self) -> Tuple[str, Union[int, str]]:
+        '''
+        Returns the piece of information used to identify this display.
+        Will iterate through the EDID, serial, name and index and return the first
+        value that is not equal to None
+
+        Returns:
+            tuple: the name of the property returned and the value of said property.
+                EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
+        '''
+        for key in ('edid', 'serial', 'name', 'index'):
+            value = getattr(self, key, None)
+            if value is not None:
+                return key, value
+
+    def is_active(self) -> bool:
+        '''
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+        '''
+        try:
+            self.get_brightness()
+            return True
+        except Exception as e:
+            self._logger.error(
+                f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
+                f' - {format_exc(e)}'
+            )
+            return False
+
+    def set_brightness(self, value: Union[int, str], no_return: bool = True, force: bool = False) -> Optional[int]:
+        '''
+        Sets the brightness for this display. See `set_brightness` for the full docs
+
+        Args:
+            value (int or str): the brightness percentage to set the display to. Can be an int (0 to 100)
+                or an incremental string (eg: `'+5'` or `'-15'`)
+            no_return (bool): don't return the new brightness of the display
+            force (bool): allow the brightness to be set to 0 on Linux. This is disabled by default
+                because setting the brightness of 0 will often turn off the backlight
+
+        Returns:
+            None: if `no_return is True`
+            int: the new brightness of the display, as a percentage
+        '''
+        # convert brightness value to percentage
+        if platform.system() == 'Linux' and not force:
+            lower_bound = 1
+        else:
+            lower_bound = 0
+
+        value = percentage(
+            value,
+            current=lambda: self.method.get_brightness(display=self.index)[0],
+            lower_bound=lower_bound
+        )
+
+        self.method.set_brightness(value, display=self.index)
+        if no_return:
+            return None
+        return self.get_brightness()
 
 
 class EDID:
