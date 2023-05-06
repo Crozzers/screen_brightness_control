@@ -444,6 +444,8 @@ class VCP(BrightnessMethod):
                 # no point iterating through all the other ones
                 break
 
+        # make sure final handle is destroyed
+        windll.dxva2.DestroyPhysicalMonitor(handle)
         return values
 
     @classmethod
@@ -483,6 +485,9 @@ class VCP(BrightnessMethod):
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
                     cls.logger.error(f'failed to set display:{index}->{value} after {attempt} tries')
+
+        # make sure final handle is destroyed
+        windll.dxva2.DestroyPhysicalMonitor(handle)
 
 
 def list_monitors_info(
