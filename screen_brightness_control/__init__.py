@@ -9,7 +9,7 @@ from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
 from .helpers import MONITOR_MANUFACTURER_CODES, Display, percentage  # noqa: F401
-from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range
+from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range  # noqa: F401
 from dataclasses import fields
 
 logger = logging.getLogger(__name__)
@@ -158,8 +158,8 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic (bool): follow a logarithmic brightness curve when adjusting the brightness
-        kwargs (dict): passed directly to `set_brightness`.
-            Any compatible kwargs are passed to `filter_monitors` as well. (eg: display, method...)
+        kwargs (dict): passed through to `filter_monitors` for display selection.
+            Will also be passed to `get_brightness` if `blocking is True`
 
     Returns:
         list: list of `threading.Thread` objects if `blocking == False`,
@@ -185,24 +185,6 @@ def fade_brightness(
         sbc.fade_brightness(100, blocking=False)
         ```
     '''
-    def fade(start, finish, increment, monitor):
-        range_func = logarithmic_range if logarithmic else range
-
-        increment = abs(increment)
-        if start > finish:
-            increment = -increment
-
-        logger.debug(
-            f'fade display {monitor.index} of {monitor.method}'
-            f' {start}->{finish}:{increment}:logarithmic={logarithmic}'
-        )
-        for value in range_func(start, finish, increment):
-            monitor.set_brightness(value, no_return=True)
-            time.sleep(interval)
-
-        if monitor.get_brightness() != finish:
-            monitor.set_brightness(finish, no_return=True)
-
     # make sure only compatible kwargs are passed to filter_monitors
     available_monitors = filter_monitors(
         **{k: v for k, v in kwargs.items() if k in (
@@ -210,39 +192,12 @@ def fade_brightness(
         )}
     )
 
-    # minimum brightness value
-    if platform.system() == 'Linux' and not force:
-        lower_bound = 1
-    else:
-        lower_bound = 0
-
     threads = []
     for i in available_monitors:
-        try:
-            monitor = Monitor(i)
+        monitor = Monitor(i)
 
-            # same effect as monitor.is_active()
-            current = monitor.get_brightness()
-        except Exception as e:
-            logger.error(f'exception when preparing to fade monitor {i} - {format_exc(e)}')
-            continue
-
-        st, fi = start, finish
-        # convert strings like '+5' to an actual brightness value
-        if isinstance(fi, str):
-            if "+" in fi or "-" in fi:
-                fi = current + int(float(fi))
-        if isinstance(st, str):
-            if "+" in st or "-" in st:
-                st = current + int(float(st))
-
-        st = current if st is None else st
-        # make sure both values are within the correct range
-        fi = min(max(int(float(fi)), lower_bound), 100)
-        st = min(max(int(float(st)), lower_bound), 100)
-
-        t1 = threading.Thread(target=fade, args=(st, fi, increment, monitor))
-        t1.start()
+        t1 = monitor.fade_brightness(finish, start=start, interval=interval, increment=increment,
+                                     force=force, logarithmic=logarithmic, blocking=False)
         threads.append(t1)
 
     if not blocking:
