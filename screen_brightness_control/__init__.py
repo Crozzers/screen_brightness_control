@@ -450,7 +450,10 @@ class Monitor(Display):
             ```
         '''
         if monitor is None:
-            return super().get_identifier()
+            if isinstance(self, dict):
+                monitor = self
+            else:
+                return super().get_identifier()
 
         for key in ('edid', 'serial', 'name', 'index'):
             value = monitor[key]
