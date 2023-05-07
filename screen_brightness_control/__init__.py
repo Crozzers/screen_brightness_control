@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
-from .exceptions import NoValidDisplayError, format_exc
+from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
 from .helpers import MONITOR_MANUFACTURER_CODES, Display, percentage  # noqa: F401
 from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range  # noqa: F401
 from dataclasses import fields
@@ -612,12 +612,6 @@ def __brightness(
     logger.debug(
         f"brightness {meta_method} request display {display} with method {method}")
 
-    def format_exc(name, e):
-        errors.append((
-            name, e.__class__.__name__,
-            traceback.format_exc() if verbose_error else e
-        ))
-
     output = []
     errors = []
     method = method.lower() if isinstance(method, str) else method
@@ -635,7 +629,10 @@ def __brightness(
                 display=monitor['index'], **kwargs)
         except Exception as e:
             output.append(None)
-            format_exc(monitor, e)
+            errors.append((
+                monitor, e.__class__.__name__,
+                traceback.format_exc() if verbose_error else e
+            ))
 
     if output:
         output_is_none = set(output) == {None}
