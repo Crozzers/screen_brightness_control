@@ -240,13 +240,33 @@ class Display():
 
     def fade_brightness(
         self,
-        fade_to: Union[int, str],
-        fade_from: Union[int, str] = None,
+        finish: Union[int, str],
+        start: Union[int, str] = None,
         interval: float = 0.01,
         increment: int = 1,
         force: bool = False,
         logarithmic: bool = True
     ) -> int:
+        '''
+        Gradually change the brightness of this display to a set value.
+        This works by incrementally changing the brightness until the desired
+        value is reached.
+
+        Args:
+            finish (int or str): the brightness level to end up on
+            start (int or str): where the fade should start from. Defaults to
+                whatever the current brightness level for the display is
+            interval (float): time delay between each change in brightness
+            increment (int): amount to change the brightness by each time (as a percentage)
+            force (bool): [*Linux only*] allow the brightness to be set to 0. By default,
+                brightness values will never be set lower than 1, since setting them to 0
+                often turns off the backlight
+            logarithmic (bool): follow a logarithmic curve when setting brightness values.
+                See `logarithmic_range` for rationale
+
+        Returns:
+            int: the brightness of the display after the fade is complete
+        '''
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
             lower_bound = 1
@@ -255,24 +275,24 @@ class Display():
 
         current = self.get_brightness()
 
-        fade_to = percentage(fade_to, current, lower_bound)
-        fade_from = percentage(
-            current if fade_from is None else fade_from, current, lower_bound)
+        finish = percentage(finish, current, lower_bound)
+        start = percentage(
+            current if start is None else start, current, lower_bound)
 
         range_func = logarithmic_range if logarithmic else range
         increment = abs(increment)
-        if fade_from > fade_to:
+        if start > finish:
             increment = -increment
 
         self._logger.debug(
-            f'fade {fade_from}->{fade_to}:{increment}:logarithmic={logarithmic}')
+            f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
 
-        for value in range_func(fade_from, fade_to, increment):
+        for value in range_func(start, finish, increment):
             self.set_brightness(value, no_return=True)
             time.sleep(interval)
 
-        if self.get_brightness() != fade_to:
-            self.set_brightness(fade_to, no_return=True)
+        if self.get_brightness() != finish:
+            self.set_brightness(finish, no_return=True)
 
         return self.get_brightness()
 

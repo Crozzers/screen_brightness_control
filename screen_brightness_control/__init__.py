@@ -472,45 +472,30 @@ class Monitor(Display):
         self.get_info()
         return super().get_brightness()
 
-    def fade_brightness(self, *args, **kwargs) -> Union[threading.Thread, int]:
+    def fade_brightness(
+        self,
+        *args,
+        blocking: bool = True,
+        **kwargs
+    ) -> Union[threading.Thread, int]:
         '''
-        Fades the brightness for this display. See `fade_brightness` for the full docs
+        Wrapper for `Display.fade_brightness`
 
         Args:
-            args (tuple): passed directly to `fade_brightness`
-            kwargs (dict): passed directly to `fade_brightness`.
-                The `display` and `method` kwargs are always
-                overwritten.
-
-        Returns:
-            threading.Thread: if the the blocking kwarg is False
-            int: if the blocking kwarg is True
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # fade the brightness of the primary display to 50%
-            primary = sbc.Monitor(0)
-            primary.fade_brightness(50)
-            ```
+            *args: see `Display.fade_brightness`
+            blocking (bool): run this function in the current thread and block until
+                it completes. If `False`, the fade will be run in a new daemonic
+                thread, which will be started and returned
+            **kwargs: see `Display.fade_brightness`
         '''
-        # refresh display info, in case another display has been unplugged or something
-        # which would change the index of this display
-        self.get_info(refresh=False)
-        kwargs['display'] = self.index
-        # the reason we override the method kwarg here is that
-        # the 'index' is method specific and `fade_brightness`
-        # is a top-level function. `self.set_brightness` and `self.get_brightness`
-        # call directly to the method so they don't need this step
-        kwargs['method'] = self.method.__name__.lower()
+        if not blocking:
+            result = threading.Thread(
+                target=super().fade_brightness, args=args, kwargs=kwargs, daemon=True)
+            result.start()
+        else:
+            result = super().fade_brightness(*args, **kwargs)
 
-        brightness = fade_brightness(*args, **kwargs)
-        # fade_brightness will call the top-level get_brightness
-        # function, which will return list OR int
-        if isinstance(brightness, list):
-            return brightness[0]
-        return brightness
+        return result
 
     def get_info(self, refresh: bool = True) -> dict:
         '''
