@@ -23,6 +23,21 @@ else:
 
 logger = logging.getLogger(__name__)
 
+Percentage = Union[int, str]
+'''
+A number between 0 and 100 that represents a brightness level. This value can be an integer
+or a string. All string values are converted to integers, relative to the current brightness
+level where applicable.
+
+You can specify a brightness level relative to the current level by including a '+' or '-'
+in front of the number. In this case, the integer value of your string will be added to the
+current brightness level.
+For example, if the current brightness is 50%, a value of '+40' would imply 90% brightness.
+A value of '-40' would imply 10% brightness.
+
+Relative brightness values will usually be resolved by the `percentage` function.
+'''
+
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
     "ACI": "Asus (ASUSTeK Computer Inc.)",
@@ -240,8 +255,8 @@ class Display():
 
     def fade_brightness(
         self,
-        finish: Union[int, str],
-        start: Union[int, str] = None,
+        finish: Percentage,
+        start: Optional[Percentage] = None,
         interval: float = 0.01,
         increment: int = 1,
         force: bool = False,
@@ -253,19 +268,19 @@ class Display():
         value is reached.
 
         Args:
-            finish (int or str): the brightness level to end up on
-            start (int or str): where the fade should start from. Defaults to
-                whatever the current brightness level for the display is
-            interval (float): time delay between each change in brightness
-            increment (int): amount to change the brightness by each time (as a percentage)
-            force (bool): [*Linux only*] allow the brightness to be set to 0. By default,
+            finish: the brightness level to end up on
+            start: where the fade should start from. Defaults to whatever the
+                current brightness level for the display is
+            interval: time delay between each change in brightness
+            increment: amount to change the brightness by each time (as a percentage)
+            force: [*Linux only*] allow the brightness to be set to 0. By default,
                 brightness values will never be set lower than 1, since setting them to 0
                 often turns off the backlight
-            logarithmic (bool): follow a logarithmic curve when setting brightness values.
+            logarithmic: follow a logarithmic curve when setting brightness values.
                 See `logarithmic_range` for rationale
 
         Returns:
-            int: the brightness of the display after the fade is complete
+            The brightness of the display after the fade is complete
         '''
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
@@ -301,7 +316,7 @@ class Display():
         Returns the brightness of this display.
 
         Returns:
-            int: the brightness value of the display, as a percentage
+            The brightness value of the display, as a percentage
         '''
         return self.method.get_brightness(display=self.index)[0]
 
@@ -312,8 +327,8 @@ class Display():
         value that is not equal to None
 
         Returns:
-            tuple: the name of the property returned and the value of said property.
-                EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
+            The name of the property returned and the value of said property.
+            EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
         '''
         for key in ('edid', 'serial', 'name', 'index'):
             value = getattr(self, key, None)
@@ -334,15 +349,14 @@ class Display():
             )
             return False
 
-    def set_brightness(self, value: Union[int, str], no_return: bool = True, force: bool = False) -> Optional[int]:
+    def set_brightness(self, value: Percentage, no_return: bool = True, force: bool = False) -> Optional[int]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            value (int or str): the brightness percentage to set the display to. Can be an int (0 to 100)
-                or an incremental string (eg: `'+5'` or `'-15'`)
-            no_return (bool): don't return the new brightness of the display
-            force (bool): allow the brightness to be set to 0 on Linux. This is disabled by default
+            value: the brightness percentage to set the display to
+            no_return: don't return the new brightness of the display
+            force: allow the brightness to be set to 0 on Linux. This is disabled by default
                 because setting the brightness of 0 will often turn off the backlight
 
         Returns:
@@ -519,16 +533,16 @@ class EDID:
         return hex_str
 
 
-def check_output(command: list, max_tries: int = 1):
+def check_output(command: List[str], max_tries: int = 1) -> bytes:
     '''
     Run a command with retry management built in.
 
     Args:
-        command (list[str]): the command to run
-        max_retries (int): the maximum number of retries to allow before raising an error
+        command: the command to run
+        max_tries: the maximum number of retries to allow before raising an error
 
     Returns:
-        str: the command output
+        The output from the command
     '''
     tries = 1
     while True:
@@ -547,7 +561,7 @@ def check_output(command: list, max_tries: int = 1):
 
 def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, None, None]:
     '''
-    A `range`-like function that returns a sequence of integers following
+    A `range`-like function that yields a sequence of integers following
     a logarithmic curve (`y = 10 ^ (x / 50)`) from `start` (inclusive) to
     `stop` (inclusive).
 
@@ -558,9 +572,9 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
     will never return a value less than 0 or greater than 100.
 
     Args:
-        start (int): the start of your percentage range
-        stop (int): the end of your percentage range
-        step (int): the increment per iteration through the sequence
+        start: the start of your percentage range
+        stop: the end of your percentage range
+        step: the increment per iteration through the sequence
 
     Yields:
         int
@@ -612,19 +626,19 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     return keys[index], values[index]
 
 
-def percentage(value: Union[int, str], current: Union[int, Callable[[], int]] = None, lower_bound: int = 0) -> int:
+def percentage(value: Percentage, current: Union[int, Callable[[], int]] = None, lower_bound: int = 0) -> int:
     '''
     Convenience function to convert a brightness value into a percentage. Can handle
     integers, floats and strings. Also can handle relative strings (eg: `'+10'` or `'-10'`)
 
     Args:
-        value (int or str or float): the brightness value to convert
-        current (int or callable): the current brightness value or a function that returns the current brightness
+        value: the brightness value to convert
+        current: the current brightness value or a function that returns the current brightness
             value. Used when dealing with relative brightness values
-        lower_bound (int): the minimum value the brightness can be set to
+        lower_bound: the minimum value the brightness can be set to
 
     Returns:
-        int: the new brightness percentage, between `lower_bound` and 100
+        The new brightness percentage, between `lower_bound` and 100
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
         if callable(current):
