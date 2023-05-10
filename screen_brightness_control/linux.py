@@ -38,12 +38,9 @@ class SysFiles(BrightnessMethod):
         `/sys/class/backlight` directory
 
         Args:
-            display (str or int): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -128,10 +125,7 @@ class SysFiles(BrightnessMethod):
         stored in `/sys/class/backlight/*/brightness`
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of ints (0 to 100)
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -168,8 +162,8 @@ class SysFiles(BrightnessMethod):
         usually provided when it's run as root.
 
         Args:
-            value (int): Sets the brightness to this value
-            display (int): The specific display you wish to adjust.
+            value: Sets the brightness to this value
+            display: The specific display you wish to adjust.
 
         Example:
             ```python
@@ -249,8 +243,8 @@ class I2C(BrightnessMethod):
         def __init__(self, fname: str, slave_addr: int):
             '''
             Args:
-                fname (str): the I2C path, eg: `/dev/i2c-2`
-                slave_addr (int): not entirely sure what this is meant to be
+                fname: the I2C path, eg: `/dev/i2c-2`
+                slave_addr: not entirely sure what this is meant to be
             '''
             self.device = os.open(fname, os.O_RDWR)
             # I2C_SLAVE address setup
@@ -261,7 +255,7 @@ class I2C(BrightnessMethod):
             Read a certain number of bytes from the I2C bus
 
             Args:
-                length (int): the number of bytes to read
+                length: the number of bytes to read
 
             Returns:
                 bytes
@@ -273,10 +267,10 @@ class I2C(BrightnessMethod):
             Writes data to the I2C bus
 
             Args:
-                data (bytes): the data to write
+                data: the data to write
 
             Returns:
-                int: the number of bytes written
+                The number of bytes written
             '''
             return os.write(self.device, data)
 
@@ -291,7 +285,7 @@ class I2C(BrightnessMethod):
         def __init__(self, i2c_path: str):
             '''
             Args:
-                i2c_path (str): the path to the I2C device, eg: `/dev/i2c-2`
+                i2c_path: the path to the I2C device, eg: `/dev/i2c-2`
             '''
             self.logger = logger.getChild(self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
@@ -309,7 +303,7 @@ class I2C(BrightnessMethod):
                     checksums before being written to the I2C device
 
             Returns:
-                int: the number of bytes that were written
+                The number of bytes that were written
             '''
             time.sleep(I2C.WAIT_TIME)
 
@@ -325,11 +319,11 @@ class I2C(BrightnessMethod):
             Set a VCP value on the device
 
             Args:
-                vcp_code (int): the VCP command to send, eg: `0x10` is brightness
-                value (int): what to set the value to
+                vcp_code: the VCP command to send, eg: `0x10` is brightness
+                value: what to set the value to
 
             Returns:
-                int: the number of bytes written to the device
+                The number of bytes written to the device
             '''
             return self.write(I2C.SET_VCP_CMD, vcp_code, *value.to_bytes(2, 'big'))
 
@@ -341,10 +335,7 @@ class I2C(BrightnessMethod):
             DDC device instead of using this function directly.
 
             Args:
-                amount (int): the number of bytes to read
-
-            Returns:
-                bytes
+                amount: the number of bytes to read
 
             Raises:
                 ValueError: if the read data is deemed invalid
@@ -370,10 +361,10 @@ class I2C(BrightnessMethod):
             Retrieves a VCP value from the DDC device.
 
             Args:
-                vcp_code (int): the VCP value to read, eg: `0x10` is brightness
+                vcp_code: the VCP value to read, eg: `0x10` is brightness
 
             Returns:
-                tuple[int, int]: the current and maximum value respectively
+                The current and maximum value respectively
 
             Raises:
                 ValueError: if the read data is deemed invalid
@@ -399,12 +390,9 @@ class I2C(BrightnessMethod):
         Returns information about detected displays by querying the various I2C buses
 
         Args:
-            display (str or int): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -479,10 +467,7 @@ class I2C(BrightnessMethod):
         Gets the brightness for a display by querying the I2C bus
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of ints (0 to 100)
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -528,8 +513,8 @@ class I2C(BrightnessMethod):
         Sets the brightness for a display by writing to the I2C bus
 
         Args:
-            value (int): Set the brightness to this value
-            display (int): The specific display you wish to adjust.
+            value: Set the brightness to this value
+            display: The specific display you wish to adjust.
 
         Example:
             ```python
@@ -579,12 +564,9 @@ class Light(BrightnessMethod):
         filtering out any displays that aren't supported by Light
 
         Args:
-            display (str or int): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -626,8 +608,8 @@ class Light(BrightnessMethod):
         Sets the brightness for a display using the light executable
 
         Args:
-            value (int): Sets the brightness to this value
-            display (int): The specific display you wish to query.
+            value: Sets the brightness to this value
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -656,10 +638,7 @@ class Light(BrightnessMethod):
         Gets the brightness for a display using the light executable
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of ints (0 to 100)
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -757,14 +736,11 @@ class XRandr(BrightnessMethodAdv):
         Returns info about all detected displays as reported by xrandr
 
         Args:
-            display (str or int): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, interface, edid or index.
                 This is passed to `filter_monitors`
-            brightness (bool): whether to include the current brightness
+            brightness: whether to include the current brightness
                 in the returned info
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -801,10 +777,7 @@ class XRandr(BrightnessMethodAdv):
         Returns the brightness for a display using the xrandr executable
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of integers (from 0 to 100)
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -830,8 +803,8 @@ class XRandr(BrightnessMethodAdv):
         Sets the brightness for a display using the xrandr executable
 
         Args:
-            value (int): Sets the brightness to this value
-            display (int): The specific display you wish to query.
+            value: Sets the brightness to this value
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -969,12 +942,9 @@ class DDCUtil(BrightnessMethodAdv):
         Works by calling the command 'ddcutil detect' and parsing the output.
 
         Args:
-            display (int or str): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, i2c bus, edid or index.
                 This is passed to `filter_monitors`
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -1015,10 +985,7 @@ class DDCUtil(BrightnessMethodAdv):
         Returns the brightness for a display using the ddcutil executable
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of ints (0 to 100)
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -1071,8 +1038,8 @@ class DDCUtil(BrightnessMethodAdv):
         Sets the brightness for a display using the ddcutil executable
 
         Args:
-            value (int): Sets the brightness to this value
-            display (int): The specific display you wish to query.
+            value: Sets the brightness to this value
+            display: The specific display you wish to query.
 
         Example:
             ```python
@@ -1115,13 +1082,10 @@ def list_monitors_info(
     Lists detailed information about all detected displays
 
     Args:
-        method (str): the method the display can be addressed by. See `screen_brightness_control.get_methods`
+        method: the method the display can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
-        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
-        unsupported (bool): include detected displays that are invalid or unsupported
-
-    Returns:
-        list: list of dicts
+        allow_duplicates: whether to filter out duplicate displays (displays with the same EDID) or not
+        unsupported: include detected displays that are invalid or unsupported
 
     Example:
         ```python
