@@ -40,9 +40,6 @@ def _wmi_init():
 def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, None]:
     '''
     Yields all display devices connected to the computer
-
-    Yields:
-        win32api.PyDISPLAY_DEVICEType
     '''
     for monitor_enum in win32api.EnumDisplayMonitors():
         pyhandle = monitor_enum[0]
@@ -60,9 +57,6 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
 def get_display_info() -> List[dict]:
     '''
     Gets information about all connected displays using WMI and win32api
-
-    Returns:
-        list: list of dictionaries
 
     Example:
         ```python
@@ -181,11 +175,8 @@ class WMI(BrightnessMethod):
         Returns a list of dictionaries of info about all detected displays
 
         Args:
-            display (str or int): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, edid or index
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -215,8 +206,8 @@ class WMI(BrightnessMethod):
         Sets the display brightness for Windows using WMI
 
         Args:
-            value (int): The percentage to set the brightness to
-            display (int): The specific display you wish to query.
+            value: The percentage to set the brightness to
+            display: The specific display you wish to query.
 
         Raises:
             LookupError: if the given display cannot be found
@@ -248,10 +239,7 @@ class WMI(BrightnessMethod):
         Returns the current display brightness using WMI
 
         Args:
-            display (int): The specific display you wish to query.
-
-        Returns:
-            list: list of integers (0 to 100)
+            display: The specific display you wish to query.
 
         Raises:
             LookupError: if the given display cannot be found
@@ -301,10 +289,7 @@ class VCP(BrightnessMethod):
         It is not recommended to use this function unless you are familiar with `ctypes` and `windll`
 
         Args:
-            start (int): skip the first X handles
-
-        Yields:
-            ctypes.wintypes.HANDLE
+            start: skip the first X handles
 
         Raises:
             ctypes.WinError: upon failure to enumerate through the monitors
@@ -365,11 +350,8 @@ class VCP(BrightnessMethod):
         Returns a dictionary of info about all detected displays
 
         Args:
-            display (int or str): The display to return info about.
+            display: The display to return info about.
                 Pass in the serial number, name, model, edid or index
-
-        Returns:
-            list: list of dicts
 
         Example:
             ```python
@@ -396,12 +378,9 @@ class VCP(BrightnessMethod):
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int): The specific display you wish to query.
-            max_tries (int): the maximum allowed number of attempts to
+            display: The specific display you wish to query.
+            max_tries: the maximum allowed number of attempts to
                 read the VCP output from the display
-
-        Returns:
-            list: list of ints (0 to 100)
 
         Examples:
             ```python
@@ -454,8 +433,8 @@ class VCP(BrightnessMethod):
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
         Args:
-            display (int): The specific display you wish to query.
-            max_tries (int): the maximum allowed number of attempts to
+            display: The specific display you wish to query.
+            max_tries: the maximum allowed number of attempts to
                 send the VCP input to the display
 
         Examples:
@@ -497,14 +476,11 @@ def list_monitors_info(
     Lists detailed information about all detected displays
 
     Args:
-        method (str): the method the display can be addressed by. See `screen_brightness_control.get_methods`
+        method: the method the display can be addressed by. See `screen_brightness_control.get_methods`
             for more info on available methods
-        allow_duplicates (bool): whether to filter out duplicate displays (displays with the same EDID) or not
-        unsupported (bool): include detected displays that are invalid or unsupported.
+        allow_duplicates: whether to filter out duplicate displays (displays with the same EDID) or not
+        unsupported: include detected displays that are invalid or unsupported.
             This argument does nothing on Windows
-
-    Returns:
-        list: list of dicts upon success, empty list upon failure
 
     Example:
         ```python
