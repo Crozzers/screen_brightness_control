@@ -25,14 +25,14 @@ def get_brightness(
     Returns the current display brightness
 
     Args:
-        display (str or int): the specific display to query
-        method (str): the method to use to get the brightness. See `get_methods` for
+        display: the specific display to query
+        method: the method to use to get the brightness. See `get_methods` for
             more info on available methods
-        verbose_error (bool): controls the level of detail in the error messages
+        verbose_error: controls the level of detail in the error messages
 
     Returns:
-        list: a list of integers (from 0 to 100), each integer being the
-            percentage brightness of a display (invalid displays may return None)
+        A list of integers (from 0 to 100), each integer being the
+        percentage brightness of a display (invalid displays may return None)
 
     Example:
         ```python
@@ -63,15 +63,15 @@ def set_brightness(
     Sets the screen brightness
 
     Args:
-        value (int or float or str): a value 0 to 100. This is a percentage or a string as '+5' or '-5'
-        display (int or str): the specific display to adjust
-        method (str): the method to use to set the brightness. See `get_methods` for
+        value: a value from 0 to 100. This is a percentage or a string as '+5' or '-5'
+        display: the specific display to adjust
+        method: the method to use to set the brightness. See `get_methods` for
             more info on available methods
-        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+        force: [*Linux Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
-        verbose_error (bool): boolean value controls the amount of detail error messages will contain
-        no_return (bool): if False, this function returns new brightness (by calling `get_brightness`).
+        verbose_error: boolean value controls the amount of detail error messages will contain
+        no_return: if False, this function returns new brightness (by calling `get_brightness`).
             If True, this function returns None (default behaviour).
 
     Returns:
@@ -148,17 +148,17 @@ def fade_brightness(
     Gradually change the brightness of one or more displays
 
     Args:
-        finish (int or str): the brightness level to end up on
-        start (int or str): where the brightness should fade from.
+        finish: the brightness level to end up on
+        start: where the brightness should fade from.
             If not specified the function starts from the current brightness
-        interval (float or int): the time delay between each step in brightness
-        increment (int): the amount to change the brightness by per step
-        blocking (bool): whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
-        force (bool): [*Linux Only*] if False the brightness will never be set lower than 1.
+        interval: the time delay between each step in brightness
+        increment: the amount to change the brightness by per step
+        blocking: whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
+        force: [*Linux Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
-        logarithmic (bool): follow a logarithmic brightness curve when adjusting the brightness
-        kwargs (dict): passed through to `filter_monitors` for display selection.
+        logarithmic: follow a logarithmic brightness curve when adjusting the brightness
+        **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
     Returns:
@@ -215,13 +215,13 @@ def list_monitors_info(
     List detailed information about all displays that are controllable by this library
 
     Args:
-        method (str): the method to use to list the available displays. See `get_methods` for
+        method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
-        allow_duplicates (bool): whether to filter out duplicate displays or not
-        unsupported (bool): include detected displays that are invalid or unsupported
+        allow_duplicates: whether to filter out duplicate displays or not
+        unsupported: include detected displays that are invalid or unsupported
 
     Returns:
-        list: list of dictionaries
+        list: list of dictionaries containing information about the detected displays
 
     Example:
         ```python
@@ -257,11 +257,8 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     List the names of all detected displays
 
     Args:
-        method (str): the method to use to list the available displays. See `get_methods` for
+        method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
-
-    Returns:
-        list: list of strings
 
     Example:
         ```python
@@ -278,12 +275,7 @@ def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
     Returns all available brightness method names and their associated classes.
 
     Args:
-        name (str): if specified, return the method corresponding to this name
-
-    Returns:
-        dict: keys are the method names. This is what you would use
-            if a function has a `method` kwarg.
-            Values are the classes themselves
+        name: if specified, return the method corresponding to this name
 
     Raises:
         ValueError: if the given name is incorrect
@@ -323,7 +315,7 @@ class Monitor(Display):
     def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
-            display (int or str or dict): the index/name/model name/serial/edid
+            display: the index/name/model name/serial/edid
                 of the display you wish to control. Is passed to `filter_monitors`
                 to decide which display to use.
 
@@ -385,11 +377,11 @@ class Monitor(Display):
         value that is not equal to None
 
         Args:
-            monitor (dict): extract an identifier from this dict instead of the monitor class
+            monitor: extract an identifier from this dict instead of the monitor class
 
         Returns:
-            tuple: the name of the property returned and the value of said property.
-                EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
+            A tuple containing the name of the property returned and the value of said
+            property. EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
 
         Example:
             ```python
@@ -438,7 +430,7 @@ class Monitor(Display):
 
         Args:
             *args: see `Display.fade_brightness`
-            blocking (bool): run this function in the current thread and block until
+            blocking: run this function in the current thread and block until
                 it completes. If `False`, the fade will be run in a new daemonic
                 thread, which will be started and returned
             **kwargs: see `Display.fade_brightness`
@@ -457,11 +449,8 @@ class Monitor(Display):
         Returns all known information about this monitor instance
 
         Args:
-            refresh (bool): whether to refresh the information
+            refresh: whether to refresh the information
                 or to return the cached version
-
-        Returns:
-            dict
 
         Example:
             ```python
@@ -504,19 +493,16 @@ def filter_monitors(
     Will attempt to match against index, name, model, edid, method and serial
 
     Args:
-        display (str or int): the display you are searching for.
+        display: the display you are searching for.
             Can be serial, name, model number, edid string or index of the display
-        haystack (list): the information to filter from.
+        haystack: the information to filter from.
             If this isn't set it defaults to the return of `list_monitors_info`
-        method (str): the method the monitors use. See `get_methods` for
+        method: the method the monitors use. See `get_methods` for
             more info on available methods
-        include (list): extra fields of information to sort by
+        include: extra fields of information to sort by
 
     Raises:
         NoValidDisplayError: if the display does not have a match
-
-    Returns:
-        list: list of dicts
 
     Example:
         ```python
