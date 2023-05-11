@@ -5,12 +5,77 @@ for code in the `screen_brightness_control/helpers.py` file
 import os
 import sys
 import unittest
+from timeit import timeit
 
 import helpers
 from helpers import TestCase
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
+
+
+class TestDisplay(TestCase):
+    primary: sbc.Display
+
+    def setUp(self):
+        super().setUp()
+        self.primary = sbc.Display(**sbc.list_monitors_info()[0])
+
+    def test_fade_brightness(self):
+        # test normal
+        brightness = self.primary.fade_brightness(75)
+        self.assertIsInstance(brightness, int)
+        self.assertTrue(0 <= brightness <= 100)
+        self.assertBrightnessEqual(75, brightness, 0)
+
+        # test increment values
+        self.assertBrightnessEqual(self.primary.fade_brightness('60'), 60, 0)
+        self.assertBrightnessEqual(self.primary.fade_brightness('70.0'), 70, 0)
+        self.assertBrightnessEqual(self.primary.fade_brightness('+10'), 80, 0)
+        self.assertBrightnessEqual(self.primary.fade_brightness('-10'), 70, 0)
+        self.assertBrightnessEqual(
+            self.primary.fade_brightness('+500'), 100, 0)
+
+        # test increment kwarg
+        # smaller increment should take longer
+        self.assertGreater(
+            timeit(lambda: self.primary.fade_brightness(
+                90, start=100, increment=1), number=1),
+            timeit(lambda: self.primary.fade_brightness(
+                90, start=100, increment=2), number=1)
+        )
+
+    def test_get_brightness(self):
+        brightness = self.primary.get_brightness()
+        self.assertIsInstance(brightness, int)
+        self.assertTrue(0 <= brightness <= 100)
+
+    def test_is_active(self):
+        self.assertIsInstance(self.primary.is_active(), bool)
+
+    def test_get_identifier(self):
+        identifier = self.primary.get_identifier()
+        self.assertIsInstance(identifier, tuple)
+        self.assertIn(identifier[0], ('edid', 'serial', 'name', 'index'))
+        self.assertIsNotNone(identifier[1])
+        if identifier[0] == 'index':
+            self.assertIsInstance(identifier[1], int)
+        else:
+            self.assertIsInstance(identifier[1], str)
+
+    def test_set_brightness(self):
+        # test normal
+        for value in (0, 10, 21, 37, 43, 50, 90, 100):
+            brightness = self.primary.set_brightness(value, no_return=False)
+            # check it is the right type and within
+            # the max and min values
+            self.assertIsInstance(brightness, int)
+            self.assertTrue(0 <= brightness <= 100)
+            # use almost equal because some laptops cannot display all values 0 to 100
+            self.assertBrightnessEqual(value, brightness, 0)
+
+        self.assertIsNone(self.primary.set_brightness(100))
+        self.assertIsNone(self.primary.set_brightness(100, no_return=True))
 
 
 class TestEDID(TestCase):
