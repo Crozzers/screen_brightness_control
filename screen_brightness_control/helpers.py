@@ -15,28 +15,9 @@ from typing import Callable, List, Optional, Tuple, Union
 
 from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
                          ScreenBrightnessError, format_exc)
-
-if int(platform.python_version_tuple()[1]) < 9:
-    from typing import Generator
-else:
-    from collections.abc import Generator
+from .types import IntPercentage, Percentage, Generator
 
 logger = logging.getLogger(__name__)
-
-Percentage = Union[int, str]
-'''
-A number between 0 and 100 that represents a brightness level. This value can be an integer
-or a string. All string values are converted to integers, relative to the current brightness
-level where applicable.
-
-You can specify a brightness level relative to the current level by including a '+' or '-'
-in front of the number. In this case, the integer value of your string will be added to the
-current brightness level.
-For example, if the current brightness is 50%, a value of '+40' would imply 90% brightness.
-A value of '-40' would imply 10% brightness.
-
-Relative brightness values will usually be resolved by the `percentage` function.
-'''
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
@@ -163,11 +144,11 @@ class BrightnessMethod(ABC):
         ...
 
     @abstractclassmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[IntPercentage] = None) -> List[IntPercentage]:
         ...
 
     @abstractclassmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: int, display: Optional[IntPercentage] = None):
         ...
 
 
@@ -311,7 +292,7 @@ class Display():
 
         return self.get_brightness()
 
-    def get_brightness(self) -> int:
+    def get_brightness(self) -> IntPercentage:
         '''
         Returns the brightness of this display.
 
@@ -349,7 +330,12 @@ class Display():
             )
             return False
 
-    def set_brightness(self, value: Percentage, no_return: bool = True, force: bool = False) -> Optional[int]:
+    def set_brightness(
+        self,
+        value: Percentage,
+        no_return: bool = True,
+        force: bool = False
+    ) -> Optional[IntPercentage]:
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
@@ -626,7 +612,11 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
     return keys[index], values[index]
 
 
-def percentage(value: Percentage, current: Union[int, Callable[[], int]] = None, lower_bound: int = 0) -> int:
+def percentage(
+    value: Percentage,
+    current: Union[int, Callable[[], int]] = None,
+    lower_bound: int = 0
+) -> IntPercentage:
     '''
     Convenience function to convert a brightness value into a percentage. Can handle
     integers, floats and strings. Also can handle relative strings (eg: `'+10'` or `'-10'`)

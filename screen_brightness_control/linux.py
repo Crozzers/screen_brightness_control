@@ -12,6 +12,7 @@ from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
 from .helpers import (EDID, BrightnessMethod, BrightnessMethodAdv, __Cache,
                       _monitor_brand_lookup, check_output)
+from .types import IntPercentage
 
 __cache__ = __Cache()
 logger = logging.getLogger(__name__)
@@ -115,11 +116,12 @@ class SysFiles(BrightnessMethod):
 
         all_displays = list(all_displays.values())
         if display is not None:
-            all_displays = filter_monitors(display=display, haystack=all_displays, include=['path'])
+            all_displays = filter_monitors(
+                display=display, haystack=all_displays, include=['path'])
         return all_displays
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Gets the brightness for a display by reading the brightness files
         stored in `/sys/class/backlight/*/brightness`
@@ -154,7 +156,7 @@ class SysFiles(BrightnessMethod):
         return results
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the brightness for a display by writing to the brightness files
         stored in `/sys/class/backlight/*/brightness`.
@@ -240,6 +242,7 @@ class I2C(BrightnessMethod):
         Class to read and write data to an I2C bus,
         based on the `I2CDev` class from [ddcci.py](https://github.com/siemer/ddcci)
         '''
+
         def __init__(self, fname: str, slave_addr: int):
             '''
             Args:
@@ -462,7 +465,7 @@ class I2C(BrightnessMethod):
         return all_displays
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Gets the brightness for a display by querying the I2C bus
 
@@ -508,7 +511,7 @@ class I2C(BrightnessMethod):
         return results
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the brightness for a display by writing to the I2C bus
 
@@ -603,7 +606,7 @@ class Light(BrightnessMethod):
         return displays
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the light executable
 
@@ -633,7 +636,7 @@ class Light(BrightnessMethod):
             check_output(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Gets the brightness for a display using the light executable
 
@@ -772,7 +775,7 @@ class XRandr(BrightnessMethodAdv):
         return valid_displays
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Returns the brightness for a display using the xrandr executable
 
@@ -798,7 +801,7 @@ class XRandr(BrightnessMethodAdv):
         return brightness
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the xrandr executable
 
@@ -980,7 +983,7 @@ class DDCUtil(BrightnessMethodAdv):
         return valid_displays
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Returns the brightness for a display using the ddcutil executable
 
@@ -1033,7 +1036,7 @@ class DDCUtil(BrightnessMethodAdv):
         return res
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the brightness for a display using the ddcutil executable
 

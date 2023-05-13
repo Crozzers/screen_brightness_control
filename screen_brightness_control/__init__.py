@@ -3,14 +3,16 @@ import platform
 import threading
 import time
 import traceback
+from dataclasses import fields
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
-from .helpers import MONITOR_MANUFACTURER_CODES, Display, percentage  # noqa: F401
-from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range  # noqa: F401
-from dataclasses import fields
+from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
+                      BrightnessMethod, Display, ScreenBrightnessError,
+                      logarithmic_range, percentage)
+from .types import IntPercentage, Percentage
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -20,7 +22,7 @@ def get_brightness(
     display: Optional[Union[int, str]] = None,
     method: Optional[str] = None,
     verbose_error: bool = False
-) -> List[int]:
+) -> List[IntPercentage]:
     '''
     Returns the current display brightness
 
@@ -52,13 +54,13 @@ def get_brightness(
 
 
 def set_brightness(
-    value: Union[int, float, str],
+    value: Percentage,
     display: Optional[Union[str, int]] = None,
     method: Optional[str] = None,
     force: bool = False,
     verbose_error: bool = False,
     no_return: bool = True
-) -> Union[None, List[int]]:
+) -> Optional[List[IntPercentage]]:
     '''
     Sets the screen brightness
 
@@ -135,15 +137,15 @@ def set_brightness(
 
 
 def fade_brightness(
-    finish: Union[int, str],
-    start: Optional[Union[int, str]] = None,
+    finish: Percentage,
+    start: Optional[Percentage] = None,
     interval: float = 0.01,
     increment: int = 1,
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
     **kwargs
-) -> Union[List[threading.Thread], List[int]]:
+) -> Union[List[threading.Thread], List[IntPercentage]]:
     '''
     Gradually change the brightness of one or more displays
 
@@ -407,13 +409,18 @@ class Monitor(Display):
             if value is not None:
                 return key, value
 
-    def set_brightness(self, value: Union[int, str], no_return: bool = True, force: bool = False) -> Union[None, int]:
+    def set_brightness(
+        self,
+        value: Percentage,
+        no_return: bool = True,
+        force: bool = False
+    ) -> Optional[IntPercentage]:
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
         return super().set_brightness(value, no_return, force)
 
-    def get_brightness(self) -> int:
+    def get_brightness(self) -> IntPercentage:
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
@@ -424,7 +431,7 @@ class Monitor(Display):
         *args,
         blocking: bool = True,
         **kwargs
-    ) -> Union[threading.Thread, int]:
+    ) -> Union[threading.Thread, IntPercentage]:
         '''
         Wrapper for `Display.fade_brightness`
 

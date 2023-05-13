@@ -1,6 +1,5 @@
 import ctypes
 import logging
-import platform
 import threading
 import time
 from ctypes import POINTER, WINFUNCTYPE, Structure, WinError, byref, windll
@@ -17,13 +16,7 @@ import wmi
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
 from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
-
-# a bunch of typing classes were deprecated in Python 3.9
-# in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)
-if int(platform.python_version_tuple()[1]) < 9:
-    from typing import Generator
-else:
-    from collections.abc import Generator
+from .types import Generator, IntPercentage
 
 __cache__ = __Cache()
 logger = logging.getLogger(__name__)
@@ -201,7 +194,7 @@ class WMI(BrightnessMethod):
         return info
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Sets the display brightness for Windows using WMI
 
@@ -234,7 +227,7 @@ class WMI(BrightnessMethod):
             method.WmiSetBrightness(value, 0)
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Returns the current display brightness using WMI
 
@@ -373,7 +366,7 @@ class VCP(BrightnessMethod):
         return info
 
     @classmethod
-    def get_brightness(cls, display: Optional[int] = None, max_tries: int = 50) -> List[int]:
+    def get_brightness(cls, display: Optional[int] = None, max_tries: int = 50) -> List[IntPercentage]:
         '''
         Retrieve the brightness of all connected displays using the `ctypes.windll` API
 
@@ -429,7 +422,7 @@ class VCP(BrightnessMethod):
         return values
 
     @classmethod
-    def set_brightness(cls, value: int, display: Optional[int] = None, max_tries: int = 50):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None, max_tries: int = 50):
         '''
         Sets the brightness for all connected displays using the `ctypes.windll` API
 
