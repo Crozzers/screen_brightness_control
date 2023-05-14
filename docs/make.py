@@ -115,7 +115,7 @@ def latest_navigation_links():
 
 __version__ = get_directory_version(HERE / '..' / 'screen_brightness_control')
 
-pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
+# pdoc.docstrings.GOOGLE_LIST_SECTIONS.extend(["Returns", "Yields"])
 PDOC_CONFIG = dict(docformat='google', template_directory=TEMPLATES, footer_text=f'screen_brightness_control v{__version__}')
 configure_pdoc()
 pdoc.render.env.filters["minify_js"] = minify_js

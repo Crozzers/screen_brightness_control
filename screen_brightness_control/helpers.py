@@ -131,24 +131,46 @@ class BrightnessMethod(ABC):
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
         Return information about detected displays.
-        Each returned dict must have the following keys:
-         - name (str): the name of the display
-         - model (str): the model of the display
-         - manufacturer (str): the name of the display manufacturer
-         - manufacturer_id (str): the three letter manufacturer code (see `MONITOR_MANUFACTURER_CODES`)
-         - serial (str): the serial of the display OR some other unique identifier
-         - edid (str): the EDID string for the display
-         - method (BrightnessMethod): the brightness method associated with this display
-         - index (int): the index of the display, relative to the brightness method
+
+        Args:
+            display: the specific display to return information about.
+                This parameter is passed to `filter_monitors`
+
+        Returns:
+            A list of dictionaries, each representing a detected display.
+            Each returned dictionary will have the following keys:
+            - name (`str`): the name of the display
+            - model (`str`): the model of the display
+            - manufacturer (`str`): the name of the display manufacturer
+            - manufacturer_id (`str`): the three letter manufacturer code (see `MONITOR_MANUFACTURER_CODES`)
+            - serial (`str`): the serial of the display OR some other unique identifier
+            - edid (`str`): the EDID string for the display
+            - method (`BrightnessMethod`): the brightness method associated with this display
+            - index (`int`): the index of the display, relative to the brightness method
         '''
         ...
 
     @abstractclassmethod
-    def get_brightness(cls, display: Optional[IntPercentage] = None) -> List[IntPercentage]:
+    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
+        '''
+        Args:
+            display: the index of the specific display to query.
+                If unspecified, all detected displays are queried
+
+        Returns:
+            A list of `types.IntPercentage` values, one for each
+            queried display
+        '''
         ...
 
     @abstractclassmethod
-    def set_brightness(cls, value: int, display: Optional[IntPercentage] = None):
+    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
+        '''
+        Args:
+            value (types.IntPercentage): the new brightness value
+            display: the index of the specific display to adjust.
+                If unspecified, all detected displays are adjusted
+        '''
         ...
 
 
@@ -242,16 +264,16 @@ class Display():
         increment: int = 1,
         force: bool = False,
         logarithmic: bool = True
-    ) -> int:
+    ) -> IntPercentage:
         '''
         Gradually change the brightness of this display to a set value.
         This works by incrementally changing the brightness until the desired
         value is reached.
 
         Args:
-            finish: the brightness level to end up on
-            start: where the fade should start from. Defaults to whatever the
-                current brightness level for the display is
+            finish (types.Percentage): the brightness level to end up on
+            start (types.Percentage): where the fade should start from. Defaults
+                to whatever the current brightness level for the display is
             interval: time delay between each change in brightness
             increment: amount to change the brightness by each time (as a percentage)
             force: [*Linux only*] allow the brightness to be set to 0. By default,
@@ -261,7 +283,8 @@ class Display():
                 See `logarithmic_range` for rationale
 
         Returns:
-            The brightness of the display after the fade is complete
+            The brightness of the display after the fade is complete.
+            See `types.IntPercentage`
         '''
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
@@ -297,7 +320,8 @@ class Display():
         Returns the brightness of this display.
 
         Returns:
-            The brightness value of the display, as a percentage
+            The brightness value of the display, as a percentage.
+            See `types.IntPercentage`
         '''
         return self.method.get_brightness(display=self.index)[0]
 
@@ -339,15 +363,20 @@ class Display():
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
+        TODO
+        .. warning:: Deprecated
+            this func should NOT return new brightness at all
+
         Args:
-            value: the brightness percentage to set the display to
+            value (types.Percentage): the brightness percentage to set the display to
             no_return: don't return the new brightness of the display
             force: allow the brightness to be set to 0 on Linux. This is disabled by default
                 because setting the brightness of 0 will often turn off the backlight
 
         Returns:
-            None: if `no_return is True`
-            int: the new brightness of the display, as a percentage
+            If `no_return` is set to `True` (the default) then this function returns nothing.
+            Otherwise, it returns the new brightness of this display, as a percentage.
+            See `types.IntPercentage` for details
         '''
         # convert brightness value to percentage
         if platform.system() == 'Linux' and not force:

@@ -34,30 +34,6 @@ class SysFiles(BrightnessMethod):
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
-        '''
-        Returns information about detected displays by reading files from the
-        `/sys/class/backlight` directory
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, interface, edid or index.
-                This is passed to `filter_monitors`
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get info about all displays
-            info = sbc.linux.SysFiles.get_display_info()
-            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
-
-            # get info about the primary display
-            primary_info = sbc.linux.SysFiles.get_display_info(0)[0]
-
-            # get info about a display called 'edp-backlight'
-            edp_info = sbc.linux.SysFiles.get_display_info('edp-backlight')[0]
-            ```
-        '''
         subsystems = set()
         for folder in os.listdir('/sys/class/backlight'):
             if os.path.isdir(f'/sys/class/backlight/{folder}/subsystem'):
@@ -122,27 +98,6 @@ class SysFiles(BrightnessMethod):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Gets the brightness for a display by reading the brightness files
-        stored in `/sys/class/backlight/*/brightness`
-
-        Args:
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the current display brightness
-            current_brightness = sbc.linux.SysFiles.get_brightness()
-
-            # get the brightness of the primary display
-            primary_brightness = sbc.linux.SysFiles.get_brightness(display = 0)[0]
-
-            # get the brightness of the secondary display
-            secondary_brightness = sbc.linux.SysFiles.get_brightness(display = 1)[0]
-            ```
-        '''
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
@@ -157,30 +112,6 @@ class SysFiles(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the brightness for a display by writing to the brightness files
-        stored in `/sys/class/backlight/*/brightness`.
-        This function requires permission to write to these files which is
-        usually provided when it's run as root.
-
-        Args:
-            value: Sets the brightness to this value
-            display: The specific display you wish to adjust.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 50%
-            sbc.linux.SysFiles.set_brightness(50)
-
-            # set the primary display brightness to 75%
-            sbc.linux.SysFiles.set_brightness(75, display = 0)
-
-            # set the secondary display brightness to 25%
-            sbc.linux.SysFiles.set_brightness(25, display = 1)
-            ```
-        '''
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
@@ -290,7 +221,8 @@ class I2C(BrightnessMethod):
             Args:
                 i2c_path: the path to the I2C device, eg: `/dev/i2c-2`
             '''
-            self.logger = logger.getChild(self.__class__.__name__).getChild(i2c_path)
+            self.logger = logger.getChild(
+                self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
 
         def write(self, *args) -> int:
@@ -313,7 +245,8 @@ class I2C(BrightnessMethod):
             ba = bytearray(args)
             ba.insert(0, len(ba) | self.PROTOCOL_FLAG)  # add length info
             ba.insert(0, I2C.HOST_ADDR_W)  # insert source address
-            ba.append(functools.reduce(operator.xor, ba, I2C.DESTINATION_ADDR_W))  # checksum
+            ba.append(functools.reduce(operator.xor, ba,
+                      I2C.DESTINATION_ADDR_W))  # checksum
 
             return super().write(ba)
 
@@ -355,7 +288,8 @@ class I2C(BrightnessMethod):
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise I2CValidationError('i2c read check failed: ' + repr(checks))
+                raise I2CValidationError(
+                    'i2c read check failed: ' + repr(checks))
 
             return ba[2:-1]
 
@@ -382,36 +316,14 @@ class I2C(BrightnessMethod):
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise I2CValidationError('i2c read check failed: ' + repr(checks))
+                raise I2CValidationError(
+                    'i2c read check failed: ' + repr(checks))
 
             # current and max values
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
-        '''
-        Returns information about detected displays by querying the various I2C buses
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, interface, edid or index.
-                This is passed to `filter_monitors`
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get info about all displays
-            info = sbc.linux.I2C.get_display_info()
-            # EG output: [{'name': 'Benq GL2450H', 'model': 'GL2450H', 'manufacturer': 'BenQ', 'edid': '00ffff...'}]
-
-            # get info about the primary display
-            primary_info = sbc.linux.I2C.get_display_info(0)[0]
-
-            # get info about a display called 'Benq GL2450H'
-            benq_info = sbc.linux.I2C.get_display_info('Benq GL2450H')[0]
-            ```
-        '''
         all_displays = __cache__.get('i2c_display_info')
         if all_displays is None:
             all_displays = []
@@ -427,7 +339,8 @@ class I2C(BrightnessMethod):
                     # read some 512 bytes from the device
                     data = device.read(512)
                 except IOError as e:
-                    cls.logger.error(f'IOError reading from device {i2c_path}: {e}')
+                    cls.logger.error(
+                        f'IOError reading from device {i2c_path}: {e}')
                     continue
 
                 # search for the EDID header within our 512 read bytes
@@ -438,7 +351,8 @@ class I2C(BrightnessMethod):
                 # grab 128 bytes of the edid
                 edid = data[start: start + 128]
                 # parse the EDID
-                manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
+                manufacturer_id, manufacturer, model, name, serial = EDID.parse(
+                    edid)
                 # convert edid to hex string
                 edid = ''.join(f'{i:02x}' for i in edid)
 
@@ -466,26 +380,6 @@ class I2C(BrightnessMethod):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Gets the brightness for a display by querying the I2C bus
-
-        Args:
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the current display brightness
-            current_brightness = sbc.linux.I2C.get_brightness()
-
-            # get the brightness of the primary display
-            primary_brightness = sbc.linux.I2C.get_brightness(display = 0)[0]
-
-            # get the brightness of the secondary display
-            secondary_brightness = sbc.linux.I2C.get_brightness(display = 1)[0]
-            ```
-        '''
         all_displays = cls.get_display_info()
         if display is not None:
             all_displays = [all_displays[display]]
@@ -496,10 +390,12 @@ class I2C(BrightnessMethod):
             value, max_value = interface.getvcp(0x10)
 
             # make sure display's max brighness is cached
-            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            cache_ident = '%s-%s-%s' % (device['name'],
+                                        device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
-                cls.logger.info(f'{cache_ident} max brightness:{max_value} (current: {value})')
+                cls.logger.info(
+                    f'{cache_ident} max brightness:{max_value} (current: {value})')
 
             if max_value != 100:
                 # if max value is not 100 then we have to adjust the scale to be
@@ -512,34 +408,14 @@ class I2C(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the brightness for a display by writing to the I2C bus
-
-        Args:
-            value: Set the brightness to this value
-            display: The specific display you wish to adjust.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 50%
-            sbc.linux.I2C.set_brightness(50)
-
-            # set the primary display brightness to 75%
-            sbc.linux.I2C.set_brightness(75, display = 0)
-
-            # set the secondary display brightness to 25%
-            sbc.linux.I2C.set_brightness(25, display = 1)
-            ```
-        '''
         all_displays = cls.get_display_info()
         if display is not None:
             all_displays = [all_displays[display]]
 
         for device in all_displays:
             # make sure display brightness max value is cached
-            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
+            cache_ident = '%s-%s-%s' % (device['name'],
+                                        device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls.get_brightness(display=device['index'])
 
@@ -553,7 +429,16 @@ class I2C(BrightnessMethod):
 
 
 class Light(BrightnessMethod):
-    '''collection of screen brightness related methods using the light executable'''
+    '''
+    Wraps around [light](https://github.com/haikarainen/light), an external
+    3rd party tool that can control brightness levels for e-DP displays.
+
+    .. warning::
+       As of April 2nd 2023, the official repository for the light project has
+       [been archived](https://github.com/haikarainen/light/issues/147) and
+       will no longer receive any updates unless another maintainer picks it
+       up.
+    '''
 
     executable: str = 'light'
     '''the light executable to be called'''
@@ -561,30 +446,10 @@ class Light(BrightnessMethod):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
         '''
-        Returns information about detected displays as reported by Light.
+        Implements `BrightnessMethod.get_display_info`.
 
-        It works by taking the output of `SysFiles.get_display_info` and
+        Works by taking the output of `SysFiles.get_display_info` and
         filtering out any displays that aren't supported by Light
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, interface, edid or index.
-                This is passed to `filter_monitors`
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get info about all displays
-            info = sbc.linux.Light.get_display_info()
-            # EG output: [{'name': 'edp-backlight', 'path': '/sys/class/backlight/edp-backlight', edid': '00ffff...'}]
-
-            # get info about the primary display
-            primary_info = sbc.linux.Light.get_display_info(0)[0]
-
-            # get info about a display called 'edp-backlight'
-            edp_info = sbc.linux.Light.get_display_info('edp-backlight')[0]
-            ```
         '''
         light_output = check_output([cls.executable, '-L']).decode()
         displays = []
@@ -594,7 +459,8 @@ class Light(BrightnessMethod):
             # so it makes sense to use that output
             if device['path'].replace('/sys/class', 'sysfs') in light_output:
                 del device['scale']
-                device['light_path'] = device['path'].replace('/sys/class', 'sysfs')
+                device['light_path'] = device['path'].replace(
+                    '/sys/class', 'sysfs')
                 device['method'] = cls
                 device['index'] = index
 
@@ -602,61 +468,22 @@ class Light(BrightnessMethod):
                 index += 1
 
         if display is not None:
-            displays = filter_monitors(display=display, haystack=displays, include=['path', 'light_path'])
+            displays = filter_monitors(display=display, haystack=displays, include=[
+                                       'path', 'light_path'])
         return displays
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the brightness for a display using the light executable
-
-        Args:
-            value: Sets the brightness to this value
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 50%
-            sbc.linux.Light.set_brightness(50)
-
-            # set the primary display brightness to 75%
-            sbc.linux.Light.set_brightness(75, display = 0)
-
-            # set the secondary display brightness to 25%
-            sbc.linux.Light.set_brightness(25, display = 1)
-            ```
-        '''
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
 
         for i in info:
-            check_output(f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
+            check_output(
+                f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Gets the brightness for a display using the light executable
-
-        Args:
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the current display brightness
-            current_brightness = sbc.linux.Light.get_brightness()
-
-            # get the brightness of the primary display
-            primary_brightness = sbc.linux.Light.get_brightness(display = 0)[0]
-
-            # get the brightness of the secondary display
-            edp_brightness = sbc.linux.Light.get_brightness(display = 1)[0]
-            ```
-        '''
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
@@ -685,7 +512,8 @@ class XRandr(BrightnessMethodAdv):
 
         Gets all displays reported by XRandr even if they're not supported
         '''
-        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
+        xrandr_output = check_output(
+            [cls.executable, '--verbose']).decode().split('\n')
 
         display_count = 0
         tmp_display = {}
@@ -728,7 +556,8 @@ class XRandr(BrightnessMethodAdv):
                     tmp_display[key] = value
 
             elif 'Brightness:' in line:
-                tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
+                tmp_display['brightness'] = int(
+                    float(line.replace('Brightness:', '')) * 100)
 
         if tmp_display:
             yield tmp_display
@@ -736,31 +565,13 @@ class XRandr(BrightnessMethodAdv):
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None, brightness: bool = False) -> List[dict]:
         '''
-        Returns info about all detected displays as reported by xrandr
+        Implements `BrightnessMethod.get_display_info`.
 
         Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, interface, edid or index.
-                This is passed to `filter_monitors`
+            display: the index of the specific display to query.
+                If unspecified, all detected displays are queried
             brightness: whether to include the current brightness
                 in the returned info
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            info = sbc.linux.XRandr.get_display_info()
-            for i in info:
-                print('================')
-                for key, value in i.items():
-                    print(key, ':', value)
-
-            # get information about the first XRandr addressable display
-            primary_info = sbc.linux.XRandr.get_display_info(0)[0]
-
-            # get information about a display with a specific name
-            benq_info = sbc.linux.XRandr.get_display_info('BenQ GL2450HM')[0]
-            ```
         '''
         valid_displays = []
         for item in cls._gdi():
@@ -771,28 +582,12 @@ class XRandr(BrightnessMethodAdv):
             del item['unsupported']
             valid_displays.append(item)
         if display is not None:
-            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['interface'])
+            valid_displays = filter_monitors(
+                display=display, haystack=valid_displays, include=['interface'])
         return valid_displays
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Returns the brightness for a display using the xrandr executable
-
-        Args:
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the current brightness
-            current_brightness = sbc.linux.XRandr.get_brightness()
-
-            # get the current brightness for the primary display
-            primary_brightness = sbc.linux.XRandr.get_brightness(display=0)[0]
-            ```
-        '''
         monitors = cls.get_display_info(brightness=True)
         if display is not None:
             monitors = [monitors[display]]
@@ -802,31 +597,14 @@ class XRandr(BrightnessMethodAdv):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the brightness for a display using the xrandr executable
-
-        Args:
-            value: Sets the brightness to this value
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 50
-            sbc.linux.XRandr.set_brightness(50)
-
-            # set the brightness of the primary display to 75
-            sbc.linux.XRandr.set_brightness(75, display=0)
-            ```
-        '''
         value = str(float(value) / 100)
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
 
         for i in info:
-            check_output([cls.executable, '--output', i['interface'], '--brightness', value])
+            check_output([cls.executable, '--output',
+                         i['interface'], '--brightness', value])
 
 
 class DDCUtil(BrightnessMethodAdv):
@@ -867,7 +645,8 @@ class DDCUtil(BrightnessMethodAdv):
 
         # include "Invalid display" sections because they tell us where one displays metadata ends
         # and another begins. We filter out invalid displays later on
-        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
+        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(
+            ('Invalid display', 'Display', '\t', ' '))]
         tmp_display = {}
         display_count = 0
 
@@ -891,7 +670,8 @@ class DDCUtil(BrightnessMethodAdv):
 
             elif 'I2C bus' in line:
                 tmp_display['i2c_bus'] = line[line.index('/'):]
-                tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
+                tmp_display['bus_number'] = int(
+                    tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
 
             elif 'Mfg id' in line:
                 # Recently ddcutil has started reporting manufacturer IDs like
@@ -922,7 +702,8 @@ class DDCUtil(BrightnessMethodAdv):
                 tmp_display['name'] = ' '.join(name)
 
             elif 'Serial number' in line:
-                tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
+                tmp_display['serial'] = line.replace(
+                    'Serial number:', '').replace(' ', '') or None
 
             elif 'Binary serial number:' in line:
                 tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
@@ -940,32 +721,6 @@ class DDCUtil(BrightnessMethodAdv):
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
-        '''
-        Returns information about all DDC compatible displays shown by DDCUtil
-        Works by calling the command 'ddcutil detect' and parsing the output.
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, i2c bus, edid or index.
-                This is passed to `filter_monitors`
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            info = sbc.linux.DDCUtil.get_display_info()
-            for i in info:
-                print('================')
-                for key, value in i.items():
-                    print(key, ':', value)
-
-            # get information about the first DDCUtil addressable display
-            primary_info = sbc.linux.DDCUtil.get_display_info(0)[0]
-
-            # get information about a display with a specific name
-            benq_info = sbc.linux.DDCUtil.get_display_info('BenQ GL2450HM')[0]
-            ```
-        '''
         valid_displays = __cache__.get('ddcutil_monitors_info')
         if valid_displays is None:
             valid_displays = []
@@ -979,28 +734,12 @@ class DDCUtil(BrightnessMethodAdv):
                 __cache__.store('ddcutil_monitors_info', valid_displays)
 
         if display is not None:
-            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['i2c_bus'])
+            valid_displays = filter_monitors(
+                display=display, haystack=valid_displays, include=['i2c_bus'])
         return valid_displays
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Returns the brightness for a display using the ddcutil executable
-
-        Args:
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the current brightness
-            current_brightness = sbc.linux.DDCUtil.get_brightness()
-
-            # get the current brightness for the primary display
-            primary_brightness = sbc.linux.DDCUtil.get_brightness(display=0)[0]
-            ```
-        '''
         monitors = cls.get_display_info()
         if display is not None:
             monitors = [monitors[display]]
@@ -1026,35 +765,20 @@ class DDCUtil(BrightnessMethodAdv):
                     value = int((value / max_value) * 100)
 
                 # now make sure max brightness is recorded so set_brightness can use it
-                cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
+                cache_ident = '%s-%s-%s' % (monitor['name'],
+                                            monitor['serial'], monitor['bin_serial'])
                 if cache_ident not in cls._max_brightness_cache:
                     cls._max_brightness_cache[cache_ident] = max_value
-                    cls.logger.debug(f'{cache_ident} max brightness:{max_value} (current: {value})')
+                    cls.logger.debug(
+                        f'{cache_ident} max brightness:{max_value} (current: {value})')
 
-                __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
+                __cache__.store(
+                    f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
             res.append(value)
         return res
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the brightness for a display using the ddcutil executable
-
-        Args:
-            value: Sets the brightness to this value
-            display: The specific display you wish to query.
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set the brightness to 50
-            sbc.linux.DDCUtil.set_brightness(50)
-
-            # set the brightness of the primary display to 75
-            sbc.linux.DDCUtil.set_brightness(75, display=0)
-            ```
-        '''
         monitors = cls.get_display_info()
         if display is not None:
             monitors = [monitors[display]]
@@ -1062,12 +786,14 @@ class DDCUtil(BrightnessMethodAdv):
         __cache__.expire(startswith='ddcutil_brightness_')
         for monitor in monitors:
             # check if monitor has a max brightness that requires us to scale this value
-            cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
+            cache_ident = '%s-%s-%s' % (monitor['name'],
+                                        monitor['serial'], monitor['bin_serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls.get_brightness(display=monitor['index'])
 
             if cls._max_brightness_cache[cache_ident] != 100:
-                value = int((value / 100) * cls._max_brightness_cache[cache_ident])
+                value = int((value / 100) *
+                            cls._max_brightness_cache[cache_ident])
 
             check_output(
                 [
@@ -1089,29 +815,6 @@ def list_monitors_info(
             for more info on available methods
         allow_duplicates: whether to filter out duplicate displays (displays with the same EDID) or not
         unsupported: include detected displays that are invalid or unsupported
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        displays = sbc.linux.list_monitors_info()
-        for display in displays:
-            print('=======================')
-            # the manufacturer name plus the model OR a generic name for the display, depending on the method
-            print('Name:', display['name'])
-            # the general model of the display
-            print('Model:', display['model'])
-            # the serial of the display
-            print('Serial:', display['serial'])
-            # the name of the brand of the display
-            print('Manufacturer:', display['manufacturer'])
-            # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Manufacturer ID:', display['manufacturer_id'])
-            # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Index:', display['index'])
-            # the method this display can be addressed by
-            print('Method:', display['method'])
-        ```
     '''
     all_methods = get_methods(method).values()
     haystack = []
@@ -1122,7 +825,8 @@ def list_monitors_info(
             else:
                 haystack += method_class.get_display_info()
         except Exception as e:
-            logger.warning(f'error grabbing display info from {method_class} - {format_exc(e)}')
+            logger.warning(
+                f'error grabbing display info from {method_class} - {format_exc(e)}')
             pass
 
     if allow_duplicates:

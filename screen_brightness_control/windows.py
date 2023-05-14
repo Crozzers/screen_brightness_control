@@ -39,9 +39,11 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
         monitor_info = win32api.GetMonitorInfo(pyhandle)
         for adaptor_index in range(5):
             try:
-                device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
+                device = win32api.EnumDisplayDevices(
+                    monitor_info['Device'], adaptor_index, 1)
             except pywintypes.error:
-                logger.debug(f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
+                logger.debug(
+                    f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
             else:
                 yield device
                 break
@@ -77,32 +79,37 @@ def get_display_info() -> List[dict]:
             ]
         except Exception as e:
             # don't do specific exception classes here because WMI does not play ball with it
-            logger.warning(f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
+            logger.warning(
+                f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
         extras, desktop, laptop = [], 0, 0
         uid_keys = list(monitor_uids.keys())
         for monitor in wmi.WmiMonitorDescriptorMethods():
             model, serial, manufacturer, man_id, edid = None, None, None, None, None
-            instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
+            instance_name = monitor.InstanceName.replace(
+                '_0', '', 1).split('\\')[2]
             pydevice = monitor_uids[instance_name]
 
             # get the EDID
             try:
-                edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
+                edid = ''.join(
+                    f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
                 # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                 # takes too long
                 parsed = EDID.parse(edid)
                 man_id, manufacturer, model, name, serial = parsed
                 if name is None:
-                    raise EDIDParseError('parsed EDID returned invalid display name')
+                    raise EDIDParseError(
+                        'parsed EDID returned invalid display name')
             except EDIDParseError as e:
                 edid = None
                 logger.warning(
                     f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
             except Exception as e:
                 edid = None
-                logger.error(f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
+                logger.error(
+                    f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
             finally:
                 if edid is None:
                     devid = pydevice.DeviceID.split('#')
@@ -164,30 +171,6 @@ class WMI(BrightnessMethod):
     '''
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
-        '''
-        Returns a list of dictionaries of info about all detected displays
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, edid or index
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            info = sbc.windows.WMI.get_display_info()
-            for i in info:
-                print('================')
-                for key, value in i.items():
-                    print(key, ':', value)
-
-            # get information about the first WMI addressable display
-            primary_info = sbc.windows.WMI.get_display_info(0)
-
-            # get information about a display with a specific name
-            benq_info = sbc.windows.WMI.get_display_info('BenQ GL2450H')
-            ```
-        '''
         info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
@@ -195,30 +178,6 @@ class WMI(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        '''
-        Sets the display brightness for Windows using WMI
-
-        Args:
-            value: The percentage to set the brightness to
-            display: The specific display you wish to query.
-
-        Raises:
-            LookupError: if the given display cannot be found
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # set brightness of WMI addressable displays to 50%
-            sbc.windows.WMI.set_brightness(50)
-
-            # set the primary display brightness to 75%
-            sbc.windows.WMI.set_brightness(75, display = 0)
-
-            # set the brightness of the secondary display to 25%
-            sbc.windows.WMI.set_brightness(25, display = 1)
-            ```
-        '''
         brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
         if display is not None:
             brightness_method = [brightness_method[display]]
@@ -228,33 +187,6 @@ class WMI(BrightnessMethod):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        '''
-        Returns the current display brightness using WMI
-
-        Args:
-            display: The specific display you wish to query.
-
-        Raises:
-            LookupError: if the given display cannot be found
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get brightness of all WMI addressable displays
-            current_brightness = sbc.windows.WMI.get_brightness()
-            if type(current_brightness) is int:
-                print('There is only one detected display')
-            else:
-                print('There are', len(current_brightness), 'detected displays')
-
-            # get the primary display brightness
-            primary_brightness = sbc.windows.WMI.get_brightness(display = 0)
-
-            # get the brightness of the secondary display
-            benq_brightness = sbc.windows.WMI.get_brightness(display = 1)
-            ```
-        '''
         brightness_method = _wmi_init().WmiMonitorBrightness()
         if display is not None:
             brightness_method = [brightness_method[display]]
@@ -309,19 +241,22 @@ class VCP(BrightnessMethod):
                 for i in wmi.WmiMonitorBrightness()
             ]
         except Exception as e:
-            cls.logger.warning(f'failed to gather list of laptop displays - {format_exc(e)}')
+            cls.logger.warning(
+                f'failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
         for monitor in monitors:
             # Get physical monitor count
             count = DWORD()
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
-                raise WinError('call to GetNumberOfPhysicalMonitorsFromHMONITOR returned invalid result')
+                raise WinError(
+                    'call to GetNumberOfPhysicalMonitorsFromHMONITOR returned invalid result')
             if count.value > 0:
                 # Get physical monitor handles
                 physical_array = (cls._PHYSICAL_MONITOR * count.value)()
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
-                    raise WinError('call to GetPhysicalMonitorsFromHMONITOR returned invalid result')
+                    raise WinError(
+                        'call to GetPhysicalMonitorsFromHMONITOR returned invalid result')
                 for item in physical_array:
                     # check that the monitor is not a pseudo monitor by
                     # checking it's StateFlags for the
@@ -339,27 +274,6 @@ class VCP(BrightnessMethod):
 
     @classmethod
     def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
-        '''
-        Returns a dictionary of info about all detected displays
-
-        Args:
-            display: The display to return info about.
-                Pass in the serial number, name, model, edid or index
-
-        Example:
-            ```python
-            import screen_brightness_control as sbc
-
-            # get the information about all displays
-            vcp_info = sbc.windows.VCP.get_display_info()
-            print(vcp_info)
-            # EG output: [{'name': 'BenQ GL2450H', ... }, {'name': 'Dell U2211H', ... }]
-
-            # get information about a display with this specific model
-            bnq_info = sbc.windows.VCP.get_display_info('GL2450H')
-            # EG output: {'name': 'BenQ GL2450H', 'model': 'GL2450H', ... }
-            ```
-        '''
         info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
@@ -368,27 +282,14 @@ class VCP(BrightnessMethod):
     @classmethod
     def get_brightness(cls, display: Optional[int] = None, max_tries: int = 50) -> List[IntPercentage]:
         '''
-        Retrieve the brightness of all connected displays using the `ctypes.windll` API
-
         Args:
-            display: The specific display you wish to query.
+            display: the index of the specific display to query.
+                If unspecified, all detected displays are queried
             max_tries: the maximum allowed number of attempts to
                 read the VCP output from the display
 
-        Examples:
-            ```python
-            import screen_brightness_control as sbc
-
-            # Get the brightness for all detected displays
-            current_brightness = sbc.windows.VCP.get_brightness()
-            print('There are', len(current_brightness), 'detected displays')
-
-            # Get the brightness for the primary display
-            primary_brightness = sbc.windows.VCP.get_brightness(display = 0)[0]
-
-            # Get the brightness for a secondary display
-            secondary_brightness = sbc.windows.VCP.get_brightness(display = 1)[0]
-            ```
+        Returns:
+            See `BrightnessMethod.get_brightness`
         '''
         code = BYTE(0x10)
         values = []
@@ -405,10 +306,12 @@ class VCP(BrightnessMethod):
                     current = None
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
-                    cls.logger.error(f'failed to get VCP feature reply for display:{index} after {attempt} tries')
+                    cls.logger.error(
+                        f'failed to get VCP feature reply for display:{index} after {attempt} tries')
 
             if current is not None:
-                __cache__.store(f'vcp_brightness_{index}', current, expires=0.1)
+                __cache__.store(
+                    f'vcp_brightness_{index}', current, expires=0.1)
                 values.append(current)
 
             if display == index:
@@ -424,26 +327,10 @@ class VCP(BrightnessMethod):
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None, max_tries: int = 50):
         '''
-        Sets the brightness for all connected displays using the `ctypes.windll` API
-
         Args:
             display: The specific display you wish to query.
             max_tries: the maximum allowed number of attempts to
                 send the VCP input to the display
-
-        Examples:
-            ```python
-            import screen_brightness_control as sbc
-
-            # Set the brightness for all detected displays to 50%
-            sbc.windows.VCP.set_brightness(50)
-
-            # Set the brightness for the primary display to 75%
-            sbc.windows.VCP.set_brightness(75, display = 0)
-
-            # Set the brightness for a secondary display to 25%
-            sbc.windows.VCP.set_brightness(25, display = 1)
-            ```
         '''
         __cache__.expire(startswith='vcp_brightness_')
         code = BYTE(0x10)
@@ -457,7 +344,8 @@ class VCP(BrightnessMethod):
                         break
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
-                    cls.logger.error(f'failed to set display:{index}->{value} after {attempt} tries')
+                    cls.logger.error(
+                        f'failed to set display:{index}->{value} after {attempt} tries')
 
         if 'handle' in locals():
             # make sure final handle is destroyed
@@ -476,31 +364,6 @@ def list_monitors_info(
         allow_duplicates: whether to filter out duplicate displays (displays with the same EDID) or not
         unsupported: include detected displays that are invalid or unsupported.
             This argument does nothing on Windows
-
-    Example:
-        ```python
-        import screen_brightness_control as sbc
-
-        displays = sbc.windows.list_monitors_info()
-        for info in displays:
-            print('=======================')
-            # the manufacturer name plus the model
-            print('Name:', info['name'])
-            # the general model of the display
-            print('Model:', info['model'])
-            # a unique string assigned by Windows to this display
-            print('Serial:', info['serial'])
-            # the name of the brand of the display
-            print('Manufacturer:', info['manufacturer'])
-            # the 3 letter code corresponding to the brand name, EG: BNQ -> BenQ
-            print('Manufacturer ID:', info['manufacturer_id'])
-            # the index of that display FOR THE SPECIFIC METHOD THE DISPLAY USES
-            print('Index:', info['index'])
-            # the method this display can be addressed by
-            print('Method:', info['method'])
-            # the EDID string of the display
-            print('EDID:', info['edid'])
-        ```
     '''
     # no caching here because get_display_info caches its results
     info = get_display_info()

@@ -13,7 +13,7 @@ IntPercentage = int
 An integer between 0 and 100 (inclusive) that represents a brightness level.
 Other than the implied bounds, this is just a normal integer.
 '''
-Percentage = Union[int, str]
+Percentage = Union[IntPercentage, str]
 '''
 An `IntPercentage` or a string representing an `IntPercentage`.
 

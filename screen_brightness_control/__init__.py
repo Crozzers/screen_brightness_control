@@ -24,7 +24,7 @@ def get_brightness(
     verbose_error: bool = False
 ) -> List[IntPercentage]:
     '''
-    Returns the current display brightness
+    Returns the current brightness of one or more displays
 
     Args:
         display: the specific display to query
@@ -33,8 +33,8 @@ def get_brightness(
         verbose_error: controls the level of detail in the error messages
 
     Returns:
-        A list of integers (from 0 to 100), each integer being the
-        percentage brightness of a display (invalid displays may return None)
+        A list of `IntPercentage` values, each being the brightness of an
+        individual display. Invalid displays may return None.
 
     Example:
         ```python
@@ -62,10 +62,10 @@ def set_brightness(
     no_return: bool = True
 ) -> Optional[List[IntPercentage]]:
     '''
-    Sets the screen brightness
+    Sets the brightness level of one or more displays to a given value.
 
     Args:
-        value: a value from 0 to 100. This is a percentage or a string as '+5' or '-5'
+        value (`types.Percentage`): the new brightness level
         display: the specific display to adjust
         method: the method to use to set the brightness. See `get_methods` for
             more info on available methods
@@ -73,13 +73,12 @@ def set_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         verbose_error: boolean value controls the amount of detail error messages will contain
-        no_return: if False, this function returns new brightness (by calling `get_brightness`).
-            If True, this function returns None (default behaviour).
+        no_return: don't return the new brightness level(s)
 
     Returns:
-        None: if the `no_return` kwarg is `True`
-        list: a list of integers (from 0 to 100), each integer being the
-            percentage brightness of a display (invalid displays may return None)
+        If `no_return` is set to `True` (the default) then this function returns nothing.
+        Otherwise, a list of `types.IntPercentage` is returned, each item being the new
+        brightness of each adjusted display (invalid displays may return None)
 
     Example:
         ```python
@@ -150,9 +149,10 @@ def fade_brightness(
     Gradually change the brightness of one or more displays
 
     Args:
-        finish: the brightness level to end up on
-        start: where the brightness should fade from.
-            If not specified the function starts from the current brightness
+        finish (types.Percentage): fade to this brightness level
+        start (types.Percentage): where the brightness should fade from.
+            If this arg is not specified, the fade will be started from the
+            current brightness.
         interval: the time delay between each step in brightness
         increment: the amount to change the brightness by per step
         blocking: whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
@@ -164,8 +164,11 @@ def fade_brightness(
             Will also be passed to `get_brightness` if `blocking is True`
 
     Returns:
-        list: list of `threading.Thread` objects if `blocking == False`,
-            otherwise it returns the result of `get_brightness()`
+        By default, this function calls `get_brightness()` to return the new
+        brightness of any adjusted displays.
+
+        If the `blocking` is set to `False`, then a list of threads are
+        returned, one for each display being faded.
 
     Example:
         ```python
