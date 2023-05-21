@@ -3,6 +3,7 @@ import platform
 import threading
 import time
 import traceback
+import warnings
 from dataclasses import fields
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -373,6 +374,10 @@ class Monitor(Display):
         .. warning:: Deprecated
            This behaviour is deprecated and will be removed in v0.22.0
         '''
+        warnings.warn(
+            'Monitor.__getitem__ is deprecated for removal in v0.22.0',
+            DeprecationWarning
+        )
         return getattr(self, item)
 
     def get_identifier(self, monitor: dict = None) -> Tuple[str, Union[int, str]]:
@@ -418,10 +423,20 @@ class Monitor(Display):
         no_return: bool = True,
         force: bool = False
     ) -> Optional[IntPercentage]:
+        '''
+        Wrapper for `Display.set_brightness`
+
+        Args:
+            value: see `Display.set_brightness`
+            no_return: do not return the new brightness after it has been set
+            force: see `Display.set_brightness`
+        '''
         # refresh display info, in case another display has been unplugged or something
         # which would change the index of this display
         self.get_info()
-        return super().set_brightness(value, no_return, force)
+        super().set_brightness(value, force)
+        if not no_return:
+            return self.get_brightness()
 
     def get_brightness(self) -> IntPercentage:
         # refresh display info, in case another display has been unplugged or something

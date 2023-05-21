@@ -371,29 +371,14 @@ class Display():
             )
             return False
 
-    def set_brightness(
-        self,
-        value: Percentage,
-        no_return: bool = True,
-        force: bool = False
-    ) -> Optional[IntPercentage]:
+    def set_brightness(self, value: Percentage, force: bool = False):
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
-        TODO
-        .. warning:: Deprecated
-            this func should NOT return new brightness at all
-
         Args:
             value (types.Percentage): the brightness percentage to set the display to
-            no_return: don't return the new brightness of the display
             force: allow the brightness to be set to 0 on Linux. This is disabled by default
                 because setting the brightness of 0 will often turn off the backlight
-
-        Returns:
-            If `no_return` is set to `True` (the default) then this function returns nothing.
-            Otherwise, it returns the new brightness of this display, as a percentage.
-            See `types.IntPercentage` for details
         '''
         # convert brightness value to percentage
         if platform.system() == 'Linux' and not force:
@@ -408,9 +393,6 @@ class Display():
         )
 
         self.method.set_brightness(value, display=self.index)
-        if no_return:
-            return None
-        return self.get_brightness()
 
 
 class EDID:
