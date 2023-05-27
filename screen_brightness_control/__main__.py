@@ -1,13 +1,16 @@
 import argparse
 import time
 import screen_brightness_control as SBC
+from dataclasses import fields
 
 
-def get_monitors(args):
+def get_monitors(args) -> SBC.types.Generator[SBC.Display, None, None]:
     filtered = SBC.filter_monitors(display=args.display, method=args.method)
+    m_fields = [i.name for i in fields(SBC.Display)]
     for monitor in filtered:
-        yield SBC.Monitor(monitor)
-
+        yield SBC.Display(
+            **{k: v for k, v in monitor.items() if k in m_fields}
+        )
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='screen_brightness_control')
