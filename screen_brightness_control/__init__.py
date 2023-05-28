@@ -454,6 +454,10 @@ class Monitor(Display):
 
         return result
 
+    @classmethod
+    def from_dict(cls, display) -> 'Monitor':
+        return cls(display)
+
     def get_info(self, refresh: bool = True) -> dict:
         '''
         Returns all known information about this monitor instance

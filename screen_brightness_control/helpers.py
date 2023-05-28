@@ -315,6 +315,23 @@ class Display():
 
         return self.get_brightness()
 
+    @classmethod
+    def from_dict(cls, display: dict) -> Display:
+        '''
+        Initialise an instance of the class from a dictionary, ignoring
+        any unwanted keys
+        '''
+        return cls(
+            index=display['index'],
+            method=display['method'],
+            edid=display['edid'],
+            manufacturer=display['manufacturer'],
+            manufacturer_id=display['manufacturer_id'],
+            model=display['model'],
+            name=display['name'],
+            serial=display['serial']
+        )
+
     def get_brightness(self) -> IntPercentage:
         '''
         Returns the brightness of this display.
