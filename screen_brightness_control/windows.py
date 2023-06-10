@@ -16,7 +16,7 @@ import wmi
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
 from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
-from .types import Generator, IntPercentage
+from .types import DisplayIdentifier, Generator, IntPercentage
 
 __cache__ = __Cache()
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ class WMI(BrightnessMethod):
     This class primarily works with laptop displays.
     '''
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)
@@ -273,7 +273,7 @@ class VCP(BrightnessMethod):
                     windll.dxva2.DestroyPhysicalMonitor(item.handle)
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         info = [i for i in get_display_info() if i['method'] == cls]
         if display is not None:
             info = filter_monitors(display=display, haystack=info)

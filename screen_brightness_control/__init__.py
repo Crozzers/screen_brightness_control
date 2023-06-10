@@ -13,14 +13,14 @@ from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
 from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
                       BrightnessMethod, Display, ScreenBrightnessError,
                       logarithmic_range, percentage)
-from .types import IntPercentage, Percentage
+from .types import DisplayIdentifier, IntPercentage, Percentage
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
 def get_brightness(
-    display: Optional[Union[int, str]] = None,
+    display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     verbose_error: bool = False
 ) -> List[IntPercentage]:
@@ -28,7 +28,7 @@ def get_brightness(
     Returns the current brightness of one or more displays
 
     Args:
-        display: the specific display to query
+        display (types.DisplayIdentifier): the specific display to query
         method: the method to use to get the brightness. See `get_methods` for
             more info on available methods
         verbose_error: controls the level of detail in the error messages
@@ -56,7 +56,7 @@ def get_brightness(
 
 def set_brightness(
     value: Percentage,
-    display: Optional[Union[str, int]] = None,
+    display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     force: bool = False,
     verbose_error: bool = False,
@@ -66,8 +66,8 @@ def set_brightness(
     Sets the brightness level of one or more displays to a given value.
 
     Args:
-        value (`types.Percentage`): the new brightness level
-        display: the specific display to adjust
+        value (types.Percentage): the new brightness level
+        display (types.DisplayIdentifier): the specific display to adjust
         method: the method to use to set the brightness. See `get_methods` for
             more info on available methods
         force: [*Linux Only*] if False the brightness will never be set lower than 1.
@@ -321,8 +321,8 @@ class Monitor(Display):
     def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
-            display: the index/name/model name/serial/edid
-                of the display you wish to control. Is passed to `filter_monitors`
+            display (types.DisplayIdentifier or dict): the display you
+                wish to control. Is passed to `filter_monitors`
                 to decide which display to use.
 
         Example:
@@ -380,9 +380,9 @@ class Monitor(Display):
         )
         return getattr(self, item)
 
-    def get_identifier(self, monitor: dict = None) -> Tuple[str, Union[int, str]]:
+    def get_identifier(self, monitor: dict = None) -> Tuple[str, DisplayIdentifier]:
         '''
-        Returns the piece of information used to identify this display.
+        Returns the `types.DisplayIdentifier` for this display.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
@@ -511,7 +511,7 @@ class Monitor(Display):
 
 
 def filter_monitors(
-    display: Optional[Union[int, str]] = None,
+    display: Optional[DisplayIdentifier] = None,
     haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
     include: List[str] = []
@@ -522,8 +522,7 @@ def filter_monitors(
     Will attempt to match against index, name, model, edid, method and serial
 
     Args:
-        display: the display you are searching for.
-            Can be serial, name, model number, edid string or index of the display
+        display (types.DisplayIdentifier): the display you are searching for
         haystack: the information to filter from.
             If this isn't set it defaults to the return of `list_monitors_info`
         method: the method the monitors use. See `get_methods` for

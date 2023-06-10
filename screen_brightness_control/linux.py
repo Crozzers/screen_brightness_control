@@ -12,7 +12,7 @@ from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
 from .helpers import (EDID, BrightnessMethod, BrightnessMethodAdv, __Cache,
                       _monitor_brand_lookup, check_output)
-from .types import IntPercentage
+from .types import DisplayIdentifier, IntPercentage
 
 __cache__ = __Cache()
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SysFiles(BrightnessMethod):
     logger = logger.getChild('SysFiles')
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         subsystems = set()
         for folder in os.listdir('/sys/class/backlight'):
             if os.path.isdir(f'/sys/class/backlight/{folder}/subsystem'):
@@ -323,7 +323,7 @@ class I2C(BrightnessMethod):
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         all_displays = __cache__.get('i2c_display_info')
         if all_displays is None:
             all_displays = []
@@ -444,7 +444,7 @@ class Light(BrightnessMethod):
     '''the light executable to be called'''
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         '''
         Implements `BrightnessMethod.get_display_info`.
 
@@ -563,7 +563,7 @@ class XRandr(BrightnessMethodAdv):
             yield tmp_display
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None, brightness: bool = False) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None, brightness: bool = False) -> List[dict]:
         '''
         Implements `BrightnessMethod.get_display_info`.
 
@@ -720,7 +720,7 @@ class DDCUtil(BrightnessMethodAdv):
             yield tmp_display
 
     @classmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         valid_displays = __cache__.get('ddcutil_monitors_info')
         if valid_displays is None:
             valid_displays = []
@@ -792,8 +792,7 @@ class DDCUtil(BrightnessMethodAdv):
                 cls.get_brightness(display=monitor['index'])
 
             if cls._max_brightness_cache[cache_ident] != 100:
-                value = int((value / 100) *
-                            cls._max_brightness_cache[cache_ident])
+                value = int((value / 100) * cls._max_brightness_cache[cache_ident])
 
             check_output(
                 [

@@ -15,7 +15,7 @@ from typing import Callable, List, Optional, Tuple, Union
 
 from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
                          ScreenBrightnessError, format_exc)
-from .types import IntPercentage, Percentage, Generator
+from .types import DisplayIdentifier, IntPercentage, Percentage, Generator
 
 logger = logging.getLogger(__name__)
 
@@ -128,13 +128,13 @@ MONITOR_MANUFACTURER_CODES = {
 
 class BrightnessMethod(ABC):
     @abstractclassmethod
-    def get_display_info(cls, display: Optional[Union[int, str]] = None) -> List[dict]:
+    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         '''
         Return information about detected displays.
 
         Args:
-            display: the specific display to return information about.
-                This parameter is passed to `filter_monitors`
+            display (types.DisplayIdentifier): the specific display to return
+                information about. This parameter is passed to `filter_monitors`
 
         Returns:
             A list of dictionaries, each representing a detected display.
@@ -238,7 +238,7 @@ class Display():
     This will be a class from either the windows or linux sub-module'''
 
     edid: str = None
-    '''The EDID string for this monitor'''
+    '''A 256 character hex string containing information about a display and its capabilities'''
     manufacturer: str = None
     '''Name of the display's manufacturer'''
     manufacturer_id: str = None
@@ -342,9 +342,9 @@ class Display():
         '''
         return self.method.get_brightness(display=self.index)[0]
 
-    def get_identifier(self) -> Tuple[str, Union[int, str]]:
+    def get_identifier(self) -> Tuple[str, DisplayIdentifier]:
         '''
-        Returns the piece of information used to identify this display.
+        Returns the `types.DisplayIdentifier` for this display.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
@@ -476,7 +476,7 @@ class EDID:
         # split mfg_id (2 bytes) into 3 letters, 5 bits each (ignoring reserved bit)
         mfg_id = (
             mfg_id_block >> 10,             # First 6 bits (reserved bit at start is always 0)
-            (mfg_id_block >> 5) & 0b11111,  # Next 5 (use bitwise AND to isolate the 5 bits we want from first 11)
+            (mfg_id_block >> 5) & 0b11111,  # isolate next 5 bits from first 11 using bitwise AND
             mfg_id_block & 0b11111          # Last five bits
         )
         # turn numbers into ascii
@@ -665,7 +665,4 @@ def percentage(
     else:
         value = int(float(str(value)))
 
-    return min(
-        100,
-        max(lower_bound, value)
-    )
+    return min(100, max(lower_bound, value))

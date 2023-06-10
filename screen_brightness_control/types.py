@@ -1,3 +1,13 @@
+'''
+Submodule containing types and type aliases used throughout the library.
+
+Splitting these definitions into a seperate submodule allows for detailed
+explanations and verbose type definitions, without cluttering up the rest
+of the library.
+
+This file is also useful for wrangling types based on the current Python
+version.
+'''
 from typing import Union
 import sys
 
@@ -26,4 +36,20 @@ String values may come in two forms:
     and a value of `'-40'` would imply 10% brightness.
 
 Relative brightness values will usually be resolved by the `helpers.percentage` function.
+'''
+
+
+DisplayIdentifier = Union[int, str]
+'''
+Something that can be used to identify a particular display.
+Can be any one of the following properties of a display:
+- edid (str)
+- serial (str)
+- name (str)
+- model (str)
+  .. warning:: Deprecated
+     Identifying a display by its model is deprecated for removal in v0.22.0
+- index (int)
+
+See `helpers.Display` for descriptions of each property and its type
 '''
