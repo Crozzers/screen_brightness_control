@@ -6,7 +6,7 @@ import operator
 import os
 import re
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc

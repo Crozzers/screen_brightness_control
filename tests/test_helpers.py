@@ -19,7 +19,7 @@ class TestDisplay(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.primary = sbc.Display(**sbc.list_monitors_info()[0])
+        self.primary = sbc.Display.from_dict(sbc.list_monitors_info()[0])
 
     def test_fade_brightness(self):
         # test normal
@@ -45,13 +45,23 @@ class TestDisplay(TestCase):
                 90, start=100, increment=2), number=1)
         )
 
+    def test_from_dict(self):
+        info = sbc.list_monitors_info()[1]
+        info['something'] = 'extra'
+        display = sbc.Display.from_dict(info)
+        self.assertIsInstance(display, sbc.Display)
+        # make sure that misc info wasn't assigned
+        self.assertFalse(hasattr(display, 'something'))
+        for prop in (
+            'index', 'method', 'edid', 'manufacturer',
+            'manufacturer_id', 'model', 'name', 'serial'
+        ):
+            self.assertIs(info[prop], getattr(display, prop))
+
     def test_get_brightness(self):
         brightness = self.primary.get_brightness()
         self.assertIsInstance(brightness, int)
         self.assertTrue(0 <= brightness <= 100)
-
-    def test_is_active(self):
-        self.assertIsInstance(self.primary.is_active(), bool)
 
     def test_get_identifier(self):
         identifier = self.primary.get_identifier()
@@ -63,19 +73,14 @@ class TestDisplay(TestCase):
         else:
             self.assertIsInstance(identifier[1], str)
 
+    def test_is_active(self):
+        self.assertIsInstance(self.primary.is_active(), bool)
+
     def test_set_brightness(self):
         # test normal
         for value in (0, 10, 21, 37, 43, 50, 90, 100):
-            brightness = self.primary.set_brightness(value, no_return=False)
-            # check it is the right type and within
-            # the max and min values
-            self.assertIsInstance(brightness, int)
-            self.assertTrue(0 <= brightness <= 100)
-            # use almost equal because some laptops cannot display all values 0 to 100
-            self.assertBrightnessEqual(value, brightness, 0)
-
-        self.assertIsNone(self.primary.set_brightness(100))
-        self.assertIsNone(self.primary.set_brightness(100, no_return=True))
+            ret_val = self.primary.set_brightness(value)
+            self.assertIsNone(ret_val)
 
 
 class TestEDID(TestCase):

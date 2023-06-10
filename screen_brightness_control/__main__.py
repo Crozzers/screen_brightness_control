@@ -8,6 +8,7 @@ def get_monitors(args):
     for monitor in filtered:
         yield SBC.Display.from_dict(monitor)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='screen_brightness_control')
     parser.add_argument('-d', '--display', help='the display to be used')

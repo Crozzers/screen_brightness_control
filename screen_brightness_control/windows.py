@@ -5,7 +5,7 @@ import time
 from ctypes import POINTER, WINFUNCTYPE, Structure, WinError, byref, windll
 from ctypes.wintypes import (BOOL, BYTE, DWORD, HANDLE, HDC, HMONITOR, LPARAM,
                              RECT, WCHAR)
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import pythoncom
 import pywintypes
