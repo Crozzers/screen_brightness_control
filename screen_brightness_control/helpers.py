@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractclassmethod
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
                          ScreenBrightnessError, format_exc)
@@ -185,46 +185,45 @@ class BrightnessMethodAdv(BrightnessMethod):
         ...
 
 
-class __Cache(dict):
+class __Cache:
     '''class to cache data with a short shelf life'''
 
     def __init__(self):
+        self.logger = logger.getChild(f'{self.__class__.__name__}_{id(self)}')
         self.enabled = True
-        super().__init__()
+        self._store: Dict[str, Tuple[Any, float]] = {}
 
-    def get(self, key, *args, **kwargs):
+    def get(self, key):
         if not self.enabled:
             return None
 
         try:
-            value, expires, orig_args, orig_kwargs = self[key]
+            value, expires = self._store[key]
             if time.time() < expires:
-                if orig_args == args and orig_kwargs == kwargs:
-                    logger.debug(f'cache get {repr(key)}')
-                    return value
-            else:
-                logger.debug(f'cache get {repr(key)} = [expired]')
-                del self[key]
+                self.logger.debug(f'cache get {repr(key)}')
+                return value
+            self.logger.debug(f'cache get {repr(key)} = [expired]')
+            del self._store[key]
         except KeyError:
-            logger.debug(f'cache get {repr(key)} = [KeyError]')
-            pass
+            self.logger.debug(f'cache get {repr(key)} = [KeyError]')
+        return None
 
-    def store(self, key, value, *args, expires=1, **kwargs):
-        self[key] = (value, expires + time.time(), args, kwargs)
-        logger.debug(f'cache set {repr(key)}, expires={expires}')
+    def store(self, key, value, expires=1):
+        self.logger.debug(f'cache set {repr(key)}, expires={expires}')
+        self._store[key] = (value, expires + time.time())
 
     def expire(self, key=None, startswith=None):
         if key is not None:
             try:
-                del self[key]
-                logger.debug(f'cache expire key {repr(key)}')
+                del self._store[key]
+                self.logger.debug(f'cache expire key {repr(key)}')
             except KeyError:
                 pass
         elif startswith is not None:
-            for i in tuple(self.keys()):
+            for i in tuple(self._store.keys()):
                 if i.startswith(startswith):
-                    del self[i]
-                    logger.debug(f'cache expire key {repr(i)}')
+                    del self._store[i]
+                    self.logger.debug(f'cache expire key {repr(i)}')
 
 
 @dataclass

@@ -4,6 +4,7 @@ for code in the `screen_brightness_control/helpers.py` file
 '''
 import os
 import sys
+import time
 import unittest
 from timeit import timeit
 
@@ -12,6 +13,58 @@ from helpers import TestCase
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
+# for the cache tests. Refs to __Cache get scrambled within classes
+from screen_brightness_control.helpers import __Cache as _Cache
+
+
+class TestCache(unittest.TestCase):
+    cache: _Cache
+
+    def setUp(self):
+        super().setUp()
+        self.cache = _Cache()
+
+    def test_get(self):
+        c_time = time.time()
+        self.cache._store.update({
+            'a': (123, c_time + 1),
+            'b': (456, c_time - 1)
+        })
+
+        self.assertEqual(self.cache.get('a'), 123)
+        self.assertIn('a', self.cache._store)
+        self.assertEqual(self.cache.get('b'), None)
+        # key should have been deleted as expired
+        self.assertNotIn('b', self.cache._store)
+
+    def test_store(self, expires=1):
+        c_time = time.time()
+        self.cache.store('abc', 123, expires=expires)
+        self.assertIn('abc', self.cache._store)
+        item = self.cache._store['abc']
+        self.assertEqual(item[0], 123)
+        self.assertLess((c_time + expires) - item[1], 0.1)
+
+    def test_store_expires(self):
+        self.test_store(3)
+        self.test_store(5)
+        self.test_store(-1)
+
+    def test_expire(self):
+        self.cache._store.update({
+            'a': (123, 0),
+            'b': (123, 0),
+            'bc': (123, 0),
+            'def': (123, 0)
+        })
+        self.cache.expire('a')
+        self.assertNotIn('a', self.cache._store)
+        self.cache.expire(startswith='b')
+        self.assertNotIn('b', self.cache._store)
+        self.assertNotIn('bc', self.cache._store)
+
+        self.assertIn('def', self.cache._store)
+
 
 
 class TestDisplay(TestCase):
