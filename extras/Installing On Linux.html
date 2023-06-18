@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="pdoc 13.0.0"/>
+    <meta name="generator" content="pdoc 13.1.1"/>
     <title>Installing On Linux - screen_brightness_control
 </title>
     
@@ -31,8 +31,8 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
 
 
 
-        <h2>Contents</h2>
-        <ul>
+            <h2>Contents</h2>
+            <ul>
   <li><a href="#without-using-a-3rd-party-program">Without using a 3rd party program</a>
   <ul>
     <li><a href="#laptop-displays">Laptop displays</a></li>
@@ -66,7 +66,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.20.0</footer>
+                <footer>screen_brightness_control v0.21.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -98,19 +98,19 @@ To avoid having to run this library as root every time, you can do the following
 This command adds a line to your backlight udev rules allowing you to write brightness values to the relevant files.</p>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="nb">echo</span> <span class="s1">&#39;SUBSYSTEM==&quot;backlight&quot;,RUN+=&quot;/bin/chmod 666 /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power&quot;&#39;</span> <span class="p">|</span> sudo tee -a /etc/udev/rules.d/backlight-permissions.rules
+<pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;SUBSYSTEM==&quot;backlight&quot;,RUN+=&quot;/bin/chmod 666 /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/udev/rules.d/backlight-permissions.rules
 </code></pre>
 </div></li>
 <li><p>Reload udev rules</p>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code>sudo udevadm control --reload-rules <span class="o">&amp;&amp;</span> udevadm trigger
+<pre><span></span><code>sudo<span class="w"> </span>udevadm<span class="w"> </span>control<span class="w"> </span>--reload-rules<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>udevadm<span class="w"> </span>trigger
 </code></pre>
 </div></li>
 <li><p>If the above steps don't immediately work, reboot.</p></li>
 </ol>
 
-<p>Credit to <a href="https://linustechtips.com/topic/1246132-allow-non-root-user-to-access-sysclassbacklight/?do=findComment&amp;comment=14015728">Nayr438's comment</a>
+<p>Credit to <a href="https://linustechtips.com/topic/1246132-allow-non-root-user-to-access-sysclassbacklight/?do=findComment&comment=14015728">Nayr438's comment</a>
 on the LTT forums for this.</p>
 
 <h2 id="desktop-displays">Desktop displays</h2>

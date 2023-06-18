@@ -1126,7 +1126,7 @@ screen_brightness_control    </h1>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>display (types.DisplayIdentifier):</strong>  the specific display to query</li>
+<li><strong>display (<a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a>):</strong>  the specific display to query</li>
 <li><strong>method:</strong>  the method to use to get the brightness. See <code><a href="#get_methods">get_methods</a></code> for
 more info on available methods</li>
 <li><strong>verbose_error:</strong>  controls the level of detail in the error messages</li>
@@ -1259,8 +1259,8 @@ more info on available methods</li>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>value (types.Percentage):</strong>  the new brightness level</li>
-<li><strong>display (types.DisplayIdentifier):</strong>  the specific display to adjust</li>
+<li><strong>value (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  the new brightness level</li>
+<li><strong>display (<a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a>):</strong>  the specific display to adjust</li>
 <li><strong>method:</strong>  the method to use to set the brightness. See <code><a href="#get_methods">get_methods</a></code> for
 more info on available methods</li>
 <li><strong>force:</strong>  [<em>Linux Only</em>] if False the brightness will never be set lower than 1.
@@ -1274,7 +1274,7 @@ If True, this check is bypassed</li>
 
 <blockquote>
   <p>If <code>no_return</code> is set to <code>True</code> (the default) then this function returns nothing.
-  Otherwise, a list of <code>types.IntPercentage</code> is returned, each item being the new
+  Otherwise, a list of <code><a href="screen_brightness_control/types.html#IntPercentage">types.IntPercentage</a></code> is returned, each item being the new
   brightness of each adjusted display (invalid displays may return None)</p>
 </blockquote>
 
@@ -1400,8 +1400,8 @@ If True, this check is bypassed</li>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>finish (types.Percentage):</strong>  fade to this brightness level</li>
-<li><strong>start (types.Percentage):</strong>  where the brightness should fade from.
+<li><strong>finish (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  fade to this brightness level</li>
+<li><strong>start (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  where the brightness should fade from.
 If this arg is not specified, the fade will be started from the
 current brightness.</li>
 <li><strong>interval:</strong>  the time delay between each step in brightness</li>
@@ -1902,8 +1902,8 @@ more info on available methods</li>
     <a class="headerlink" href="#Display.index"></a>
     
             <div class="docstring"><p>The index of the display relative to the method it uses.
-So if the index is 0 and the method is <code>windows.VCP</code>, then this is the 1st
-display reported by <code>windows.VCP</code>, not the first display overall.</p>
+So if the index is 0 and the method is <code><a href="screen_brightness_control/windows.html#VCP">windows.VCP</a></code>, then this is the 1st
+display reported by <code><a href="screen_brightness_control/windows.html#VCP">windows.VCP</a></code>, not the first display overall.</p>
 </div>
 
 
@@ -2085,8 +2085,8 @@ value is reached.</p>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>finish (types.Percentage):</strong>  the brightness level to end up on</li>
-<li><strong>start (types.Percentage):</strong>  where the fade should start from. Defaults
+<li><strong>finish (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  the brightness level to end up on</li>
+<li><strong>start (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  where the fade should start from. Defaults
 to whatever the current brightness level for the display is</li>
 <li><strong>interval:</strong>  time delay between each change in brightness</li>
 <li><strong>increment:</strong>  amount to change the brightness by each time (as a percentage)</li>
@@ -2101,7 +2101,7 @@ See <code>logarithmic_range</code> for rationale</li>
 
 <blockquote>
   <p>The brightness of the display after the fade is complete.
-  See <code>types.IntPercentage</code></p>
+  See <code><a href="screen_brightness_control/types.html#IntPercentage">types.IntPercentage</a></code></p>
 </blockquote>
 </div>
 
@@ -2173,7 +2173,7 @@ any unwanted keys</p>
 
 <blockquote>
   <p>The brightness value of the display, as a percentage.
-  See <code>types.IntPercentage</code></p>
+  See <code><a href="screen_brightness_control/types.html#IntPercentage">types.IntPercentage</a></code></p>
 </blockquote>
 </div>
 
@@ -2207,7 +2207,7 @@ any unwanted keys</p>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Returns the <code>types.DisplayIdentifier</code> for this display.
+            <div class="docstring"><p>Returns the <code><a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a></code> for this display.
 Will iterate through the EDID, serial, name and index and return the first
 value that is not equal to None</p>
 
@@ -2294,7 +2294,7 @@ value that is not equal to None</p>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>value (types.Percentage):</strong>  the brightness percentage to set the display to</li>
+<li><strong>value (<a href="screen_brightness_control/types.html#Percentage">types.Percentage</a>):</strong>  the brightness percentage to set the display to</li>
 <li><strong>force:</strong>  allow the brightness to be set to 0 on Linux. This is disabled by default
 because setting the brightness of 0 will often turn off the backlight</li>
 </ul>
@@ -2609,7 +2609,7 @@ because setting the brightness of 0 will often turn off the backlight</li>
             <div class="docstring"><h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>display (types.DisplayIdentifier or dict):</strong>  the display you
+<li><strong>display (<a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a> or dict):</strong>  the display you
 wish to control. Is passed to <code><a href="#filter_monitors">filter_monitors</a></code>
 to decide which display to use.</li>
 </ul>
@@ -2691,7 +2691,7 @@ to decide which display to use.</li>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Returns the <code>types.DisplayIdentifier</code> for this display.
+            <div class="docstring"><p>Returns the <code><a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a></code> for this display.
 Will iterate through the EDID, serial, name and index and return the first
 value that is not equal to None</p>
 
@@ -2800,7 +2800,7 @@ value that is not equal to None</p>
 
 <blockquote>
   <p>The brightness value of the display, as a percentage.
-  See <code>types.IntPercentage</code></p>
+  See <code><a href="screen_brightness_control/types.html#IntPercentage">types.IntPercentage</a></code></p>
 </blockquote>
 </div>
 
@@ -3103,7 +3103,7 @@ Will attempt to match against index, name, model, edid, method and serial</p>
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>display (types.DisplayIdentifier):</strong>  the display you are searching for</li>
+<li><strong>display (<a href="screen_brightness_control/types.html#DisplayIdentifier">types.DisplayIdentifier</a>):</strong>  the display you are searching for</li>
 <li><strong>haystack:</strong>  the information to filter from.
 If this isn't set it defaults to the return of <code><a href="#list_monitors_info">list_monitors_info</a></code></li>
 <li><strong>method:</strong>  the method the monitors use. See <code><a href="#get_methods">get_methods</a></code> for
