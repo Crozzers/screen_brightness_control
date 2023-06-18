@@ -51,5 +51,5 @@ Can be any one of the following properties of a display:
      Identifying a display by its model is deprecated for removal in v0.22.0
 - index (int)
 
-See `helpers.Display` for descriptions of each property and its type
+See `Display` for descriptions of each property and its type
 '''

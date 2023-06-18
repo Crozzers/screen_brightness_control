@@ -4,14 +4,14 @@ import threading
 import time
 import traceback
 import warnings
-from dataclasses import fields
+from dataclasses import dataclass, fields, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
 from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
-                      BrightnessMethod, Display, ScreenBrightnessError,
+                      BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
 
@@ -315,8 +315,184 @@ def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
         f'invalid method {name!r}, must be one of: {list(methods)}')
 
 
+@dataclass
+class Display():
+    '''
+    Represents a single connected display.
+    '''
+    index: int
+    '''The index of the display relative to the method it uses.
+    So if the index is 0 and the method is `windows.VCP`, then this is the 1st
+    display reported by `windows.VCP`, not the first display overall.'''
+    method: BrightnessMethod
+    '''The method by which this monitor can be addressed.
+    This will be a class from either the windows or linux sub-module'''
+
+    edid: str = None
+    '''A 256 character hex string containing information about a display and its capabilities'''
+    manufacturer: str = None
+    '''Name of the display's manufacturer'''
+    manufacturer_id: str = None
+    '''3 letter code corresponding to the manufacturer name'''
+    model: str = None
+    '''Model name of the display'''
+    name: str = None
+    '''The name of the display, often the manufacturer name plus the model name'''
+    serial: str = None
+    '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
+
+    _logger: logging.Logger = field(init=False)
+
+    def __post_init__(self):
+        self._logger = logger.getChild(self.__class__.__name__).getChild(
+            str(self.get_identifier()[1])[:20])
+
+    def fade_brightness(
+        self,
+        finish: Percentage,
+        start: Optional[Percentage] = None,
+        interval: float = 0.01,
+        increment: int = 1,
+        force: bool = False,
+        logarithmic: bool = True
+    ) -> IntPercentage:
+        '''
+        Gradually change the brightness of this display to a set value.
+        This works by incrementally changing the brightness until the desired
+        value is reached.
+
+        Args:
+            finish (types.Percentage): the brightness level to end up on
+            start (types.Percentage): where the fade should start from. Defaults
+                to whatever the current brightness level for the display is
+            interval: time delay between each change in brightness
+            increment: amount to change the brightness by each time (as a percentage)
+            force: [*Linux only*] allow the brightness to be set to 0. By default,
+                brightness values will never be set lower than 1, since setting them to 0
+                often turns off the backlight
+            logarithmic: follow a logarithmic curve when setting brightness values.
+                See `logarithmic_range` for rationale
+
+        Returns:
+            The brightness of the display after the fade is complete.
+            See `types.IntPercentage`
+        '''
+        # minimum brightness value
+        if platform.system() == 'Linux' and not force:
+            lower_bound = 1
+        else:
+            lower_bound = 0
+
+        current = self.get_brightness()
+
+        finish = percentage(finish, current, lower_bound)
+        start = percentage(
+            current if start is None else start, current, lower_bound)
+
+        range_func = logarithmic_range if logarithmic else range
+        increment = abs(increment)
+        if start > finish:
+            increment = -increment
+
+        self._logger.debug(
+            f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
+
+        for value in range_func(start, finish, increment):
+            self.set_brightness(value)
+            time.sleep(interval)
+
+        if self.get_brightness() != finish:
+            self.set_brightness(finish, no_return=True)
+
+        return self.get_brightness()
+
+    @classmethod
+    def from_dict(cls, display: dict) -> 'Display':
+        '''
+        Initialise an instance of the class from a dictionary, ignoring
+        any unwanted keys
+        '''
+        return cls(
+            index=display['index'],
+            method=display['method'],
+            edid=display['edid'],
+            manufacturer=display['manufacturer'],
+            manufacturer_id=display['manufacturer_id'],
+            model=display['model'],
+            name=display['name'],
+            serial=display['serial']
+        )
+
+    def get_brightness(self) -> IntPercentage:
+        '''
+        Returns the brightness of this display.
+
+        Returns:
+            The brightness value of the display, as a percentage.
+            See `types.IntPercentage`
+        '''
+        return self.method.get_brightness(display=self.index)[0]
+
+    def get_identifier(self) -> Tuple[str, DisplayIdentifier]:
+        '''
+        Returns the `types.DisplayIdentifier` for this display.
+        Will iterate through the EDID, serial, name and index and return the first
+        value that is not equal to None
+
+        Returns:
+            The name of the property returned and the value of said property.
+            EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
+        '''
+        for key in ('edid', 'serial', 'name', 'index'):
+            value = getattr(self, key, None)
+            if value is not None:
+                return key, value
+
+    def is_active(self) -> bool:
+        '''
+        Attempts to retrieve the brightness for this display. If it works the display is deemed active
+        '''
+        try:
+            self.get_brightness()
+            return True
+        except Exception as e:
+            self._logger.error(
+                f'Monitor.is_active: {self.get_identifier()} failed get_brightness call'
+                f' - {format_exc(e)}'
+            )
+            return False
+
+    def set_brightness(self, value: Percentage, force: bool = False):
+        '''
+        Sets the brightness for this display. See `set_brightness` for the full docs
+
+        Args:
+            value (types.Percentage): the brightness percentage to set the display to
+            force: allow the brightness to be set to 0 on Linux. This is disabled by default
+                because setting the brightness of 0 will often turn off the backlight
+        '''
+        # convert brightness value to percentage
+        if platform.system() == 'Linux' and not force:
+            lower_bound = 1
+        else:
+            lower_bound = 0
+
+        value = percentage(
+            value,
+            current=lambda: self.method.get_brightness(display=self.index)[0],
+            lower_bound=lower_bound
+        )
+
+        self.method.set_brightness(value, display=self.index)
+
+
 class Monitor(Display):
-    '''A class to manage a single monitor and its relevant information'''
+    '''
+    Legacy class for managing displays.
+
+    .. warning:: Deprecated
+       Deprecated for removal in v0.23.0. Please use the new `Display` class instead
+    '''
 
     def __init__(self, display: Union[int, str, dict]):
         '''
@@ -345,6 +521,14 @@ class Monitor(Display):
             print(benq_monitor['name'])
             ```
         '''
+        warnings.warn(
+            (
+                '`Monitor` is deprecated for removal in v0.23.0.'
+                ' Please use the new `Display` class instead'
+            ),
+            DeprecationWarning
+        )
+
         monitors_info = list_monitors_info(allow_duplicates=True)
         if isinstance(display, dict):
             if display in monitors_info:
@@ -375,7 +559,7 @@ class Monitor(Display):
            This behaviour is deprecated and will be removed in v0.22.0
         '''
         warnings.warn(
-            'Monitor.__getitem__ is deprecated for removal in v0.22.0',
+            '`Monitor.__getitem__` is deprecated for removal in v0.22.0',
             DeprecationWarning
         )
         return getattr(self, item)
