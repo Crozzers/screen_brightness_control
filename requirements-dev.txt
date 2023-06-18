@@ -1,5 +1,5 @@
 -r requirements.txt
-pdoc>=11.0.0
+git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links
 packaging
 jsmin
 build

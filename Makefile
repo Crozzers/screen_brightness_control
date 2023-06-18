@@ -18,6 +18,7 @@ testall:
 
 .PHONY: docs
 docs:
+	cd docs/docs && git reset --hard
 	python -m pip install -r requirements-dev.txt
 	python docs/make.py
 
@@ -37,7 +38,6 @@ publish: release
 	python -m pip install --upgrade twine
 	twine upload dist/*$(version).tar.gz dist/*$(version)*.whl
 	@echo Stage updated documentation with git
-	cd docs/docs && git reset --hard
 	cd docs/docs && find . -maxdepth 2 -type f -not -path '*/[@.]*' | while read file; do git add "$$file"; done
 	cd docs/docs && git add docs/$(version)/*
 	@echo Commit and push new docs
