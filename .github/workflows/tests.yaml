@@ -39,7 +39,7 @@ jobs:
           python -m pip install -r requirements-dev.txt
       - name: Lint with flake8
         run: |
-          flake8 screen_brightness_control --max-line-length=119 --ignore=W503
+          make lint
       - name: Run tests
         run: |
-          python tests/testall.py --synthetic
+          make test

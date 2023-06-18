@@ -1,8 +1,16 @@
 SHELL=/bin/bash
 
-.PHONY: test
-test:
+.PHONY: lint
+lint:
+	python -m flake8 screen_brightness_control --max-line-length 119 --ignore W503
+
+.PHONY: testquick
+testquick:
 	python tests/testall.py --synthetic
+
+.PHONY: test
+test: lint
+	make testquick
 
 .PHONY: testall
 testall:
