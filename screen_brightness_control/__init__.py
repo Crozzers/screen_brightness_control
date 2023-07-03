@@ -200,11 +200,17 @@ def fade_brightness(
 
     threads = []
     for i in available_monitors:
-        monitor = Monitor(i)
+        display = Display.from_dict(i)
 
-        t1 = monitor.fade_brightness(finish, start=start, interval=interval, increment=increment,
-                                     force=force, logarithmic=logarithmic, blocking=False)
-        threads.append(t1)
+        thread = threading.Thread(target=display.fade_brightness, args=(finish,), kwargs={
+            'start': start,
+            'interval': interval,
+            'increment': increment,
+            'force': force,
+            'logarithmic': logarithmic
+        })
+        thread.start()
+        threads.append(thread)
 
     if not blocking:
         return threads
