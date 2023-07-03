@@ -7,7 +7,7 @@ import logging
 import struct
 import subprocess
 import time
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -125,7 +125,8 @@ MONITOR_MANUFACTURER_CODES = {
 
 
 class BrightnessMethod(ABC):
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         '''
         Return information about detected displays.
@@ -148,7 +149,8 @@ class BrightnessMethod(ABC):
         '''
         ...
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         '''
         Args:
@@ -161,7 +163,8 @@ class BrightnessMethod(ABC):
         '''
         ...
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Args:
@@ -173,7 +176,8 @@ class BrightnessMethod(ABC):
 
 
 class BrightnessMethodAdv(BrightnessMethod):
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def _gdi(cls) -> List[dict]:
         '''
         Similar to `BrightnessMethod.get_display_info` except this method will also
