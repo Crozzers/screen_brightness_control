@@ -25,4 +25,12 @@ class I2CValidationError(ScreenBrightnessError):
 
 
 class MaxRetriesExceededError(ScreenBrightnessError, subprocess.CalledProcessError):
-    ...
+    def __init__(self, message, exc: subprocess.CalledProcessError):
+        self.message = message
+        ScreenBrightnessError.__init__(self, message)
+        super().__init__(exc.returncode, exc.cmd, exc.stdout, exc.stderr)
+
+    def __str__(self):
+        string = super().__str__()
+        string += f'\n\t-> {self.message}'
+        return string

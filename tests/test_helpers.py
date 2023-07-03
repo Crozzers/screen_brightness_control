@@ -3,13 +3,16 @@ Not to be confused with `tests/helpers.py`, this file contains tests
 for code in the `screen_brightness_control/helpers.py` file
 '''
 import os
+import subprocess
 import sys
 import time
 import unittest
-from timeit import timeit
+from unittest.mock import Mock, patch
 
 import helpers
 from helpers import TestCase
+
+from screen_brightness_control.exceptions import MaxRetriesExceededError
 
 sys.path.insert(0, os.path.abspath('./'))
 import screen_brightness_control as sbc  # noqa: E402
@@ -120,6 +123,13 @@ class TestMonitorBrandLookup(unittest.TestCase):
         invalids = ['TEST', 'INVALID', 'ITEMS']
         for item in invalids:
             self.assertEqual(sbc.helpers._monitor_brand_lookup(item), None)
+
+
+class TestCheckOutput(unittest.TestCase):
+    def test_retries(self):
+        command = ['do', 'nothing']
+        with patch.object(subprocess, 'check_output', Mock(side_effect=subprocess.CalledProcessError(1, command))):
+            self.assertRaises(MaxRetriesExceededError, sbc.helpers.check_output, command)
 
 
 class TestLogarithmicRange(unittest.TestCase):

@@ -195,7 +195,7 @@ class __Cache:
         self.enabled = True
         self._store: Dict[str, Tuple[Any, float]] = {}
 
-    def get(self, key):
+    def get(self, key: str) -> Any:
         if not self.enabled:
             return None
 
@@ -210,7 +210,7 @@ class __Cache:
             self.logger.debug(f'cache get {repr(key)} = [KeyError]')
         return None
 
-    def store(self, key, value, expires=1):
+    def store(self, key: str, value: Any, expires=1):
         self.logger.debug(f'cache set {repr(key)}, expires={expires}')
         self._store[key] = (value, expires + time.time())
 
@@ -305,15 +305,14 @@ class EDID:
         except struct.error as e:
             raise EDIDParseError('cannot unpack edid') from e
 
-        mfg_id_block = blocks[1]
         # split mfg_id (2 bytes) into 3 letters, 5 bits each (ignoring reserved bit)
-        mfg_id = (
-            mfg_id_block >> 10,             # First 6 bits (reserved bit at start is always 0)
-            (mfg_id_block >> 5) & 0b11111,  # isolate next 5 bits from first 11 using bitwise AND
-            mfg_id_block & 0b11111          # Last five bits
+        mfg_id_chars = (
+            blocks[1] >> 10,             # First 6 bits (reserved bit at start is always 0)
+            (blocks[1] >> 5) & 0b11111,  # isolate next 5 bits from first 11 using bitwise AND
+            blocks[1] & 0b11111          # Last five bits
         )
         # turn numbers into ascii
-        mfg_id = ''.join(chr(i + 64) for i in mfg_id)
+        mfg_id = ''.join(chr(i + 64) for i in mfg_id_chars)
 
         # now grab the manufacturer name
         mfg_lookup = _monitor_brand_lookup(mfg_id)
@@ -397,7 +396,7 @@ def check_output(command: List[str], max_tries: int = 1) -> bytes:
             output = subprocess.check_output(command, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             if tries >= max_tries:
-                raise MaxRetriesExceededError(f'process failed after {tries} tries') from e
+                raise MaxRetriesExceededError(f'process failed after {tries} tries', e) from e
             tries += 1
             time.sleep(0.04 if tries < 5 else 0.5)
         else:
