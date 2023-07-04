@@ -743,7 +743,7 @@ def filter_monitors(
         if haystack is not None:
             monitors_with_duplicates = haystack
             if method is not None:
-                method_class = next(get_methods(method).values())
+                method_class = next(iter(get_methods(method).values()))
                 monitors_with_duplicates = [
                     i for i in haystack if i['method'] == method_class]
         else:

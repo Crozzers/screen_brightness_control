@@ -436,6 +436,15 @@ class TestFilterMonitors(TestCase):
         self.assertRaises(ValueError, sbc.filter_monitors, method='not a method')
         self.assertRaises(ValueError, sbc.filter_monitors, method='not a method', haystack=[])
 
+    def test_haystack_with_method_kwargs(self):
+        displays = sbc.list_monitors_info()
+        method_cls = displays[0]['method']
+
+        filtered = sbc.filter_monitors(haystack=displays, method=method_cls.__name__)
+        for display in filtered:
+            self.assertIn(display, displays)
+            self.assertIs(display['method'], method_cls)
+
     def test_include_kwarg(self):
         monitors = sbc.list_monitors_info()
         haystack = monitors + [monitors[0].copy()]
