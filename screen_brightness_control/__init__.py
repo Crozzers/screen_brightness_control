@@ -4,14 +4,15 @@ import threading
 import time
 import traceback
 import warnings
-from dataclasses import dataclass, fields, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass, field, fields
+from types import ModuleType
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
-from .helpers import (MONITOR_MANUFACTURER_CODES,  # noqa: F401
-                      BrightnessMethod, ScreenBrightnessError,
+from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
+from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
 
@@ -282,7 +283,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
     return [i['name'] for i in list_monitors_info(method=method)]
 
 
-def get_methods(name: str = None) -> Dict[str, BrightnessMethod]:
+def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]:
     '''
     Returns all available brightness method names and their associated classes.
 
@@ -816,7 +817,7 @@ def __brightness(
     logger.debug(
         f"brightness {meta_method} request display {display} with method {method}")
 
-    output = []
+    output: List[Union[int, None]] = []
     errors = []
     method = method.lower() if isinstance(method, str) else method
 
@@ -868,6 +869,8 @@ def __brightness(
     raise ScreenBrightnessError(msg)
 
 
+_OS_MODULE: ModuleType
+_OS_METHODS: Tuple[Type[BrightnessMethod], ...]
 if platform.system() == 'Windows':
     from . import windows
     _OS_MODULE = windows
