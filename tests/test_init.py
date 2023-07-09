@@ -3,10 +3,12 @@ import random
 import sys
 import threading
 import unittest
+from copy import deepcopy
 from timeit import timeit
 
 import helpers
 from helpers import TestCase, get_method_names, get_methods
+
 from screen_brightness_control.exceptions import NoValidDisplayError
 
 sys.path.insert(0, os.path.abspath('./'))
@@ -297,6 +299,12 @@ class TestDisplay(TestCase):
 
 
 class TestMonitor(TestCase):
+    def test_init(self):
+        # test bug where malformed dict in Monitor init could throw TypeError
+        primary = deepcopy(sbc.list_monitors_info()[0])
+        primary['edid'] = f'12345abc{random.randint(0, 100)}'
+        self.assertRaises(sbc.NoValidDisplayError, sbc.Monitor, primary)
+
     def test_normal(self):
         primary = sbc.list_monitors_info()[0]
         monitor = sbc.Monitor(0)

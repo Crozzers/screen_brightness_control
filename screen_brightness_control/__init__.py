@@ -542,7 +542,7 @@ class Monitor(Display):
                 info = display
             else:
                 info = filter_monitors(
-                    display=self.get_identifier(display),
+                    display=self.get_identifier(display)[1],
                     haystack=monitors_info
                 )[0]
         else:
@@ -571,7 +571,7 @@ class Monitor(Display):
         )
         return getattr(self, item)
 
-    def get_identifier(self, monitor: dict = None) -> Tuple[str, DisplayIdentifier]:
+    def get_identifier(self, monitor: Optional[dict] = None) -> Tuple[str, DisplayIdentifier]:
         '''
         Returns the `types.DisplayIdentifier` for this display.
         Will iterate through the EDID, serial, name and index and return the first
@@ -626,8 +626,9 @@ class Monitor(Display):
         # which would change the index of this display
         self.get_info()
         super().set_brightness(value, force)
-        if not no_return:
-            return self.get_brightness()
+        if no_return:
+            return None
+        return self.get_brightness()
 
     def get_brightness(self) -> IntPercentage:
         # refresh display info, in case another display has been unplugged or something
