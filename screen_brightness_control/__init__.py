@@ -383,6 +383,9 @@ class Display():
         Returns:
             The brightness of the display after the fade is complete.
             See `types.IntPercentage`
+
+            .. warning:: Deprecated
+               This function will return `None` in v0.23.0 and later.
         '''
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
@@ -652,14 +655,14 @@ class Monitor(Display):
                 thread, which will be started and returned
             **kwargs: see `Display.fade_brightness`
         '''
-        if not blocking:
-            result = threading.Thread(
-                target=super().fade_brightness, args=args, kwargs=kwargs, daemon=True)
-            result.start()
-        else:
-            result = super().fade_brightness(*args, **kwargs)
+        if blocking:
+            super().fade_brightness(*args, **kwargs)
+            return self.get_brightness()
 
-        return result
+        thread = threading.Thread(
+            target=super().fade_brightness, args=args, kwargs=kwargs, daemon=True)
+        thread.start()
+        return thread
 
     @classmethod
     def from_dict(cls, display) -> 'Monitor':

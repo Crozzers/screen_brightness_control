@@ -238,19 +238,22 @@ class TestDisplay(TestCase):
         self.primary = sbc.Display.from_dict(sbc.list_monitors_info()[0])
 
     def test_fade_brightness(self):
+        def do_fade(*args, **kwargs):
+            self.primary.fade_brightness(*args, **kwargs)
+            return self.primary.get_brightness()
+
         # test normal
-        brightness = self.primary.fade_brightness(75)
+        brightness = do_fade(75)
         self.assertIsInstance(brightness, int)
         self.assertTrue(0 <= brightness <= 100)
         self.assertBrightnessEqual(75, brightness, 0)
 
         # test increment values
-        self.assertBrightnessEqual(self.primary.fade_brightness('60'), 60, 0)
-        self.assertBrightnessEqual(self.primary.fade_brightness('70.0'), 70, 0)
-        self.assertBrightnessEqual(self.primary.fade_brightness('+10'), 80, 0)
-        self.assertBrightnessEqual(self.primary.fade_brightness('-10'), 70, 0)
-        self.assertBrightnessEqual(
-            self.primary.fade_brightness('+500'), 100, 0)
+        self.assertBrightnessEqual(do_fade('60'), 60, 0)
+        self.assertBrightnessEqual(do_fade('70.0'), 70, 0)
+        self.assertBrightnessEqual(do_fade('+10'), 80, 0)
+        self.assertBrightnessEqual(do_fade('-10'), 70, 0)
+        self.assertBrightnessEqual(do_fade('+500'), 100, 0)
 
         # test increment kwarg
         # smaller increment should take longer
