@@ -132,7 +132,7 @@ class BrightnessMethod(ABC):
         Return information about detected displays.
 
         Args:
-            display (types.DisplayIdentifier): the specific display to return
+            display (.types.DisplayIdentifier): the specific display to return
                 information about. This parameter is passed to `filter_monitors`
 
         Returns:
@@ -158,7 +158,7 @@ class BrightnessMethod(ABC):
                 If unspecified, all detected displays are queried
 
         Returns:
-            A list of `types.IntPercentage` values, one for each
+            A list of `.types.IntPercentage` values, one for each
             queried display
         '''
         ...
@@ -168,7 +168,7 @@ class BrightnessMethod(ABC):
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         '''
         Args:
-            value (types.IntPercentage): the new brightness value
+            value (.types.IntPercentage): the new brightness value
             display: the index of the specific display to adjust.
                 If unspecified, all detected displays are adjusted
         '''

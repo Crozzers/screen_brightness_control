@@ -29,7 +29,7 @@ def get_brightness(
     Returns the current brightness of one or more displays
 
     Args:
-        display (types.DisplayIdentifier): the specific display to query
+        display (.types.DisplayIdentifier): the specific display to query
         method: the method to use to get the brightness. See `get_methods` for
             more info on available methods
         verbose_error: controls the level of detail in the error messages
@@ -67,8 +67,8 @@ def set_brightness(
     Sets the brightness level of one or more displays to a given value.
 
     Args:
-        value (types.Percentage): the new brightness level
-        display (types.DisplayIdentifier): the specific display to adjust
+        value (.types.Percentage): the new brightness level
+        display (.types.DisplayIdentifier): the specific display to adjust
         method: the method to use to set the brightness. See `get_methods` for
             more info on available methods
         force: [*Linux Only*] if False the brightness will never be set lower than 1.
@@ -79,7 +79,7 @@ def set_brightness(
 
     Returns:
         If `no_return` is set to `True` (the default) then this function returns nothing.
-        Otherwise, a list of `types.IntPercentage` is returned, each item being the new
+        Otherwise, a list of `.types.IntPercentage` is returned, each item being the new
         brightness of each adjusted display (invalid displays may return None)
 
     Example:
@@ -151,8 +151,8 @@ def fade_brightness(
     Gradually change the brightness of one or more displays
 
     Args:
-        finish (types.Percentage): fade to this brightness level
-        start (types.Percentage): where the brightness should fade from.
+        finish (.types.Percentage): fade to this brightness level
+        start (.types.Percentage): where the brightness should fade from.
             If this arg is not specified, the fade will be started from the
             current brightness.
         interval: the time delay between each step in brightness
@@ -369,8 +369,8 @@ class Display():
         value is reached.
 
         Args:
-            finish (types.Percentage): the brightness level to end up on
-            start (types.Percentage): where the fade should start from. Defaults
+            finish (.types.Percentage): the brightness level to end up on
+            start (.types.Percentage): where the fade should start from. Defaults
                 to whatever the current brightness level for the display is
             interval: time delay between each change in brightness
             increment: amount to change the brightness by each time (as a percentage)
@@ -382,7 +382,7 @@ class Display():
 
         Returns:
             The brightness of the display after the fade is complete.
-            See `types.IntPercentage`
+            See `.types.IntPercentage`
 
             .. warning:: Deprecated
                This function will return `None` in v0.23.0 and later.
@@ -439,13 +439,13 @@ class Display():
 
         Returns:
             The brightness value of the display, as a percentage.
-            See `types.IntPercentage`
+            See `.types.IntPercentage`
         '''
         return self.method.get_brightness(display=self.index)[0]
 
     def get_identifier(self) -> Tuple[str, DisplayIdentifier]:
         '''
-        Returns the `types.DisplayIdentifier` for this display.
+        Returns the `.types.DisplayIdentifier` for this display.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
@@ -477,7 +477,7 @@ class Display():
         Sets the brightness for this display. See `set_brightness` for the full docs
 
         Args:
-            value (types.Percentage): the brightness percentage to set the display to
+            value (.types.Percentage): the brightness percentage to set the display to
             force: allow the brightness to be set to 0 on Linux. This is disabled by default
                 because setting the brightness of 0 will often turn off the backlight
         '''
@@ -507,7 +507,7 @@ class Monitor(Display):
     def __init__(self, display: Union[int, str, dict]):
         '''
         Args:
-            display (types.DisplayIdentifier or dict): the display you
+            display (.types.DisplayIdentifier or dict): the display you
                 wish to control. Is passed to `filter_monitors`
                 to decide which display to use.
 
@@ -576,7 +576,7 @@ class Monitor(Display):
 
     def get_identifier(self, monitor: Optional[dict] = None) -> Tuple[str, DisplayIdentifier]:
         '''
-        Returns the `types.DisplayIdentifier` for this display.
+        Returns the `.types.DisplayIdentifier` for this display.
         Will iterate through the EDID, serial, name and index and return the first
         value that is not equal to None
 
@@ -717,7 +717,7 @@ def filter_monitors(
     Will attempt to match against index, name, model, edid, method and serial
 
     Args:
-        display (types.DisplayIdentifier): the display you are searching for
+        display (.types.DisplayIdentifier): the display you are searching for
         haystack: the information to filter from.
             If this isn't set it defaults to the return of `list_monitors_info`
         method: the method the monitors use. See `get_methods` for
