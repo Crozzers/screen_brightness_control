@@ -331,7 +331,7 @@ class Display():
     '''The index of the display relative to the method it uses.
     So if the index is 0 and the method is `windows.VCP`, then this is the 1st
     display reported by `windows.VCP`, not the first display overall.'''
-    method: BrightnessMethod
+    method: Type[BrightnessMethod]
     '''The method by which this monitor can be addressed.
     This will be a class from either the windows or linux sub-module'''
 
@@ -409,7 +409,7 @@ class Display():
             time.sleep(interval)
 
         if self.get_brightness() != finish:
-            self.set_brightness(finish, no_return=True)
+            self.set_brightness(finish)
 
         return self.get_brightness()
 

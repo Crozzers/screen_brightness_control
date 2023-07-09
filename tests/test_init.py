@@ -5,6 +5,7 @@ import threading
 import unittest
 from copy import deepcopy
 from timeit import timeit
+from unittest.mock import Mock, patch
 
 import helpers
 from helpers import TestCase, get_method_names, get_methods
@@ -259,6 +260,13 @@ class TestDisplay(TestCase):
             timeit(lambda: self.primary.fade_brightness(
                 90, start=100, increment=2), number=1)
         )
+
+        # test end of fade correction if new brightness hasn't aligned with
+        # what it should have been
+        with patch.object(self.primary, 'get_brightness', Mock(return_value=50)):
+            with patch.object(self.primary, 'set_brightness', autospec=True) as set_brightness:
+                self.primary.fade_brightness(99)
+                set_brightness.mock_calls[-1].args[0] == 99
 
     def test_from_dict(self):
         info = sbc.list_monitors_info()[1]
