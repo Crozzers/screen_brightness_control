@@ -1,24 +1,26 @@
+import importlib
 import os
 import platform
 import sys
+import unittest
+
+import helpers
 
 
 def run_test(file, synthetic=False):
     print(f'Run test: {file}, synthetic={synthetic}')
-    exitcode = os.system(
-        '"%s" %s %s' % (
-            sys.executable, file,
-            '--synthetic' if synthetic else ''
-        )
-    )
-    if exitcode:
-        raise Exception(f'Test failed with exit code {exitcode}')
+    sys.path.insert(0, os.path.dirname(__file__))
+    module = importlib.import_module(file)
+    sys.path.pop(0)
+    unittest.main(module, exit=False)
 
 
 if __name__ == '__main__':
     if '--synthetic' in sys.argv:
-        run_test('tests/test_init.py', synthetic=True)
-        run_test('tests/test_helpers.py', synthetic=True)
+        sys.argv.remove('--synthetic')
+        helpers.TEST_FAST = True
+        run_test('test_init', synthetic=True)
+        run_test('test_helpers', synthetic=True)
     else:
         for file in sorted(os.listdir('tests')):
             if not file.startswith('test_'):
