@@ -16,6 +16,10 @@ test: lint
 testall:
 	python tests/testall.py
 
+.PHONY: mypy
+mypy:
+	python -m mypy --check-untyped-defs screen_brightness_control
+
 .PHONY: docs
 docs:
 	cd docs/docs && git reset --hard

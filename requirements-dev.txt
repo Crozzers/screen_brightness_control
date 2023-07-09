@@ -1,8 +1,13 @@
+# core
 -r requirements.txt
-git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links
+# distribution
 packaging
-jsmin
 build
 setuptools
 wheel
+# docs
+jsmin
+git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links
+# qa
 flake8
+mypy
