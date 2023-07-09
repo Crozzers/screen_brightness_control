@@ -15,7 +15,7 @@ from .helpers import (EDID, BrightnessMethod, BrightnessMethodAdv, __Cache,
 from .types import DisplayIdentifier, IntPercentage
 
 __cache__ = __Cache()
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class SysFiles(BrightnessMethod):
@@ -30,7 +30,7 @@ class SysFiles(BrightnessMethod):
     `/sys/class/backlight/*/brightness` or you will need to run the program
     as root.
     '''
-    logger = logger.getChild('SysFiles')
+    _logger = _logger.getChild('SysFiles')
 
     @classmethod
     def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
@@ -70,7 +70,7 @@ class SysFiles(BrightnessMethod):
                         device['path'] = f'/sys/class/backlight/{folder}'
                         device['scale'] = scale
                 except (FileNotFoundError, TypeError) as e:
-                    cls.logger.error(
+                    cls._logger.error(
                         f'error getting highest resolution scale for {folder}'
                         f' - {format_exc(e)}'
                     )
@@ -140,7 +140,7 @@ class I2C(BrightnessMethod):
         * [ddcci.py](https://github.com/siemer/ddcci)
         * [DDCCI Spec](https://milek7.pl/ddcbacklight/ddcci.pdf)
     '''
-    logger = logger.getChild('I2C')
+    _logger = _logger.getChild('I2C')
 
     # vcp commands
     GET_VCP_CMD = 0x01
@@ -221,7 +221,7 @@ class I2C(BrightnessMethod):
             Args:
                 i2c_path: the path to the I2C device, eg: `/dev/i2c-2`
             '''
-            self.logger = logger.getChild(
+            self.logger = _logger.getChild(
                 self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
 
@@ -339,7 +339,7 @@ class I2C(BrightnessMethod):
                     # read some 512 bytes from the device
                     data = device.read(512)
                 except IOError as e:
-                    cls.logger.error(
+                    cls._logger.error(
                         f'IOError reading from device {i2c_path}: {e}')
                     continue
 
@@ -394,7 +394,7 @@ class I2C(BrightnessMethod):
                                         device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
-                cls.logger.info(
+                cls._logger.info(
                     f'{cache_ident} max brightness:{max_value} (current: {value})')
 
             if max_value != 100:
@@ -609,16 +609,22 @@ class XRandr(BrightnessMethodAdv):
 
 class DDCUtil(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the ddcutil executable'''
-    logger = logger.getChild('DDCUtil')
+    _logger = _logger.getChild('DDCUtil')
 
     executable: str = 'ddcutil'
-    '''the ddcutil executable to be called'''
+    '''The ddcutil executable to be called'''
     sleep_multiplier: float = 0.5
-    '''how long ddcutil should sleep between each DDC request (lower is shorter).
-    See [the ddcutil docs](https://www.ddcutil.com/performance_options/) for more info.'''
+    '''
+    How long ddcutil should sleep between each DDC request (lower is shorter).
+    See [the ddcutil docs](https://www.ddcutil.com/performance_options/#option-sleep-multiplier).
+    '''
     cmd_max_tries: int = 10
-    '''max number of retries when calling the ddcutil'''
+    '''Max number of retries when calling the ddcutil'''
     enable_async = True
+    '''
+    Use the `--async` flag when calling ddcutil.
+    See [ddcutil docs](https://www.ddcutil.com/performance_options/#option-async)
+    '''
     _max_brightness_cache: dict = {}
     '''Cache for displays and their maximum brightness values'''
 
@@ -769,7 +775,7 @@ class DDCUtil(BrightnessMethodAdv):
                                             monitor['serial'], monitor['bin_serial'])
                 if cache_ident not in cls._max_brightness_cache:
                     cls._max_brightness_cache[cache_ident] = max_value
-                    cls.logger.debug(
+                    cls._logger.debug(
                         f'{cache_ident} max brightness:{max_value} (current: {value})')
 
                 __cache__.store(
@@ -824,7 +830,7 @@ def list_monitors_info(
             else:
                 haystack += method_class.get_display_info()
         except Exception as e:
-            logger.warning(
+            _logger.warning(
                 f'error grabbing display info from {method_class} - {format_exc(e)}')
             pass
 

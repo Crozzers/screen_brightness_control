@@ -15,7 +15,7 @@ from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
                          ScreenBrightnessError, format_exc)
 from .types import DisplayIdentifier, IntPercentage, Percentage, Generator
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 MONITOR_MANUFACTURER_CODES = {
     "AAC": "AcerView",
@@ -191,7 +191,7 @@ class __Cache:
     '''class to cache data with a short shelf life'''
 
     def __init__(self):
-        self.logger = logger.getChild(f'{self.__class__.__name__}_{id(self)}')
+        self.logger = _logger.getChild(f'{self.__class__.__name__}_{id(self)}')
         self.enabled = True
         self._store: Dict[str, Tuple[Any, float]] = {}
 
@@ -231,8 +231,6 @@ class __Cache:
 class EDID:
     '''
     Simple structure and method to extract display serial and name from an EDID string.
-
-    The EDID parsing was created with inspiration from the [pyedid library](https://github.com/jojonas/pyedid)
     '''
     EDID_FORMAT: str = (
         ">"     # big-endian
@@ -260,7 +258,11 @@ class EDID:
         "B"     # extension flag (1 byte)
         "B"     # checksum (1 byte)
     )
-    '''The byte structure for EDID strings'''
+    '''
+    The byte structure for EDID strings, taken from the
+    [pyedid library](https://github.com/jojonas/pyedid/blob/2382910d968b2fa8de1fab495fbbdfebcdb39f19/pyedid/edid.py#L21),
+    [Copyright 2019-2020 Jonas Lieb, Davydov Denis](https://github.com/jojonas/pyedid/blob/master/LICENSE).
+    '''
     SERIAL_DESCRIPTOR = bytes.fromhex('00 00 00 ff 00')
     NAME_DESCRIPTOR = bytes.fromhex('00 00 00 fc 00')
 
@@ -401,7 +403,7 @@ def check_output(command: List[str], max_tries: int = 1) -> bytes:
             time.sleep(0.04 if tries < 5 else 0.5)
         else:
             if tries > 1:
-                logger.debug(f'command {command} took {tries}/{max_tries} tries')
+                _logger.debug(f'command {command} took {tries}/{max_tries} tries')
             return output
 
 

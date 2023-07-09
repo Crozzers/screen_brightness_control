@@ -19,7 +19,7 @@ from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
 from .types import DisplayIdentifier, Generator, IntPercentage
 
 __cache__ = __Cache()
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def _wmi_init():
@@ -42,7 +42,7 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
                 device = win32api.EnumDisplayDevices(
                     monitor_info['Device'], adaptor_index, 1)
             except pywintypes.error:
-                logger.debug(
+                _logger.debug(
                     f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
             else:
                 yield device
@@ -79,7 +79,7 @@ def get_display_info() -> List[dict]:
             ]
         except Exception as e:
             # don't do specific exception classes here because WMI does not play ball with it
-            logger.warning(
+            _logger.warning(
                 f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
@@ -104,11 +104,11 @@ def get_display_info() -> List[dict]:
                         'parsed EDID returned invalid display name')
             except EDIDParseError as e:
                 edid = None
-                logger.warning(
+                _logger.warning(
                     f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
             except Exception as e:
                 edid = None
-                logger.error(
+                _logger.error(
                     f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
             finally:
                 if edid is None:
@@ -199,7 +199,7 @@ class VCP(BrightnessMethod):
     '''Collection of screen brightness related methods using the DDC/CI commands'''
     _MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
 
-    logger = logger.getChild('VCP')
+    _logger = _logger.getChild('VCP')
 
     class _PHYSICAL_MONITOR(Structure):
         '''internal class, do not call'''
@@ -225,7 +225,7 @@ class VCP(BrightnessMethod):
 
         monitors = []
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
-            cls.logger.error('EnumDisplayMonitors failed')
+            cls._logger.error('EnumDisplayMonitors failed')
             raise WinError('EnumDisplayMonitors failed')
 
         # user index keeps track of valid monitors
@@ -241,7 +241,7 @@ class VCP(BrightnessMethod):
                 for i in wmi.WmiMonitorBrightness()
             ]
         except Exception as e:
-            cls.logger.warning(
+            cls._logger.warning(
                 f'failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
@@ -306,7 +306,7 @@ class VCP(BrightnessMethod):
                     current = None
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
-                    cls.logger.error(
+                    cls._logger.error(
                         f'failed to get VCP feature reply for display:{index} after {attempt} tries')
 
             if current is not None:
@@ -344,7 +344,7 @@ class VCP(BrightnessMethod):
                         break
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
-                    cls.logger.error(
+                    cls._logger.error(
                         f'failed to set display:{index}->{value} after {attempt} tries')
 
         if 'handle' in locals():

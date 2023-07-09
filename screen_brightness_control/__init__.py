@@ -16,8 +16,8 @@ from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+_logger = logging.getLogger(__name__)
+_logger.addHandler(logging.NullHandler())
 
 
 def get_brightness(
@@ -317,7 +317,7 @@ def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]
     if name in methods:
         return {name: methods[name]}
 
-    logger.debug(f'requested method {name!r} invalid')
+    _logger.debug(f'requested method {name!r} invalid')
     raise ValueError(
         f'invalid method {name!r}, must be one of: {list(methods)}')
 
@@ -351,7 +351,7 @@ class Display():
     _logger: logging.Logger = field(init=False)
 
     def __post_init__(self):
-        self._logger = logger.getChild(self.__class__.__name__).getChild(
+        self._logger = _logger.getChild(self.__class__.__name__).getChild(
             str(self.get_identifier()[1])[:20])
 
     def fade_brightness(
@@ -818,7 +818,7 @@ def __brightness(
     verbose_error=False, **kwargs
 ):
     '''Internal function used to get/set brightness'''
-    logger.debug(
+    _logger.debug(
         f"brightness {meta_method} request display {display} with method {method}")
 
     output: List[Union[int, None]] = []
@@ -888,5 +888,5 @@ elif platform.system() == 'Linux':
         _OS_MODULE.Light
     )
 else:
-    logger.warning(
+    _logger.warning(
         f'package imported on unsupported platform ({platform.system()})')
