@@ -69,6 +69,8 @@ class BasicMethodTest(object):
 
 
 class FakeMethodTest():
+    active = False
+
     @classmethod
     def generate_fake_displays(cls):
         fakes = []
@@ -90,7 +92,9 @@ class FakeMethodTest():
         return fakes
 
     def __enter__(self):
-        if not hasattr(sbc, '_old_methods'):
+        if self.__class__.active:
+            return
+        if not hasattr(sbc, '_old_os_methods'):
             sbc._old_os_methods = sbc._OS_METHODS
 
         # change the sbc get_methods function output
@@ -108,12 +112,17 @@ class FakeMethodTest():
 
             sbc._OS_MODULE.get_display_info = get_display_info
 
+        self.__class__.active = True
+
     def __exit__(self, *args):
+        if not self.__class__.active:
+            return
         # change the sbc get_methods function output
         sbc._OS_METHODS = sbc._old_os_methods
         # on windows we also need to override the module level `get_display_info`
         if os.name == 'nt':
             sbc._OS_MODULE.get_display_info = sbc._OS_MODULE._old_get_display_info
+        self.__class__.active = False
 
     cached_display_info = []
     cached_brightness = {}

@@ -238,6 +238,8 @@ class TestDisplay(TestCase):
         self.primary = sbc.Display.from_dict(sbc.list_monitors_info()[0])
 
     def test_fade_brightness(self):
+        # need this mega test function because unittest doesn't really support
+        # nested test classes
         def do_fade(*args, **kwargs):
             self.primary.fade_brightness(*args, **kwargs)
             return self.primary.get_brightness()
@@ -270,6 +272,21 @@ class TestDisplay(TestCase):
             with patch.object(self.primary, 'set_brightness', autospec=True) as set_brightness:
                 self.primary.fade_brightness(99)
                 set_brightness.mock_calls[-1].args[0] == 99
+
+        # test logarithmic arg
+        with patch.object(self.primary, 'set_brightness', autospec=True) as set_brightness:
+            with patch.object(self.primary, 'get_brightness', Mock(return_value=100)):
+                normal_range = list(range(75, 100))
+
+                self.primary.fade_brightness(100, start=75, logarithmic=False)
+                args = [c.args[0] for c in set_brightness.mock_calls]
+                self.assertEqual(args, normal_range)
+                set_brightness.reset_mock()
+
+                self.primary.fade_brightness(100, start=75, logarithmic=True)
+                args = [c.args[0] for c in set_brightness.mock_calls]
+                self.assertNotEqual(args, normal_range)
+                self.assertLess(len(args), len(normal_range))
 
     def test_from_dict(self):
         info = sbc.list_monitors_info()[1]

@@ -259,8 +259,8 @@ class EDID:
         "B"     # checksum (1 byte)
     )
     '''
-    The byte structure for EDID strings, taken from the
-    [pyedid library](https://github.com/jojonas/pyedid/blob/2382910d968b2fa8de1fab495fbbdfebcdb39f19/pyedid/edid.py#L21),
+    The byte structure for EDID strings, taken from
+    [pyedid](https://github.com/jojonas/pyedid/blob/2382910d968b2fa8de1fab495fbbdfebcdb39f19/pyedid/edid.py#L21),
     [Copyright 2019-2020 Jonas Lieb, Davydov Denis](https://github.com/jojonas/pyedid/blob/master/LICENSE).
     '''
     SERIAL_DESCRIPTOR = bytes.fromhex('00 00 00 ff 00')
