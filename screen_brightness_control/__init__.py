@@ -62,7 +62,7 @@ def set_brightness(
     force: bool = False,
     verbose_error: bool = False,
     no_return: bool = True
-) -> Optional[List[IntPercentage]]:
+) -> Optional[List[Union[IntPercentage, None]]]:
     '''
     Sets the brightness level of one or more displays to a given value.
 
@@ -103,9 +103,9 @@ def set_brightness(
         ```
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
-        output = []
+        output: List[Union[IntPercentage, None]] = []
         for monitor in filter_monitors(display=display, method=method):
-            identifier = Monitor.get_identifier(monitor)[1]
+            identifier = Display.from_dict(monitor).get_identifier()[1]
             current_value = get_brightness(display=identifier)[0]
             result = set_brightness(
                 # don't need to calculate lower bound here because it will be
@@ -335,17 +335,17 @@ class Display():
     '''The method by which this monitor can be addressed.
     This will be a class from either the windows or linux sub-module'''
 
-    edid: str = None
+    edid: Optional[str] = None
     '''A 256 character hex string containing information about a display and its capabilities'''
-    manufacturer: str = None
+    manufacturer: Optional[str] = None
     '''Name of the display's manufacturer'''
-    manufacturer_id: str = None
+    manufacturer_id: Optional[str] = None
     '''3 letter code corresponding to the manufacturer name'''
-    model: str = None
+    model: Optional[str] = None
     '''Model name of the display'''
-    name: str = None
+    name: Optional[str] = None
     '''The name of the display, often the manufacturer name plus the model name'''
-    serial: str = None
+    serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
     _logger: logging.Logger = field(init=False)
