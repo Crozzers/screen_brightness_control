@@ -714,7 +714,7 @@ def filter_monitors(
     '''
     Searches through the information for all detected displays
     and attempts to return the info matching the value given.
-    Will attempt to match against index, name, model, edid, method and serial
+    Will attempt to match against index, name, edid, method and serial
 
     Args:
         display (.types.DisplayIdentifier): the display you are searching for
@@ -764,7 +764,7 @@ def filter_monitors(
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
-            for identifier in ['edid', 'serial', 'name', 'model'] + include:
+            for identifier in ['edid', 'serial', 'name'] + include:
                 # check we haven't already added the monitor
                 if monitor.get(identifier, None) is None:
                     continue
@@ -805,7 +805,7 @@ def filter_monitors(
         # if no displays matched the query
         msg = 'no displays found'
         if display is not None:
-            msg += f' with name/serial/model/edid/index of {display!r}'
+            msg += f' with name/serial/edid/index of {display!r}'
         if method is not None:
             msg += f' with method of {method!r}'
         raise NoValidDisplayError(msg)

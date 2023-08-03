@@ -5,7 +5,7 @@ Gets the percentage brightness of all detected monitors. This is returned as a l
 
 **Arguments:**
 
-* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
+* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial or name)
 * `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 * `verbose_error` - a boolean value to control how much detail any error messages should contain
 
@@ -31,7 +31,7 @@ Sets the brightness to `value`. If `value` is a string and contains "+" or "-" t
 **Arguments:**
 
 * `value` - the level to set the brightness to. Can either be an integer or a string.
-* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)
+* `display` - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, or name)
 * `method` - the OS specific method to use. Use the [get_methods](#get_methods) function to get all available methods for your system.
 * `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
 * `verbose_error` - a boolean value to control how much detail any error messages should contain

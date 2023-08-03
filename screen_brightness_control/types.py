@@ -46,9 +46,6 @@ Can be any one of the following properties of a display:
 - edid (str)
 - serial (str)
 - name (str)
-- model (str)
-  .. warning:: Deprecated
-     Identifying a display by its model is deprecated for removal in v0.22.0
 - index (int)
 
 See `Display` for descriptions of each property and its type
