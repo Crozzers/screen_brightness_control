@@ -524,11 +524,6 @@ class Monitor(Display):
                 print('BenQ GL2450H is the primary display')
             else:
                 print('The primary display is', primary.name)
-
-            # DEPRECATED BEHAVIOUR
-            # Will be removed in v0.22.0
-            print(primary['name'])
-            print(benq_monitor['name'])
             ```
         '''
         warnings.warn(
@@ -562,17 +557,6 @@ class Monitor(Display):
         for key, value in info.items():
             if key not in kw and value is not None:
                 setattr(self, key, value)
-
-    def __getitem__(self, item: Any) -> Any:
-        '''
-        .. warning:: Deprecated
-           This behaviour is deprecated and will be removed in v0.22.0
-        '''
-        warnings.warn(
-            '`Monitor.__getitem__` is deprecated for removal in v0.22.0',
-            DeprecationWarning
-        )
-        return getattr(self, item)
 
     def get_identifier(self, monitor: Optional[dict] = None) -> Tuple[str, DisplayIdentifier]:
         '''
