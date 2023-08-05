@@ -58,7 +58,7 @@ sbc.set_brightness(50, display=0)
 ```  
 
 
-## fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs`)
+## fade_brightness(`finish, start=None, interval=0.01, increment=1, blocking=True, force=False, logarithmic=True, **kwargs`)
 **Summary:**  
 Fades the brightness from `start` to `finish` in steps of `increment`, pausing for `interval` seconds between each step.
 If it runs in the main thread it will return the final brightness. Otherwise it returns the list of thread objects that the process is running in
@@ -70,6 +70,9 @@ If it runs in the main thread it will return the final brightness. Otherwise it 
 * `interval` - The time interval between each step in brightness
 * `increment` - The amount to change the brightness by each step in percent.
 * `blocking` - If set to `False` it fades the brightness in a new thread
+* `force` (Linux only) - if set to `False` then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to `True` then it will bypass this check
+* `logarithmic` - Follow a logarithmic curve when setting brightness values (default: `True`).
+  The result of enabling this is that many higher percentage values will be skipped, since the difference between 99% and 100% is barely noticeable compared to the difference between 1% and 2%.
 * `kwargs` - passed to `set_brightness`
 
 **Usage:**  
