@@ -6,7 +6,7 @@ import traceback
 import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
@@ -24,7 +24,7 @@ def get_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     verbose_error: bool = False
-) -> List[IntPercentage]:
+) -> List[Union[IntPercentage, None]]:
     '''
     Returns the current brightness of one or more displays
 
@@ -52,7 +52,10 @@ def get_brightness(
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    return __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    result = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    # __brightness can return None depending on the `no_return` kwarg. That obviously would never happen here
+    # but the type checker doesn't see it that way.
+    return [] if result is None else result
 
 
 def set_brightness(
@@ -106,7 +109,17 @@ def set_brightness(
         output: List[Union[IntPercentage, None]] = []
         for monitor in filter_monitors(display=display, method=method):
             identifier = Display.from_dict(monitor).get_identifier()[1]
+
             current_value = get_brightness(display=identifier)[0]
+            if current_value is None:
+                # invalid displays can return None. In this case, assume
+                # the brightness to be 100, which is what many displays default to.
+                logging.warning(
+                    'set_brightness: unable to get current brightness level for display with identifier'
+                    f' {identifier}. Assume value to be 100'
+                )
+                current_value = 100
+
             result = set_brightness(
                 # don't need to calculate lower bound here because it will be
                 # done by the other path in `set_brightness`
@@ -146,7 +159,7 @@ def fade_brightness(
     force: bool = False,
     logarithmic: bool = True,
     **kwargs
-) -> Union[List[threading.Thread], List[IntPercentage]]:
+) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
     Gradually change the brightness of one or more displays
 
@@ -399,7 +412,8 @@ class Display():
         start = percentage(
             current if start is None else start, current, lower_bound)
 
-        range_func = logarithmic_range if logarithmic else range
+        # mypy says "object is not callable" but range is. Ignore this
+        range_func: Callable = logarithmic_range if logarithmic else range  # type: ignore[assignment]
         increment = abs(increment)
         if start > finish:
             increment = -increment
@@ -453,10 +467,12 @@ class Display():
             The name of the property returned and the value of said property.
             EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
         '''
-        for key in ('edid', 'serial', 'name', 'index'):
+        for key in ('edid', 'serial', 'name'):
             value = getattr(self, key, None)
             if value is not None:
                 return key, value
+        # the index should surely never be `None`
+        return 'index', self.index
 
     def is_active(self) -> bool:
         '''
@@ -590,10 +606,11 @@ class Monitor(Display):
             else:
                 return super().get_identifier()
 
-        for key in ('edid', 'serial', 'name', 'index'):
+        for key in ('edid', 'serial', 'name'):
             value = monitor[key]
             if value is not None:
                 return key, value
+        return 'index', self.index
 
     def set_brightness(
         self,
@@ -800,7 +817,7 @@ def filter_monitors(
 def __brightness(
     *args, display=None, method=None, meta_method='get', no_return=False,
     verbose_error=False, **kwargs
-):
+) -> Optional[List[Union[IntPercentage, None]]]:
     '''Internal function used to get/set brightness'''
     _logger.debug(
         f"brightness {meta_method} request display {display} with method {method}")

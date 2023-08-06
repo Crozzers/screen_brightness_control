@@ -39,12 +39,12 @@ class SysFiles(BrightnessMethod):
             if os.path.isdir(f'/sys/class/backlight/{folder}/subsystem'):
                 subsystems.add(tuple(os.listdir(f'/sys/class/backlight/{folder}/subsystem')))
 
-        all_displays = {}
+        displays_by_edid = {}
         index = 0
 
         for subsystem in subsystems:
 
-            device = {
+            device: dict = {
                 'name': subsystem[0],
                 'path': f'/sys/class/backlight/{subsystem[0]}',
                 'method': cls,
@@ -87,10 +87,10 @@ class SysFiles(BrightnessMethod):
                         continue
                     device[key] = value
 
-            all_displays[device['edid']] = device
+            displays_by_edid[device['edid']] = device
             index += 1
 
-        all_displays = list(all_displays.values())
+        all_displays = list(displays_by_edid.values())
         if display is not None:
             all_displays = filter_monitors(
                 display=display, haystack=all_displays, include=['path'])
@@ -351,10 +351,13 @@ class I2C(BrightnessMethod):
                 # grab 128 bytes of the edid
                 edid = data[start: start + 128]
                 # parse the EDID
-                manufacturer_id, manufacturer, model, name, serial = EDID.parse(
-                    edid)
-                # convert edid to hex string
-                edid = ''.join(f'{i:02x}' for i in edid)
+                (
+                    manufacturer_id,
+                    manufacturer,
+                    model,
+                    name,
+                    serial
+                ) = EDID.parse(edid)
 
                 all_displays.append(
                     {
@@ -365,7 +368,8 @@ class I2C(BrightnessMethod):
                         'serial': serial,
                         'method': cls,
                         'index': index,
-                        'edid': edid,
+                        # convert edid to hex string
+                        'edid': ''.join(f'{i:02x}' for i in edid),
                         'i2c_bus': i2c_path
                     }
                 )
@@ -493,8 +497,7 @@ class Light(BrightnessMethod):
             results.append(
                 check_output([cls.executable, '-G', '-s', i['light_path']])
             )
-        results = [int(round(float(i.decode()), 0)) for i in results]
-        return results
+        return [int(round(float(i.decode()), 0)) for i in results]
 
 
 class XRandr(BrightnessMethodAdv):
@@ -516,7 +519,7 @@ class XRandr(BrightnessMethodAdv):
             [cls.executable, '--verbose']).decode().split('\n')
 
         display_count = 0
-        tmp_display = {}
+        tmp_display: dict = {}
 
         for line_index, line in enumerate(xrandr_output):
             if line == '':
@@ -597,14 +600,14 @@ class XRandr(BrightnessMethodAdv):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        value = str(float(value) / 100)
+        value_as_str = str(float(value) / 100)
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
 
         for i in info:
             check_output([cls.executable, '--output',
-                         i['interface'], '--brightness', value])
+                         i['interface'], '--brightness', value_as_str])
 
 
 class DDCUtil(BrightnessMethodAdv):
@@ -653,7 +656,7 @@ class DDCUtil(BrightnessMethodAdv):
         # and another begins. We filter out invalid displays later on
         ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(
             ('Invalid display', 'Display', '\t', ' '))]
-        tmp_display = {}
+        tmp_display: dict = {}
         display_count = 0
 
         for line_index, line in enumerate(ddcutil_output):
@@ -688,14 +691,8 @@ class DDCUtil(BrightnessMethodAdv):
                         # all mfg ids are 3 chars long
                         continue
 
-                    try:
-                        (
-                            tmp_display['manufacturer_id'],
-                            tmp_display['manufacturer']
-                        ) = _monitor_brand_lookup(code)
-                    except TypeError:
-                        continue
-                    else:
+                    if (brand := _monitor_brand_lookup(code)):
+                        tmp_display['manufacturer_id'], tmp_display['manufacturer'] = brand
                         break
 
             elif 'Model' in line:

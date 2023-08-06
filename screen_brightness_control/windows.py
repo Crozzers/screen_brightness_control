@@ -117,13 +117,11 @@ def get_display_info() -> List[dict]:
                     man_id = devid[1][:3]
                     model = devid[1][3:] or 'Generic Monitor'
                     del devid
-                    try:
-                        man_id, manufacturer = _monitor_brand_lookup(man_id)
-                    except TypeError:
-                        manufacturer = None
+                    if (brand := _monitor_brand_lookup(man_id)):
+                        man_id, manufacturer = brand
 
             if (serial, model) != (None, None):
-                data = {
+                data: dict = {
                     'name': f'{manufacturer} {model}',
                     'model': model,
                     'serial': serial,
@@ -223,7 +221,7 @@ class VCP(BrightnessMethod):
             monitors.append(HMONITOR(hmonitor))
             return True
 
-        monitors = []
+        monitors: List[HMONITOR] = []
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
             cls._logger.error('EnumDisplayMonitors failed')
             raise WinError('EnumDisplayMonitors failed')
@@ -334,13 +332,13 @@ class VCP(BrightnessMethod):
         '''
         __cache__.expire(startswith='vcp_brightness_')
         code = BYTE(0x10)
-        value = DWORD(value)
+        value_dword = DWORD(value)
         start = display if display is not None else 0
         for index, monitor in enumerate(cls.iter_physical_monitors(start=start), start=start):
             if display is None or display == index:
                 handle = HANDLE(monitor)
                 for attempt in range(max_tries):
-                    if windll.dxva2.SetVCPFeature(handle, code, value):
+                    if windll.dxva2.SetVCPFeature(handle, code, value_dword):
                         break
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:

@@ -195,6 +195,19 @@ class __Cache:
         self.enabled = True
         self._store: Dict[str, Tuple[Any, float]] = {}
 
+    def expire(self, key: Optional[str] = None, startswith: Optional[str] = None):
+        if key is not None:
+            try:
+                del self._store[key]
+                self.logger.debug(f'cache expire key {repr(key)}')
+            except KeyError:
+                pass
+        elif startswith is not None:
+            for i in tuple(self._store.keys()):
+                if i.startswith(startswith):
+                    del self._store[i]
+                    self.logger.debug(f'cache expire key {repr(i)}')
+
     def get(self, key: str) -> Any:
         if not self.enabled:
             return None
@@ -210,22 +223,9 @@ class __Cache:
             self.logger.debug(f'cache get {repr(key)} = [KeyError]')
         return None
 
-    def store(self, key: str, value: Any, expires=1):
+    def store(self, key: str, value: Any, expires: float = 1):
         self.logger.debug(f'cache set {repr(key)}, expires={expires}')
         self._store[key] = (value, expires + time.time())
-
-    def expire(self, key=None, startswith=None):
-        if key is not None:
-            try:
-                del self._store[key]
-                self.logger.debug(f'cache expire key {repr(key)}')
-            except KeyError:
-                pass
-        elif startswith is not None:
-            for i in tuple(self._store.keys()):
-                if i.startswith(startswith):
-                    del self._store[i]
-                    self.logger.debug(f'cache expire key {repr(i)}')
 
 
 class EDID:
@@ -439,6 +439,7 @@ def logarithmic_range(start: int, stop: int, step: int = 1) -> Generator[int, No
             return x if step > 0 else 100 - x
 
         last_yielded = None
+        x: float
         for x in range(start, stop + 1, step):
             # get difference from base point
             x -= start
@@ -476,7 +477,7 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
 
 def percentage(
     value: Percentage,
-    current: Union[int, Callable[[], int]] = None,
+    current: Optional[Union[int, Callable[[], int]]] = None,
     lower_bound: int = 0
 ) -> IntPercentage:
     '''
