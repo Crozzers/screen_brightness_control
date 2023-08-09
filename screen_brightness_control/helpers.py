@@ -196,35 +196,45 @@ class __Cache:
         self._store: Dict[str, Tuple[Any, float]] = {}
 
     def expire(self, key: Optional[str] = None, startswith: Optional[str] = None):
+        '''
+        @private
+
+        Runs through all keys in the cache and removes any expired items.
+        Can optionally specify additional keys that should be removed.
+
+        Args:
+            key: a specific key to remove. `KeyError` exceptions are suppressed if this key doesn't exist.
+            startswith: remove any keys that start with this string
+        '''
         if key is not None:
             try:
                 del self._store[key]
-                self.logger.debug(f'cache expire key {repr(key)}')
+                self.logger.debug(f'delete key {key!r}')
             except KeyError:
                 pass
-        elif startswith is not None:
-            for i in tuple(self._store.keys()):
-                if i.startswith(startswith):
-                    del self._store[i]
-                    self.logger.debug(f'cache expire key {repr(i)}')
+
+        for k, v in tuple(self._store.items()):
+            if startswith is not None and k.startswith(startswith):
+                del self._store[k]
+                self.logger.debug(f'delete keys {startswith=}')
+                continue
+            if v[1] < time.time():
+                del self._store[k]
+                self.logger.debug(f'delete expired key {k}')
 
     def get(self, key: str) -> Any:
         if not self.enabled:
             return None
-
-        try:
-            value, expires = self._store[key]
-            if time.time() < expires:
-                self.logger.debug(f'cache get {repr(key)}')
-                return value
-            self.logger.debug(f'cache get {repr(key)} = [expired]')
-            del self._store[key]
-        except KeyError:
-            self.logger.debug(f'cache get {repr(key)} = [KeyError]')
-        return None
+        self.expire()
+        if key not in self._store:
+            self.logger.debug(f'{key!r} not present in cache')
+            return None
+        return self._store[key][0]
 
     def store(self, key: str, value: Any, expires: float = 1):
-        self.logger.debug(f'cache set {repr(key)}, expires={expires}')
+        if not self.enabled:
+            return
+        self.logger.debug(f'cache set {key!r}, {expires=}')
         self._store[key] = (value, expires + time.time())
 
 
