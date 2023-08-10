@@ -39,6 +39,7 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
         monitor_info = win32api.GetMonitorInfo(pyhandle)
         for adaptor_index in range(5):
             try:
+                # EDD_GET_DEVICE_INTERFACE_NAME flag to populate DeviceID field
                 device = win32api.EnumDisplayDevices(
                     monitor_info['Device'], adaptor_index, 1)
             except pywintypes.error:

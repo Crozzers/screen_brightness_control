@@ -116,7 +116,7 @@ function is_dict(v) {
 function create_navigation_menu(){
     if (Object.keys(all_nav_links).length <= 0){
         return;
-    } 
+    }
 
     const navigator_div = document.getElementById("custom-version-navigation");
 
@@ -141,12 +141,41 @@ function create_navigation_menu(){
     }
 }
 
-function spawn_outofdate_label(latest_url){
+function outofdate_redirect(latest_url, latest_stub) {
+    // construct a potential URL
+    base = get_version_navigation_base_url()
+    // docs/1.2.0/something/else
+    var fragment = window
+        .location.toString().replace(base, '', 1)
+        .split('/')
+        .slice(latest_stub.replace(/^\/+|\/+$/, '').split('/').length)
+        .join('/')
+    // if stub is 'docs/1.3.0' then fragment becomes ['docs', '1.2.0', 'something/else']
+    var potential_url = new URL(fragment, latest_url + '/');
+
+    // check it exists
+    var request = new XMLHttpRequest();
+    request.open('HEAD', potential_url, true);
+    request.onreadystatechange = function() {
+        if (request.readyState === 4){
+            if (request.status === 200) {
+                document.location.href = potential_url
+            } else {
+                document.location.href = latest_url
+            }
+        }
+    };
+    request.send();
+
+}
+
+function spawn_outofdate_label(latest_url, latest_stub){
     var div = document.createElement("div");
     div.className = "pdoc notice-marker";
 
     var latest = document.createElement("a");
-    latest.href = latest_url;
+    latest.href = "javascript:void(0);"
+    latest.onclick = function() {outofdate_redirect(latest_url, latest_stub)}
     latest.innerHTML = "This page is out of date. Click here to see the latest version";
     div.appendChild(latest);
 
@@ -177,7 +206,7 @@ function check_outofdate(){
                     }
                     if (window.location.href.startsWith(new URL(url_stub, get_version_navigation_base_url()))){
                         // if our URL starts with a stub that isn't the latest, then exit
-                        spawn_outofdate_label(latest_url);
+                        spawn_outofdate_label(latest_url, latest);
                         break loop1;
                     }
                 }
