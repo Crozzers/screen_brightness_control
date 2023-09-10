@@ -42,18 +42,12 @@ def get_directory_version(path: Path):
 
 
 def configure_pdoc(**kwargs):
-    if version.Version(pdoc.__version__) >= version.Version('12.2.0'):
-        os.environ["PDOC_DEFINE_VIEW_SOURCE_MACRO"] = "1"
-    else:
-        os.environ["PDOC_DEFINE_VIEW_SOURCE_MACRO"] = "0"
+    os.environ["PDOC_DEFINE_VIEW_SOURCE_MACRO"] = "1"
     pdoc.render.configure(**{**PDOC_CONFIG, **kwargs})
 
 
 def run_pdoc(source, output):
-    if version.Version(pdoc.__version__) >= version.Version('12.2.0'):
-        pdoc.pdoc(source, output_directory=output)
-    else:
-        pdoc.pdoc(source, output_directory=output, format='html')
+    pdoc.pdoc(source, output_directory=output)
 
 
 def get_documentation_versions(directory):

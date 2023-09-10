@@ -18,12 +18,11 @@ testall:
 
 .PHONY: mypy
 mypy:
-	python -m mypy --check-untyped-defs screen_brightness_control
+	python -m mypy screen_brightness_control
 
 .PHONY: docs
 docs:
 	cd docs/docs && git reset --hard
-	python -m pip install -r requirements-dev.txt
 	python docs/make.py
 
 .PHONY: release

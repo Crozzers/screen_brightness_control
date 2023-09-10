@@ -12,6 +12,7 @@ on:
   pull_request:
     branches-ignore:
       - gh-pages
+      - cicd-tests
   workflow_dispatch:
   workflow_call:
 

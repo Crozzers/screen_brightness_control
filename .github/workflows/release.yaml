@@ -11,8 +11,8 @@ on:
         required: true
 
 jobs:
-  test:
-    uses: ./.github/workflows/tests.yaml
+  # test:
+  #   uses: ./.github/workflows/tests.yaml
   getversion:
     runs-on: ubuntu-latest
     outputs:
@@ -30,12 +30,54 @@ jobs:
           fi
           echo "pkgVersion=$version" >> $GITHUB_OUTPUT
           echo "Version: $version"
-  build:
-    needs: [test, getversion]
+  # build:
+  #   needs: [getversion] # ,test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ needs.getversion.outputs.version }}
+  #     - name: Set up Python 3.11
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: "3.11"
+  #         cache: "pip"
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install .[dist]
+  #     - name: Build
+  #       run: |
+  #         python -m build
+  #     - name: Upload artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: packages
+  #         path: |
+  #           dist/screen_brightness_control*.whl
+  #           dist/screen_brightness_control*.tar.gz
+  # release:
+  #   needs: [build]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: packages
+  #     - name: Draft release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         draft: true
+  #         files: "dist/*"
+  #         name: "${{ needs.getversion.outputs.version }}"
+  #         tag_name: ${{ needs.getversion.outputs.version }}
+  docs:
+    # needs: [build]
+    needs: [getversion]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.getversion.outputs.version }}
       - name: Set up Python 3.11
@@ -43,31 +85,26 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install .[all]
-      - name: Build
+          python -m pip install .[docs]
+      - name: Checkout docs
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: docs/docs
+      - name: Generate docs
         run: |
-          python -m build
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: packages
-          path: |
-            dist/screen_brightness_control*.whl
-            dist/screen_brightness_control*.tar.gz
-  release:
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: packages
-      - name: Draft release
-        uses: softprops/action-gh-release@v1
-        with:
-          draft: true
-          files: "dist/*"
-          name: "${{ needs.getversion.outputs.version }}"
-          tag_name: ${{ needs.getversion.outputs.version }}
+          make docs
+      - name: Configure Git
+        working-directory: docs/docs
+        run: |
+          git config --global user.name "Github Actions [Bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
+      - name: Commit and Push
+        working-directory: docs/docs
+        run: |
+          git add -A
+          git commit -m "Bump ${{ needs.getversion.outputs.version }}"
+          git push
