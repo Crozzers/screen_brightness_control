@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="pdoc 13.1.1"/>
+    <meta name="generator" content="pdoc 14.0.0"/>
     <title>Quick Start Guide - screen_brightness_control
 </title>
     
@@ -35,7 +35,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
             <ul>
   <li><a href="#get_brightnessdisplaynone-methodnone-verbose_errorfalse">get_brightness(<code>display=None, method=None, verbose_error=False</code>)</a></li>
   <li><a href="#set_brightnessvalue-displaynone-methodnone-forcefalse-verbose_errorfalse-no_returntrue">set_brightness(<code>value, display=None, method=None, force=False, verbose_error=False, no_return=True</code>)</a></li>
-  <li><a href="#fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs</code>)</a></li>
+  <li><a href="#fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-forcefalse-logarithmictrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, force=False, logarithmic=True, **kwargs</code>)</a></li>
   <li><a href="#list_monitorsmethodnone">list_monitors(<code>method=None</code>)</a></li>
   <li><a href="#get_methods">get_methods()</a></li>
 </ul>
@@ -61,7 +61,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.21.0</footer>
+                <footer>screen_brightness_control v0.22.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -86,7 +86,7 @@ Gets the percentage brightness of all detected monitors. This is returned as a l
 <p><strong>Arguments:</strong></p>
 
 <ul>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
+<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial or name)</li>
 <li><code>method</code> - the OS specific method to use. Use the <a href="#get_methods">get_methods</a> function to get all available methods for your system.</li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
 </ul>
@@ -116,7 +116,7 @@ Sets the brightness to <code>value</code>. If <code>value</code> is a string and
 
 <ul>
 <li><code>value</code> - the level to set the brightness to. Can either be an integer or a string.</li>
-<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, name or model)</li>
+<li><code>display</code> - the specific display you wish to adjust. This can be an integer or a string (EDID, serial, or name)</li>
 <li><code>method</code> - the OS specific method to use. Use the <a href="#get_methods">get_methods</a> function to get all available methods for your system.</li>
 <li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
 <li><code>verbose_error</code> - a boolean value to control how much detail any error messages should contain</li>
@@ -145,7 +145,7 @@ Sets the brightness to <code>value</code>. If <code>value</code> is a string and
 </code></pre>
 </div>
 
-<h2 id="fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, **kwargs</code>)</h2>
+<h2 id="fade_brightnessfinish-startnone-interval001-increment1-blockingtrue-forcefalse-logarithmictrue-kwargs">fade_brightness(<code>finish, start=None, interval=0.01, increment=1, blocking=True, force=False, logarithmic=True, **kwargs</code>)</h2>
 
 <p><strong>Summary:</strong> <br />
 Fades the brightness from <code>start</code> to <code>finish</code> in steps of <code>increment</code>, pausing for <code>interval</code> seconds between each step.
@@ -159,6 +159,9 @@ If it runs in the main thread it will return the final brightness. Otherwise it 
 <li><code>interval</code> - The time interval between each step in brightness</li>
 <li><code>increment</code> - The amount to change the brightness by each step in percent.</li>
 <li><code>blocking</code> - If set to <code>False</code> it fades the brightness in a new thread</li>
+<li><code>force</code> (Linux only) - if set to <code>False</code> then the brightness is never set to less than 1 because on Linux this often turns the screen off. If set to <code>True</code> then it will bypass this check</li>
+<li><code>logarithmic</code> - Follow a logarithmic curve when setting brightness values (default: <code>True</code>).
+The result of enabling this is that many higher percentage values will be skipped, since the difference between 99% and 100% is barely noticeable compared to the difference between 1% and 2%.</li>
 <li><code>kwargs</code> - passed to <code>set_brightness</code></li>
 </ul>
 
