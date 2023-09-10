@@ -51,7 +51,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = { attr = "screen_brightness_control.__version__" }
+version = { attr = "screen_brightness_control._version.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["screen_brightness_control"]
