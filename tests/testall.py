@@ -12,7 +12,9 @@ def run_test(file, synthetic=False):
     sys.path.insert(0, os.path.dirname(__file__))
     module = importlib.import_module(file)
     sys.path.pop(0)
-    unittest.main(module, exit=False)
+    prog = unittest.main(module, exit=False)
+    if prog.result.errors or prog.result.failures:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
