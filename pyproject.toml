@@ -42,7 +42,7 @@ dev = [
 docs = [
     "jsmin",
     "packaging",
-    "pdoc @ git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links"
+    "pdoc>=14.0.0"
 ]
 all = ["screen_brightness_control[dist,dev,docs]"]
 

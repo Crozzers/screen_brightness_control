@@ -1,5 +1,5 @@
 # screen_brightness_control
-A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.  
+A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.
 
 # Installation
 #### Pip:
@@ -68,4 +68,4 @@ Contributions are welcome. Issues, ideas and pull requests are all appreciated. 
     * [FAQ](https://crozzers.github.io/screen_brightness_control/extras/FAQ.html)
     * [Quick Start Guide](https://crozzers.github.io/screen_brightness_control/extras/Quick%20Start%20Guide.html)
 * [GitHub page](https://github.com/Crozzers/screen_brightness_control)
-* [PyPi page](https://pypi.org/project/screen-brightness-control/)
+* [PyPI page](https://pypi.org/project/screen-brightness-control/)

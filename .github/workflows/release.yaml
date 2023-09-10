@@ -12,10 +12,6 @@ on:
       gitRef:
         description: The git ref to build against
         required: false
-      testpypi:
-        description: Release to Test PyPI
-        type: boolean
-        default: false
       pypi:
         description: Release to PyPI
         type: boolean
@@ -28,10 +24,14 @@ on:
         description: Draft GitHub release
         type: boolean
         default: true
+      testpypi:
+        description: Release to Test PyPI
+        type: boolean
+        default: false
 
 jobs:
-  # test:
-  #   uses: ./.github/workflows/tests.yaml
+  test:
+    uses: ./.github/workflows/tests.yaml
   getversion:
     runs-on: ubuntu-latest
     outputs:
@@ -61,7 +61,7 @@ jobs:
           echo "gitRef=$gitRef" >> $GITHUB_OUTPUT
           echo "GIT Ref: $gitRef"
   build:
-    needs: [getversion] # ,test
+    needs: [test, getversion]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -113,10 +113,11 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages-dir: ./
       - name: Draft release
+        if: ${{ inputs.github }}
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: "dist/*"
+          files: "./screen_brightness_control*"
           name: "${{ needs.getversion.outputs.version }}"
           tag_name: ${{ needs.getversion.outputs.version }}
   docs:
@@ -136,6 +137,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install .[docs]
+          python -m pip install git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links
       - name: Checkout docs
         uses: actions/checkout@v4
         with:
