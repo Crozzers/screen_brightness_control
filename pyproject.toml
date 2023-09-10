@@ -1,0 +1,59 @@
+[project]
+name = "screen_brightness_control"
+description = "A Python tool for controlling the brightness of your monitor"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Crozzers", email = "captaincrozzers@gmail.com" }]
+dynamic = ["version", "readme"]
+
+dependencies = [
+    "wmi ; platform_system=='Windows'",
+    "pywin32 ; platform_system=='Windows'"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only"
+]
+
+[project.urls]
+Source = "https://github.com/Crozzers/screen_brightness_control"
+Documentation = "https://crozzers.github.io/screen_brightness_control"
+Issues = "https://github.com/Crozzers/screen_brightness_control/issues"
+
+[project.optional-dependencies]
+dist = [
+    "build",
+    "setuptools",
+    "wheel",
+    "twine"
+]
+dev = [
+    "mypy",
+    "flake8",
+    "types-pywin32 ; platform_system=='Windows'"
+]
+docs = [
+    "jsmin",
+    "packaging",
+    "pdoc @ git+https://github.com/Crozzers/pdoc.git@lesser-qualified-links"
+]
+all = ["screen_brightness_control[dist,dev,docs]"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+readme = { file = "README.md" }
+version = { attr = "screen_brightness_control.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["screen_brightness_control"]
+
+[tool.mypy]
+check_untyped_defs = true
