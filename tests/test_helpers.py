@@ -65,8 +65,8 @@ class TestCache(unittest.TestCase):
         self.cache.expire(startswith='b')
         self.assertNotIn('b', self.cache._store)
         self.assertNotIn('bc', self.cache._store)
-
-        self.assertIn('def', self.cache._store)
+        # `expire` now expires all out of date keys automatically
+        self.assertNotIn('def', self.cache._store)
 
 
 class TestEDID(TestCase):

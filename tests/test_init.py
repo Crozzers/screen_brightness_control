@@ -271,7 +271,7 @@ class TestDisplay(TestCase):
         with patch.object(self.primary, 'get_brightness', Mock(return_value=50)):
             with patch.object(self.primary, 'set_brightness', autospec=True) as set_brightness:
                 self.primary.fade_brightness(99)
-                set_brightness.mock_calls[-1].args[0] == 99
+                self.assertEqual(set_brightness.mock_calls[-1].args[0], 99)
 
         # test logarithmic arg
         with patch.object(self.primary, 'set_brightness', autospec=True) as set_brightness:
@@ -428,7 +428,7 @@ class TestFilterMonitors(TestCase):
     def test_display_kwarg(self):
         monitor = sbc.list_monitors_info()[0]
         self.assertEqual(sbc.filter_monitors(display=0)[0], monitor)
-        for identifier in ('edid', 'serial', 'name', 'model'):
+        for identifier in ('edid', 'serial', 'name', 'index'):
             if monitor[identifier] is not None:
                 filtered = sbc.filter_monitors(display=monitor[identifier])
                 if len(filtered) == 1:
