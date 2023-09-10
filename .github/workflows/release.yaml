@@ -100,20 +100,20 @@ jobs:
         with:
           python-version: "3.11"
       - name: Publish to Test PyPI
-        if: ${{ inputs.testpypi }}
+        if: ${{ inputs.testpypi == true }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           packages-dir: ./
           repository-url: https://test.pypi.org/legacy/
       - name: Publish to PyPI
-        if: ${{ inputs.pypi }}
+        if: ${{ inputs.pypi != false }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages-dir: ./
       - name: Draft release
-        if: ${{ inputs.github }}
+        if: ${{ inputs.github != false }}
         uses: softprops/action-gh-release@v1
         with:
           draft: true
@@ -121,7 +121,7 @@ jobs:
           name: "${{ needs.getversion.outputs.version }}"
           tag_name: ${{ needs.getversion.outputs.version }}
   docs:
-    if: ${{ inputs.docs }}
+    if: ${{ inputs.docs != false }}
     needs: [release]
     runs-on: ubuntu-latest
     steps:
