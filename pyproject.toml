@@ -42,7 +42,7 @@ dev = [
 docs = [
     "jsmin",
     "packaging",
-    "pdoc>=14.0.0"
+    "pdoc>=14.1.0"
 ]
 all = ["screen_brightness_control[dist,dev,docs]"]
 
