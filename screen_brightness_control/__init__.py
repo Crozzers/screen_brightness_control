@@ -35,7 +35,7 @@ def get_brightness(
         verbose_error: controls the level of detail in the error messages
 
     Returns:
-        A list of `IntPercentage` values, each being the brightness of an
+        A list of `.types.IntPercentage` values, each being the brightness of an
         individual display. Invalid displays may return None.
 
     Example:

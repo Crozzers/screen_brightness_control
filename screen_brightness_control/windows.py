@@ -358,7 +358,7 @@ def list_monitors_info(
     Lists detailed information about all detected displays
 
     Args:
-        method: the method the display can be addressed by. See `screen_brightness_control.get_methods`
+        method: the method the display can be addressed by. See `.get_methods`
             for more info on available methods
         allow_duplicates: whether to filter out duplicate displays (displays with the same EDID) or not
         unsupported: include detected displays that are invalid or unsupported.
