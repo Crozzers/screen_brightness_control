@@ -90,7 +90,19 @@ def get_display_info() -> List[dict]:
             model, serial, manufacturer, man_id, edid = None, None, None, None, None
             instance_name = monitor.InstanceName.replace(
                 '_0', '', 1).split('\\')[2]
-            pydevice = monitor_uids[instance_name]
+            try:
+                pydevice = monitor_uids[instance_name]
+            except KeyError:
+                # if laptop display WAS connected but was later put to sleep (#33)
+                if instance_name in laptop_displays:
+                    laptop += 1
+                else:
+                    desktop += 1
+                _logger.warning(
+                    f'display {instance_name!r} is detected but not present in monitor_uids.'
+                    ' Maybe it is asleep?'
+                )
+                continue
 
             # get the EDID
             try:
