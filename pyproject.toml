@@ -37,7 +37,9 @@ dist = [
 dev = [
     "mypy",
     "flake8",
-    "types-pywin32 ; platform_system=='Windows'"
+    "types-pywin32 ; platform_system=='Windows'",
+    "pytest",
+    "pytest-mock"
 ]
 docs = [
     "jsmin",
