@@ -380,3 +380,6 @@ def list_monitors_info(
         return filter_monitors(haystack=info)
     except NoValidDisplayError:
         return []
+
+
+METHODS = (WMI, VCP)

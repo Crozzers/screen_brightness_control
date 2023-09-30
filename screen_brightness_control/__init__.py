@@ -879,15 +879,11 @@ _OS_METHODS: Tuple[Type[BrightnessMethod], ...]
 if platform.system() == 'Windows':
     from . import windows
     _OS_MODULE = windows
-    _OS_METHODS = (_OS_MODULE.WMI, _OS_MODULE.VCP)
+    _OS_METHODS = windows.METHODS
 elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
-    _OS_METHODS = (
-        _OS_MODULE.SysFiles, _OS_MODULE.I2C,
-        _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
-        _OS_MODULE.Light
-    )
+    _OS_METHODS = linux.METHODS
 else:
     _logger.warning(
         f'package imported on unsupported platform ({platform.system()})')

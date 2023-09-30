@@ -839,3 +839,6 @@ def list_monitors_info(
         return filter_monitors(haystack=haystack)
     except NoValidDisplayError:
         return []
+
+
+METHODS = (SysFiles, I2C, XRandr, DDCUtil, Light)
