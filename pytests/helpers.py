@@ -24,7 +24,7 @@ class BrightnessMethodTest(ABC):
         patch_get_display_info
     ) -> List[dict]:
         displays = method.get_display_info()
-        mocker.patch.object(method, 'get_display_info', Mock(return_value=displays, spec=True))
+        mocker.patch.object(method, 'get_display_info', Mock(return_value=displays), spec=True)
         return displays
 
 
@@ -85,7 +85,7 @@ class BrightnessMethodTest(ABC):
             method.get_display_info(display=0)
             spy.assert_called_once_with(display=0, haystack=display_info, **({} if extras is None else extras))
 
-    class TestGetBrightness(ABC):
+    class TestGetBrightness:
         @pytest.fixture(autouse=True)
         def patch(self, patch_get_brightness):
             return
@@ -94,16 +94,16 @@ class BrightnessMethodTest(ABC):
         def brightness(self, method: Type[BrightnessMethod]) -> List[int]:
             return method.get_brightness()
 
-        @abstractmethod
-        def test_display_kwarg(self):
-            '''Test what happens when display kwarg is given. Only one display should be polled'''
-            ...
+        class TestDisplayKwarg(ABC):
+            @abstractmethod
+            def test_with(self):
+                '''Test what happens when display kwarg is given. Only one display should be polled'''
+                ...
 
-        @abstractmethod
-        def test_no_display_kwarg(self):
-            '''
-            Test what happens when no display kwarg is given. All displays should be polled
-            '''
+            @abstractmethod
+            def test_without(self):
+                '''Test what happens when no display kwarg is given. All displays should be polled'''
+                ...
 
         def test_returns_list_of_integers(self, method: Type[BrightnessMethod], brightness):
             assert isinstance(brightness, list)
@@ -118,3 +118,27 @@ class BrightnessMethodTest(ABC):
                 assert len(brightness) == 1
                 assert isinstance(brightness[0], int)
                 assert 0 <= brightness[0] <= 100
+
+    class TestSetBrightness(ABC):
+        @pytest.fixture(autouse=True)
+        def patch(self, patch_set_brightness):
+            return
+
+        class TestDisplayKwarg(ABC):
+            @pytest.fixture(autouse=True)
+            def patch(self, freeze_display_info):
+                return
+
+            @abstractmethod
+            def test_with(self):
+                '''Test what happens when display kwarg is given. Only one display should be set'''
+                ...
+
+            @abstractmethod
+            def test_without(self):
+                '''Test what happens when no display kwarg is given. All displays should be set'''
+                ...
+
+        def test_returns_nothing(self, method: Type[BrightnessMethod]):
+            assert method.set_brightness(100) is None
+            assert method.set_brightness(100, display=0) is None
