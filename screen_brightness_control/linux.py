@@ -61,7 +61,8 @@ class SysFiles(BrightnessMethod):
                 # subsystems like intel_backlight usually have an acpi_video0
                 # counterpart, which we don't want so lets find the 'best' candidate
                 try:
-                    with open(os.path.join(f'/sys/class/backlight/{folder}/max_brightness')) as f:
+                    with open(f'/sys/class/backlight/{folder}/max_brightness') as f:
+                        # scale for SysFiles is just a multiplier for the set/get brightness values
                         scale = int(f.read().rstrip(' \n')) / 100
 
                     # use the display with the highest resolution scale
