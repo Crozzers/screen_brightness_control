@@ -107,7 +107,7 @@ jobs:
           packages-dir: ./
           repository-url: https://test.pypi.org/legacy/
       - name: Publish to PyPI
-        if: ${{ inputs.pypi != false }}
+        if: ${{ inputs.pypi == true || github.event_name == 'push' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
           name: "${{ needs.getversion.outputs.version }}"
           tag_name: ${{ needs.getversion.outputs.version }}
   docs:
-    if: ${{ inputs.docs != false }}
+    if: ${{ inputs.docs == true || github.event_name == 'push' }}
     needs: [release]
     runs-on: ubuntu-latest
     steps:
