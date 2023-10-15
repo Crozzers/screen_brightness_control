@@ -60,3 +60,8 @@ include = ["screen_brightness_control"]
 
 [tool.mypy]
 check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "pytests"
+]

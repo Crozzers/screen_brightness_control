@@ -1,8 +1,16 @@
 import pytest
+import platform
 
 import screen_brightness_control as sbc
 
 from .mocks import os_module_mock
+
+# define tests to skip
+collect_ignore = []
+if platform.system() == 'Windows':
+    collect_ignore.append('test_linux.py')
+elif platform.system() == 'Linux':
+    collect_ignore.append('test_windows.py')
 
 _OS_MODULE = sbc._OS_MODULE
 
