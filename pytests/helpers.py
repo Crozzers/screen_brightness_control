@@ -22,20 +22,23 @@ class BrightnessMethodTest(ABC):
         method: Type[BrightnessMethod],
         patch_get_display_info
     ) -> List[dict]:
+        '''
+        Calls `get_display_info`, stores the result, and mocks it to return the same
+        result every time it's called
+        '''
         displays = method.get_display_info()
         mocker.patch.object(method, 'get_display_info', Mock(return_value=displays), spec=True)
         return displays
 
-
     @pytest.fixture
     def patch_get_brightness(self, mocker: MockerFixture, patch_get_display_info):
         '''Applies patches to get `get_brightness` working'''
-        ...
+        raise NotImplementedError()
 
     @pytest.fixture
     def patch_set_brightness(self, mocker: MockerFixture, patch_get_display_info):
         '''Applies patches to get `set_brightness` working'''
-        ...
+        raise NotImplementedError()
 
     @pytest.fixture
     def method(self) -> Type[BrightnessMethod]:
@@ -97,6 +100,7 @@ class BrightnessMethodTest(ABC):
             return method.get_brightness()
 
         class TestDisplayKwarg(ABC):
+            # TODO: most of these tests are generic enough they could be implemented in a parent class
             def test_with(self):
                 '''Test what happens when display kwarg is given. Only one display should be polled'''
                 raise NotImplementedError()
@@ -105,30 +109,26 @@ class BrightnessMethodTest(ABC):
                 '''Test what happens when no display kwarg is given. All displays should be polled'''
                 raise NotImplementedError()
 
+            def test_only_returns_brightness_of_requested_display(self, method: Type[BrightnessMethod]):
+                for i in range(len(method.get_display_info())):
+                    brightness = method.get_brightness(display=i)
+                    assert isinstance(brightness, list)
+                    assert len(brightness) == 1
+                    assert isinstance(brightness[0], int)
+                    assert 0 <= brightness[0] <= 100
+
         def test_returns_list_of_integers(self, method: Type[BrightnessMethod], brightness):
             assert isinstance(brightness, list)
             assert all(isinstance(i, int) for i in brightness)
             assert all(0 <= i <= 100 for i in brightness)
             assert len(brightness) == len(method.get_display_info())
 
-        def test_only_returns_brightness_of_requested_display(self, method: Type[BrightnessMethod]):
-            for i in range(len(method.get_display_info())):
-                brightness = method.get_brightness(display=i)
-                assert isinstance(brightness, list)
-                assert len(brightness) == 1
-                assert isinstance(brightness[0], int)
-                assert 0 <= brightness[0] <= 100
-
     class TestSetBrightness(ABC):
         @pytest.fixture(autouse=True)
-        def patch(self, patch_set_brightness):
+        def patch(self, patch_set_brightness, freeze_display_info):
             return
 
         class TestDisplayKwarg(ABC):
-            @pytest.fixture(autouse=True)
-            def patch(self, freeze_display_info):
-                return
-
             def test_with(self):
                 '''Test what happens when display kwarg is given. Only one display should be set'''
                 raise NotImplementedError()
