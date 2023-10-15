@@ -34,7 +34,7 @@ class TestSysFiles(BrightnessMethodTest):
 
     class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         def test_returned_dicts_contain_required_keys(self, method):
-            super().test_returned_dicts_contain_required_keys(method, extras={'scale': float})
+            super().test_returned_dicts_contain_required_keys(method, extras={'scale': float, 'path': str})
 
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
             return super().test_display_filtering(mocker, original_os_module, method, extras={'include': ['path']})

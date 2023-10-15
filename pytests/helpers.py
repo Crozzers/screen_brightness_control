@@ -10,11 +10,10 @@ from screen_brightness_control.helpers import BrightnessMethod
 
 
 class BrightnessMethodTest(ABC):
-    @abstractmethod
     @pytest.fixture
     def patch_get_display_info(self, mocker: MockerFixture):
         '''Applies patches to get `get_display_info` working'''
-        ...
+        raise NotImplementedError()
 
     @pytest.fixture
     def freeze_display_info(
@@ -38,11 +37,10 @@ class BrightnessMethodTest(ABC):
         '''Applies patches to get `set_brightness` working'''
         ...
 
-    @abstractmethod
     @pytest.fixture
     def method(self) -> Type[BrightnessMethod]:
         '''Returns the brightness method under test'''
-        ...
+        raise NotImplementedError()
 
     class TestGetDisplayInfo:
         '''Some standard tests for the `get_display_info` method'''
@@ -61,16 +59,19 @@ class BrightnessMethodTest(ABC):
         def test_returned_dicts_contain_required_keys(self, method: Type[BrightnessMethod], extras: Optional[Dict[str, Type]]=None):
             info = method.get_display_info()
             for display in info:
-                for prop in ('name', 'path', 'model', 'serial', 'manufacturer', 'manufacturer_id', 'edid'):
-                    assert prop in display
-                    if display[prop] is not None:
-                        assert isinstance(display[prop], str)
+                # check basics
                 assert 'index' in display and isinstance(display['index'], int)
                 assert 'method' in display and display['method'] is method
+                # check all string fields
+                for prop in ('name', 'model', 'serial', 'manufacturer', 'manufacturer_id', 'edid'):
+                    assert prop in display, f'key {prop!r} not in returned dict'
+                    if display[prop] is not None:
+                        assert isinstance(display[prop], str), f'value at key {prop!r} was of type {type(display[prop])!r}'
+                # check any class specific extras
                 if extras is not None:
                     for prop, prop_type in extras.items():
-                        assert prop in display
-                        assert isinstance(display[prop], prop_type)
+                        assert prop in display, f'key {prop!r} not in returned dict'
+                        assert isinstance(display[prop], prop_type), f'value at key {prop!r} was of type {type(display[prop])!r}, not {prop_type!r}'
 
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method, extras=None):
             '''
@@ -83,6 +84,7 @@ class BrightnessMethodTest(ABC):
             spy = mocker.spy(original_os_module, 'filter_monitors')
             display_info = method.get_display_info()
             method.get_display_info(display=0)
+            # when this fails, double check the extras are being passed in right
             spy.assert_called_once_with(display=0, haystack=display_info, **({} if extras is None else extras))
 
     class TestGetBrightness:
@@ -95,15 +97,13 @@ class BrightnessMethodTest(ABC):
             return method.get_brightness()
 
         class TestDisplayKwarg(ABC):
-            @abstractmethod
             def test_with(self):
                 '''Test what happens when display kwarg is given. Only one display should be polled'''
-                ...
+                raise NotImplementedError()
 
-            @abstractmethod
             def test_without(self):
                 '''Test what happens when no display kwarg is given. All displays should be polled'''
-                ...
+                raise NotImplementedError()
 
         def test_returns_list_of_integers(self, method: Type[BrightnessMethod], brightness):
             assert isinstance(brightness, list)
@@ -129,15 +129,13 @@ class BrightnessMethodTest(ABC):
             def patch(self, freeze_display_info):
                 return
 
-            @abstractmethod
             def test_with(self):
                 '''Test what happens when display kwarg is given. Only one display should be set'''
-                ...
+                raise NotImplementedError()
 
-            @abstractmethod
             def test_without(self):
                 '''Test what happens when no display kwarg is given. All displays should be set'''
-                ...
+                raise NotImplementedError()
 
         def test_returns_nothing(self, method: Type[BrightnessMethod]):
             assert method.set_brightness(100) is None
