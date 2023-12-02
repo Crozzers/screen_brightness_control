@@ -5,7 +5,7 @@ from typing import Type
 from unittest.mock import Mock, call
 
 import pytest
-from .mocks.linux_mock import MockI2C
+from .mocks.linux_mock import MockI2C, mock_check_output
 from pytest_mock import MockerFixture
 
 import screen_brightness_control as sbc
@@ -169,3 +169,65 @@ class TestI2C(BrightnessMethodTest):
                 called_devices = [i[0][0] for i in spy.call_args_list]
                 # one call for populating max brightness cache, another for setting brightness, for each display
                 assert sorted(called_devices) == sorted(paths * 2)
+
+
+class TestXRandr(BrightnessMethodTest):
+    @pytest.fixture
+    def patch_get_display_info(self, mocker: MockerFixture):
+        mock = Mock(side_effect=mock_check_output, spec=True)
+        mocker.patch.object(sbc.helpers, 'check_output', mock)
+        mocker.patch.object(sbc.linux, 'check_output', mock)
+
+    @pytest.fixture
+    def patch_get_brightness(self, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def patch_set_brightness(self, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def method(self):
+        return linux.XRandr
+
+    class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
+        def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
+            super().test_display_filtering(mocker, original_os_module, method, extras={'include': ['interface']})
+
+        def test_brightness_kwarg(self, method: Type[linux.XRandr]):
+            assert all('brightness' not in display for display in method.get_display_info())
+            with_brightness = method.get_display_info(brightness=True)
+            assert all('brightness' in display for display in with_brightness)
+            assert all(
+                isinstance(d['brightness'], int)
+                and 0 <= d['brightness'] <= 100
+                for d in with_brightness
+            )
+
+    class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+            # xrandr polls all displays at once in `get_display_info`, so `test_with*`
+            # is not necessary. Providing stub implementations here to avoid NotImplementedError
+            def test_with(self):
+                pass
+
+            def test_without(self):
+                pass
+
+    class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, method: Type[linux.XRandr], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                for index, monitor in enumerate(freeze_display_info):
+                    method.set_brightness(100, display=index)
+                    command = spy.call_args_list[0][0][0]
+                    assert command.index('--output') == command.index(monitor['interface']) - 1
+                    assert command.index('--brightness') == command.index('1.0') - 1
+                    spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method: Type[linux.XRandr], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                method.set_brightness(100)
+                interfaces = [i['interface'] for i in freeze_display_info]
+                called_interfaces = [cmd[cmd.index('--output') + 1] for cmd in map(lambda x: x[0][0], spy.call_args_list)]
+                assert sorted(interfaces) == sorted(called_interfaces)

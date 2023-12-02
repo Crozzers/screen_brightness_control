@@ -1,6 +1,9 @@
 import re
-from typing import Dict, Optional, Tuple
+import textwrap
+from typing import Dict, List, Tuple
+
 from screen_brightness_control.linux import I2C
+
 
 def fake_edid(mfg_id: str, name: str, serial: str) -> str:
     def descriptor(string: str) -> str:
@@ -67,3 +70,44 @@ class MockI2C:
             assert vcp_code == 0x10, 'should only be getting the brightness'
             # current and max brightness
             return self._vcp_state.get(vcp_code, 100), 100
+
+
+def mock_xrandr_verbose_output(mfg_id: str, name: str, serial: str, index = 1):
+    '''
+    Mocks the output of `xrandr --verbose` for a display, including a fake edid
+    '''
+    edid = fake_edid(mfg_id, name, serial)
+    block = textwrap.indent('\n'.join(textwrap.wrap(edid, 32)), '    ' * 6)
+    return textwrap.dedent(f'''
+        HDMI-{index} connected ...
+                Identifier: 0x{mfg_id}
+                Brightness: 1.0
+                EDID:\n{block}
+                non-dekstop: 0
+          1920x1080 ...
+                h: ...
+                v: ...
+          2160x1440 ...
+                h: ...
+                v: ...
+    ''')
+
+
+def mock_check_output(command: List[str], max_tries: int = 1) -> bytes:
+    '''
+    Mocks the output of `check_output`
+    '''
+    if command[0] == 'xrandr':
+        if command == ['xrandr', '--verbose']:
+            # list displays
+            return (
+                mock_xrandr_verbose_output('DEL', 'Dell ABC123', 'abc123')
+                + mock_xrandr_verbose_output('BNQ', 'BenQ DEF456', 'def456')
+            ).encode()
+        elif '--output' in command and '--brightness' in command:
+            # output is not used. Return nothing
+            return b''
+        else:
+            raise NotImplementedError(f'mock for xrandr command not implemented: {command}')
+    else:
+        raise NotImplementedError(f'check_output mocks not implemented for {command[0]}')
