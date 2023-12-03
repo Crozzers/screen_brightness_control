@@ -76,6 +76,9 @@ class BrightnessMethodTest(ABC):
                         assert prop in display, f'key {prop!r} not in returned dict'
                         assert isinstance(display[prop], prop_type), f'value at key {prop!r} was of type {type(display[prop])!r}, not {prop_type!r}'
 
+                # check unsupported displays are filtered out, if applicable
+                assert 'unsupported' not in display, 'unsupported displays should be filtered out'
+
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method, extras=None):
             '''
             Args:
@@ -88,7 +91,10 @@ class BrightnessMethodTest(ABC):
             display_info = method.get_display_info()
             method.get_display_info(display=0)
             # when this fails, double check the extras are being passed in right
-            spy.assert_called_once_with(display=0, haystack=display_info, **({} if extras is None else extras))
+            try:
+                spy.assert_called_once_with(display=0, haystack=display_info, **({} if extras is None else extras))
+            except AssertionError as e:
+                raise AssertionError('did you specify the `extras` kwarg?') from e
 
     class TestGetBrightness:
         @pytest.fixture(autouse=True)

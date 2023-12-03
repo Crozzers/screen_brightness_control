@@ -93,21 +93,56 @@ def mock_xrandr_verbose_output(mfg_id: str, name: str, serial: str, index = 1):
     ''')
 
 
+def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index = 1):
+    '''
+    Mocks the output of `ddcutil detect` for a display, including a fake edid
+    '''
+    edid = fake_edid(mfg_id, name, serial)
+    block = ''
+    for chunk in textwrap.wrap(edid, 32):
+        block += '    ' * 2  # indent
+        block += '+0000   '  # block number
+        block += ' '.join(textwrap.wrap(chunk, 2))  # the edid line
+        block += '   ...the_line_decoded...'
+    block = textwrap.indent(block, '    ' * 5)
+    return textwrap.dedent(f'''
+        Display {index}
+            I2C bus: /dev/i2c-{index}
+            EDID synopsis:
+                Mfg id: {mfg_id} - SomeBrand
+                Model: {name}
+                Serial number: {serial}
+                Binary serial number: 123 (0x000000)
+                EDID hex dump:
+                        +0      +4      +8...
+                    {block}
+    ''')
+
+
 def mock_check_output(command: List[str], max_tries: int = 1) -> bytes:
     '''
     Mocks the output of `check_output`
     '''
     if command[0] == 'xrandr':
-        if command == ['xrandr', '--verbose']:
+        if command[1] == '--verbose':
             # list displays
             return (
-                mock_xrandr_verbose_output('DEL', 'Dell ABC123', 'abc123')
-                + mock_xrandr_verbose_output('BNQ', 'BenQ DEF456', 'def456')
+                mock_xrandr_verbose_output('DEL', 'Dell ABC123', 'abc123', 1)
+                + mock_xrandr_verbose_output('BNQ', 'BenQ DEF456', 'def456', 2)
             ).encode()
         elif '--output' in command and '--brightness' in command:
-            # output is not used. Return nothing
+            # set brightness. output is not used. Return nothing
             return b''
-        else:
-            raise NotImplementedError(f'mock for xrandr command not implemented: {command}')
-    else:
-        raise NotImplementedError(f'check_output mocks not implemented for {command[0]}')
+    elif command[0] == 'ddcutil':
+        if command[1] == 'detect':
+            # list displays
+            return (
+                mock_ddcutil_detect_output('DEL', 'Dell ABC123', 'abc123', 1)
+                + mock_ddcutil_detect_output('BNQ', 'BenQ DEF456', 'def456', 2)
+            ).encode()
+        elif command[1] == 'getvcp':
+            return b'100 100'
+        elif command[1] == 'setvcp':
+            return b''
+
+    raise NotImplementedError(f'check_output mocks not implemented for {command}')

@@ -231,3 +231,74 @@ class TestXRandr(BrightnessMethodTest):
                 interfaces = [i['interface'] for i in freeze_display_info]
                 called_interfaces = [cmd[cmd.index('--output') + 1] for cmd in map(lambda x: x[0][0], spy.call_args_list)]
                 assert sorted(interfaces) == sorted(called_interfaces)
+
+
+class TestDDCUtil(BrightnessMethodTest):
+    @pytest.fixture
+    def patch_get_display_info(self, mocker: MockerFixture):
+        mock = Mock(side_effect=mock_check_output, spec=True)
+        mocker.patch.object(sbc.helpers, 'check_output', mock)
+        mocker.patch.object(sbc.linux, 'check_output', mock)
+
+    @pytest.fixture
+    def patch_get_brightness(self, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def patch_set_brightness(self, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def method(self):
+        return linux.DDCUtil
+
+    class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
+        def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
+            return super().test_display_filtering(
+                mocker, original_os_module, method, extras={'include': ['i2c_bus']}
+            )
+
+    class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
+        # TODO: tests for brightness scaling
+        @pytest.fixture(autouse=True, scope='function')
+        def patch(self, patch_get_brightness):
+            sbc.linux.__cache__._store = {}
+
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                for index, display in enumerate(freeze_display_info):
+                    method.get_brightness(display=index)
+                    spy.assert_called_once()
+                    command = spy.call_args_list[0][0][0]
+                    assert command.index('-b') == command.index(str(display['bus_number'])) - 1
+                    spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                method.get_brightness()
+                buses = [str(d['bus_number']) for d in freeze_display_info]
+                called_buses = [i[i.index('-b') + 1] for i in map(lambda x: x[0][0], spy.call_args_list)]
+                assert buses == called_buses
+
+    class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
+        @pytest.fixture(autouse=True, scope='function')
+        def patch(self, patch_set_brightness):
+            sbc.linux.__cache__._store = {}
+
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                for index, display in enumerate(freeze_display_info):
+                    method.set_brightness(100, display=index)
+                    spy.assert_called_once()
+                    command = spy.call_args_list[0][0][0]
+                    assert command.index('-b') == command.index(str(display['bus_number'])) - 1
+                    spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+                spy = mocker.spy(sbc.linux, 'check_output')
+                method.set_brightness(100)
+                buses = [str(d['bus_number']) for d in freeze_display_info]
+                called_buses = [i[i.index('-b') + 1] for i in map(lambda x: x[0][0], spy.call_args_list)]
+                assert buses == called_buses
