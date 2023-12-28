@@ -361,7 +361,7 @@ class Display():
     serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
-    _logger: logging.Logger = field(init=False)
+    _logger: logging.Logger = field(init=False, repr=False)
 
     def __post_init__(self):
         self._logger = _logger.getChild(self.__class__.__name__).getChild(
