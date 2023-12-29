@@ -504,7 +504,7 @@ def percentage(
         lower_bound: the minimum value the brightness can be set to
 
     Returns:
-        The new brightness percentage, between `lower_bound` and 100
+        `.types.IntPercentage`: The new brightness percentage, between `lower_bound` and 100
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
         if callable(current):
