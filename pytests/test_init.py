@@ -1,12 +1,17 @@
+import logging
 import threading
+from copy import deepcopy
+from timeit import timeit
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
 from unittest.mock import Mock, call
 
 import pytest
 from pytest_mock import MockerFixture
-from .helpers import BrightnessFunctionTest
 
 import screen_brightness_control as sbc
+
+from .helpers import BFPatchType, BrightnessFunctionTest
+from .mocks import os_module_mock
 
 
 class TestGetBrightness(BrightnessFunctionTest):
@@ -20,6 +25,7 @@ class TestGetBrightness(BrightnessFunctionTest):
         assert isinstance(brightness, list)
         assert all(isinstance(i, int) for i in brightness)
         assert all(0 <= i <= 100 for i in brightness)  # type: ignore
+
 
 class TestSetBrightness(BrightnessFunctionTest):
     @pytest.fixture
@@ -145,3 +151,86 @@ class TestFadeBrightness(BrightnessFunctionTest):
         sbc.fade_brightness(*args, **kwargs)
         for mock_call in spy.mock_calls:
             assert mock_call == call(*args, **kwargs)
+
+
+def test_list_monitors_info(mock_os_module, mocker: MockerFixture):
+    '''
+    `list_monitors_info` is just a shell for the OS specific variant
+    '''
+    spy = mocker.spy(sbc._OS_MODULE, 'list_monitors_info')
+    result = sbc.list_monitors_info()
+    spy.assert_called_once()
+    assert result == spy.spy_return
+
+
+def test_list_monitors(mock_os_module, mocker: MockerFixture):
+    '''
+    `list_monitors` is just a shell for `list_monitors_info`
+    '''
+    spy = mocker.spy(sbc._OS_MODULE, 'list_monitors_info')
+    result = sbc.list_monitors()
+    spy.assert_called_once()
+    assert result == [i['name'] for i in spy.spy_return]
+
+
+class TestGetMethods:
+    def test_returns_dict(self):
+        methods = sbc.get_methods()
+        assert isinstance(methods, dict)
+        # check all methods included
+        assert tuple(methods.values()) == sbc._OS_METHODS
+        # check names match up
+        for name, method_class in methods.items():
+            assert name == method_class.__name__.lower()
+
+    class TestNameKwarg:
+        def test_non_str_raises_type_error(self):
+            with pytest.raises(TypeError, match=r'name must be of type str.*'):
+                sbc.get_methods(sbc._OS_METHODS[0])  # type: ignore
+
+        def test_raises_value_error_on_invalid_lookup(self):
+            with pytest.raises(ValueError, match=r'invalid method.*'):
+                sbc.get_methods('does not exist')
+
+        @pytest.mark.parametrize('name,method_class', [(i.__name__.lower(), i) for i in os_module_mock.METHODS])
+        def test_returns_dict_on_valid_lookup(self, mock_os_module, name: str, method_class):
+            assert sbc.get_methods(name) == {name: method_class}
+
+        @pytest.mark.parametrize('name,method_class', [(i.__name__.upper(), i) for i in os_module_mock.METHODS])
+        def test_converts_lookups_to_lowercase(self, mock_os_module, name: str, method_class):
+            assert sbc.get_methods(name) == {name.lower(): method_class}
+
+
+class TestDisplay:
+    @pytest.fixture(autouse=True, scope='function')
+    def display(self) -> sbc.Display:
+        '''Returns a `Display` instance with the brightness set to 50'''
+        display = sbc.Display.from_dict(sbc.list_monitors_info()[0])
+        display.set_brightness(50)
+        return display
+
+    class TestFadeBrightness:
+        @pytest.mark.parametrize('value', [100, 0, 75, 50, 150, -10])
+        def test_returns_int_percentage(self, display: sbc.Display, value: int):
+            assert 0 <= display.fade_brightness(value, interval=0) <= 100
+
+        @pytest.mark.parametrize('value', ['60', '70.0', '+10', '-10', '500'])
+        def test_relative_values(self, display: sbc.Display, value):
+            display.fade_brightness(value, interval=0)
+            assert display.get_brightness() == sbc.percentage(value, current=50)
+
+        def test_interval_kwarg(self, display: sbc.Display):
+            assert (
+                timeit(lambda: display.fade_brightness(100, start=95, interval=0), number=1)
+                < timeit(lambda: display.fade_brightness(100, start=95, interval=0.05), number=1)
+            ), 'longer interval should take more time'
+
+        @pytest.mark.parametrize('increment', [1, 5, 10, 15])
+        def test_increment_kwarg(self, display: sbc.Display, mocker: MockerFixture, increment: int):
+            spy = mocker.spy(display, 'set_brightness')
+            display.fade_brightness(100, interval=0, increment=increment, logarithmic=False)
+            values = [call.args[0] for call in spy.mock_calls]
+            # go until len - 2 because the last call to `set_brightness` is usually to make up the
+            # difference between the last incremented step and the target value
+            diffs = [values[i + 1] - values[i] for i in range(len(values) - 2)]
+            assert set(diffs) == {increment}

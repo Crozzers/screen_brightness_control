@@ -22,8 +22,8 @@ class MockBrightnessMethod(BrightnessMethod):
     @classmethod
     def get_brightness(cls, display = None):
         results = []
-        for index, display in enumerate(cls.get_display_info()):
-            results.append(cls.brightness.get(display['name'], 100))
+        for index, display_dict in enumerate(cls.get_display_info()):
+            results.append(cls.brightness.get(display_dict['name'], 100))
             if display is not None and display == index:
                 break
 
@@ -31,8 +31,8 @@ class MockBrightnessMethod(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value, display = None):
-        for index, display in enumerate(cls.get_display_info()):
+        for index, display_dict in enumerate(cls.get_display_info()):
             if display is None or display == index:
-                cls.brightness[display['name']] = value
+                cls.brightness[display_dict['name']] = value
                 if display is not None:
                     return

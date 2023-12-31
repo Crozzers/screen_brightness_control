@@ -182,7 +182,7 @@ def fade_brightness(
         By default, this function calls `get_brightness()` to return the new
         brightness of any adjusted displays.
 
-        If the `blocking` is set to `False`, then a list of threads are
+        If `blocking` is set to `False`, then a list of threads are
         returned, one for each display being faded.
 
     Example:
@@ -505,7 +505,7 @@ class Display():
 
         value = percentage(
             value,
-            current=lambda: self.method.get_brightness(display=self.index)[0],
+            current=self.get_brightness,
             lower_bound=lower_bound
         )
 
@@ -766,7 +766,6 @@ def filter_monitors(
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
             for identifier in ['edid', 'serial', 'name'] + include:
-                # check we haven't already added the monitor
                 if monitor.get(identifier, None) is None:
                     continue
 
@@ -777,6 +776,7 @@ def filter_monitors(
                 if isinstance(display, str) and m_id != display:
                     continue
 
+                # check we haven't already added the monitor
                 if not added:
                     filtered_displays[m_id] = monitor
                     added = True
