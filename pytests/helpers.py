@@ -175,9 +175,11 @@ class BrightnessFunctionTest(ABC):
             method = display['method']
             if method in method_patches:
                 continue
+            setter_mock = mocker.patch.object(method, 'set_brightness', Mock(side_effect=do_nothing))
             method_patches[method] = {
-                'set': mocker.patch.object(method, 'set_brightness', Mock(side_effect=do_nothing)),
-                'get': mocker.patch.object(method, 'get_brightness', Mock(side_effect=side_effect))
+                'get': mocker.patch.object(method, 'get_brightness', Mock(side_effect=side_effect)),
+                'set': setter_mock,
+                'fade': setter_mock
             }
         return method_patches
 
@@ -201,7 +203,8 @@ class BrightnessFunctionTest(ABC):
             func = sbc.get_brightness
             args = ()
         else:  # fade
-            func = sbc.fade_brightness
+            # override sleep interval to speed up tests
+            func = lambda *a, **k: sbc.fade_brightness(*a, interval=0, **k)
 
         return (func, args, returns_none)
 

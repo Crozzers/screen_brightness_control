@@ -1,3 +1,4 @@
+import threading
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
 from unittest.mock import Mock, call
 
@@ -103,3 +104,44 @@ class TestSetBrightness(BrightnessFunctionTest):
             expected = [i + 10 for i in range(count + 1)]
             actual = [call.args[0] for call in self.setter_spy.mock_calls[1:]]
             assert expected == actual
+
+
+class TestFadeBrightness(BrightnessFunctionTest):
+    @pytest.fixture
+    def operation_type(self):
+        return 'fade'
+
+    def test_returns_new_brightness_by_default(self, displays):
+        result = sbc.fade_brightness(100, interval=0)
+        assert isinstance(result, list) and all(isinstance(i, int) for i in result)
+        # `type: ignore` because fade brightness could return `list[Thread]`
+        assert sorted(result) == sorted(d['index'] for d in displays)  # type: ignore
+
+    def test_blocking_kwarg(self):
+        threads = sbc.fade_brightness(100, blocking=False, interval=0)
+        assert isinstance(threads, list) and all(isinstance(t, threading.Thread) for t in threads)
+        for thread in threads:
+            # assert again for type checker
+            assert isinstance(thread, threading.Thread)
+            thread.join()
+
+    def test_passes_kwargs_to_display_class(self, mocker: MockerFixture):
+        '''
+        Most of the fade logic has been moved to `Display.fade_brightness`. The top level
+        `fade_brightness` function is just responsible for coordinating all the different displays.
+
+        This test just checks that we pass all the correct config to the display class, and then the
+        `Display` unit tests will check that all the right things happen
+        '''
+        def stub(*a, **k):
+            pass
+
+        spy = mocker.patch.object(sbc.Display, 'fade_brightness', Mock(side_effect=stub))
+        args = (100,)
+        # all the kwargs that get passed to `Display`
+        kwargs: Dict[str, Any] = dict(
+            start=0, interval=0, increment=10, force=False, logarithmic=False
+        )
+        sbc.fade_brightness(*args, **kwargs)
+        for mock_call in spy.mock_calls:
+            assert mock_call == call(*args, **kwargs)
