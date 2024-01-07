@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import threading
 from copy import deepcopy
@@ -60,12 +61,9 @@ class TestSetBrightness(BrightnessFunctionTest):
             sbc.set_brightness(0)
             self.percentage_spy.assert_called_once_with(0, lower_bound=self.lower_bound)
 
-        def test_force_kwarg(self, os_name: str):
-            if os_name != 'Linux':
-                pytest.skip('force kwarg does not apply on windows')
-
+        def test_force_kwarg(self):
             sbc.set_brightness(0)
-            self.percentage_spy.assert_called_once_with(0, lower_bound=1)
+            self.percentage_spy.assert_called_once_with(0, lower_bound=self.lower_bound)
             self.percentage_spy.reset_mock()
 
             sbc.set_brightness(0, force=True)
@@ -219,6 +217,12 @@ class TestDisplay:
             display.fade_brightness(value, interval=0)
             assert display.get_brightness() == sbc.percentage(value, current=50)
 
+        @pytest.mark.parametrize('value', [100, 75, 50, 25])
+        def test_start_kwarg(self, display: sbc.Display, mocker: MockerFixture, value):
+            spy = mocker.spy(display, 'set_brightness')
+            display.fade_brightness(100, start=value, interval=0)
+            assert spy.mock_calls[0].args[0] == value
+
         def test_interval_kwarg(self, display: sbc.Display):
             assert (
                 timeit(lambda: display.fade_brightness(100, start=95, interval=0), number=1)
@@ -226,11 +230,133 @@ class TestDisplay:
             ), 'longer interval should take more time'
 
         @pytest.mark.parametrize('increment', [1, 5, 10, 15])
-        def test_increment_kwarg(self, display: sbc.Display, mocker: MockerFixture, increment: int):
+        @pytest.mark.parametrize('start', [0, 100])
+        def test_increment_kwarg(self, display: sbc.Display, mocker: MockerFixture, increment: int, start: int):
+            target = 50
             spy = mocker.spy(display, 'set_brightness')
-            display.fade_brightness(100, interval=0, increment=increment, logarithmic=False)
+            display.fade_brightness(target, interval=0, increment=increment, logarithmic=False, start=start)
             values = [call.args[0] for call in spy.mock_calls]
             # go until len - 2 because the last call to `set_brightness` is usually to make up the
             # difference between the last incremented step and the target value
             diffs = [values[i + 1] - values[i] for i in range(len(values) - 2)]
+
+            # check that it works the same when fading to a dimmer value
+            if start > target:
+                increment = -increment
             assert set(diffs) == {increment}
+
+        @pytest.mark.parametrize('os_name', ['Windows', 'Linux'])
+        def test_force_kwarg(self, display: sbc.Display, mocker: MockerFixture, os_name: str):
+            mocker.patch.object(sbc.platform, 'system', new=lambda: os_name)
+            lower_bound = 1 if os_name == 'Linux' else 0
+            spy = mocker.spy(display, 'set_brightness')
+
+            display.fade_brightness(10, start=0, interval=0)
+            assert spy.mock_calls[0].args[0] == lower_bound
+            spy.reset_mock()
+
+            display.fade_brightness(10, start=0, interval=0, force=True)
+            assert spy.mock_calls[0].args[0] == 0
+
+        def test_logarithmic_kwarg(self, display: sbc.Display, mocker: MockerFixture):
+            # range_spy = mocker.spy(sbc, 'range')  # cant spy on range?
+            logarithmic_range_spy = mocker.spy(sbc, 'logarithmic_range')
+
+            display.fade_brightness(100, interval=0)
+            # range_spy.assert_not_called()
+            logarithmic_range_spy.assert_called()
+
+            # range_spy.reset_mock()
+            logarithmic_range_spy.reset_mock()
+
+            display.fade_brightness(100, interval=0, logarithmic=False)
+            # range_spy.assert_called()
+            logarithmic_range_spy.assert_not_called()
+
+    class TestFromDict:
+        def test_returns_valid_instance(self):
+            info = sbc.list_monitors_info()[0]
+            display = sbc.Display.from_dict(info)
+            assert isinstance(display, sbc.Display)
+            for field in dataclasses.fields(sbc.Display):
+                if field.name.startswith('_'):
+                    continue
+                assert getattr(display, field.name) == info[field.name]
+
+        def test_excludes_extra_fields(self):
+            info = {**sbc.list_monitors_info()[0], 'extra': '12345'}
+            display = sbc.Display.from_dict(info)
+            with pytest.raises(AttributeError):
+                getattr(display, 'extra')
+
+    def test_get_brightness(self, display: sbc.Display, mocker: MockerFixture):
+        spy = mocker.spy(display.method, 'get_brightness')
+        result = display.get_brightness()
+        spy.assert_called_once_with(display=display.index)
+        # method returns list[int]. display should return int
+        assert isinstance(result, int) and result == spy.spy_return[0]
+
+    class TestGetIdentifier:
+        def test_returns_tuple(self, display: sbc.Display):
+            result = display.get_identifier()
+            assert isinstance(result, tuple)
+            prop, value = result
+            assert isinstance(prop, str) and hasattr(display, prop)
+            assert getattr(display, prop) == value
+            assert value is not None
+
+        @pytest.mark.parametrize('prop', ['edid', 'serial', 'name', 'index'])
+        def test_returns_first_not_none_value(self, display: sbc.Display, prop: str):
+            all_props = ['edid', 'serial', 'name', 'index']
+            for p in all_props:
+                if p == prop:
+                    continue
+                setattr(display, p, None)
+
+            key, value = display.get_identifier()
+            assert key == prop and value == getattr(display, prop)
+
+        def test_allows_falsey_values(self, display: sbc.Display):
+            '''
+            `get_identifier` should skip properties only if they are `None`.
+            It's very easy to do an `if truthy` check but that's not what we want here.
+            '''
+            display.edid = ''
+            prop, value = display.get_identifier()
+            assert prop == 'edid' and value == ''
+
+    def test_is_active(self, display: sbc.Display, mocker: MockerFixture):
+        # normal operation, should return true
+        assert display.is_active() is True
+
+        def stub(*_, **__):
+            raise Exception
+
+        mocker.patch.object(display, 'get_brightness', Mock(side_effect=stub))
+        # if get_brightness fails, should return false
+        assert display.is_active() is False
+
+    class TestSetBrightness:
+        def test_normal(self, display: sbc.Display, mocker: MockerFixture):
+            spy = mocker.spy(display.method, 'set_brightness')
+            display.set_brightness(100)
+            spy.assert_called_once_with(100, display=display.index)
+
+        def test_relative_values(self, display: sbc.Display, mocker: MockerFixture):
+            mocker.patch.object(display, 'get_brightness', Mock(return_value=50))
+            spy = mocker.spy(display.method, 'set_brightness')
+            display.set_brightness('+30')
+            spy.assert_called_once_with(80, display=display.index)
+
+        @pytest.mark.parametrize('os_name', ['Windows', 'Linux'])
+        def test_force_kwarg(self, display: sbc.Display, mocker: MockerFixture, os_name: str):
+            mocker.patch.object(sbc.platform, 'system', new=lambda: os_name)
+            lower_bound = 1 if os_name == 'Linux' else 0
+            spy = mocker.spy(display.method, 'set_brightness')
+
+            display.set_brightness(0)
+            assert spy.mock_calls[0].args[0] == lower_bound
+            spy.reset_mock()
+
+            display.set_brightness(0, force=True)
+            assert spy.mock_calls[0].args[0] == 0
