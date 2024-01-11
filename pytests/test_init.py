@@ -1,9 +1,8 @@
 import dataclasses
-import logging
 import threading
 from copy import deepcopy
 from timeit import timeit
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
+from typing import Any, Dict, List
 from unittest.mock import Mock, call
 
 import pytest
@@ -11,7 +10,7 @@ from pytest_mock import MockerFixture
 
 import screen_brightness_control as sbc
 
-from .helpers import BFPatchType, BrightnessFunctionTest
+from .helpers import BrightnessFunctionTest
 from .mocks import os_module_mock
 
 
@@ -155,24 +154,38 @@ def test_list_monitors_info(mock_os_module, mocker: MockerFixture):
     '''
     `list_monitors_info` is just a shell for the OS specific variant
     '''
-    spy = mocker.spy(sbc._OS_MODULE, 'list_monitors_info')
-    result = sbc.list_monitors_info()
-    spy.assert_called_once()
-    assert result == spy.spy_return
+    mock = mocker.patch.object(sbc._OS_MODULE, 'list_monitors_info', Mock(return_value=12345, spec=True))
+    supported_kw = {
+        'method': 123,
+        'allow_duplicates': 456,
+        'unsupported': 789
+    }
+    result = sbc.list_monitors_info(**supported_kw)  # type: ignore
+    # check that kwargs passed along and result passed back
+    mock.assert_called_once_with(**supported_kw)
+    assert result == 12345
 
 
 def test_list_monitors(mock_os_module, mocker: MockerFixture):
     '''
     `list_monitors` is just a shell for `list_monitors_info`
     '''
-    spy = mocker.spy(sbc._OS_MODULE, 'list_monitors_info')
-    result = sbc.list_monitors()
-    spy.assert_called_once()
-    assert result == [i['name'] for i in spy.spy_return]
+    mock_return = [{'name': '123'}, {'name': '456'}]
+    mock = mocker.patch.object(
+        sbc, 'list_monitors_info',
+        Mock(return_value=mock_return, spec=True)
+    )
+    supported_kw = {
+        'method': 123
+    }
+    result = sbc.list_monitors(**supported_kw)  # type:ignore
+    # check that kwargs passed along and result passed back
+    mock.assert_called_once_with(**supported_kw)
+    assert result == [i['name'] for i in mock_return]
 
 
 class TestGetMethods:
-    def test_returns_dict(self):
+    def test_returns_dict_of_brightness_methods(self):
         methods = sbc.get_methods()
         assert isinstance(methods, dict)
         # check all methods included
@@ -180,6 +193,7 @@ class TestGetMethods:
         # check names match up
         for name, method_class in methods.items():
             assert name == method_class.__name__.lower()
+            assert issubclass(method_class, sbc.BrightnessMethod)
 
     class TestNameKwarg:
         def test_non_str_raises_type_error(self):
@@ -273,6 +287,26 @@ class TestDisplay:
             # range_spy.assert_called()
             logarithmic_range_spy.assert_not_called()
 
+        def test_end_of_fade_correction(self, display: sbc.Display, mocker: MockerFixture):
+            '''
+            If the brightness does not match the target at the end of the fade then
+            this should be corrected
+            '''
+            target = 100
+            mocker.patch.object(display, 'get_brightness', Mock(return_value=50))
+            setter = mocker.patch.object(display, 'set_brightness', autospec=True)
+            # patch the range function so that it never returns the target brightness
+            range_values = list(sbc.logarithmic_range(0, 100))[:-10]
+            assert target not in range_values, 'setup has gone wrong!'
+            mocker.patch.object(
+                sbc, 'logarithmic_range',
+                Mock(return_value=range_values, spec=True)
+            )
+
+            display.fade_brightness(target, start=0, interval=0)
+            # at this point, fade_brightness should have manually set the final brightness
+            assert setter.mock_calls[-1].args[0] == target
+
     class TestFromDict:
         def test_returns_valid_instance(self):
             info = sbc.list_monitors_info()[0]
@@ -337,10 +371,14 @@ class TestDisplay:
         assert display.is_active() is False
 
     class TestSetBrightness:
-        def test_normal(self, display: sbc.Display, mocker: MockerFixture):
+        @pytest.mark.parametrize('value', [1, 10, 21, 37, 43, 50, 90, 100])
+        def test_normal(self, display: sbc.Display, mocker: MockerFixture, value: int):
             spy = mocker.spy(display.method, 'set_brightness')
-            display.set_brightness(100)
-            spy.assert_called_once_with(100, display=display.index)
+            display.set_brightness(value)
+            spy.assert_called_once_with(value, display=display.index)
+
+        def test_returns_none(self):
+            assert sbc.set_brightness(100) is None
 
         def test_relative_values(self, display: sbc.Display, mocker: MockerFixture):
             mocker.patch.object(display, 'get_brightness', Mock(return_value=50))
@@ -360,3 +398,204 @@ class TestDisplay:
 
             display.set_brightness(0, force=True)
             assert spy.mock_calls[0].args[0] == 0
+
+
+class TestFilterMonitors:
+    def test_returns_list_of_dict(self):
+        filtered = sbc.filter_monitors()
+        assert isinstance(filtered, list)
+        assert all(isinstance(i, dict) for i in filtered)
+
+    def test_raises_exception_when_no_displays_detected(self, mocker: MockerFixture):
+        mocker.patch.object(sbc, 'list_monitors_info', Mock(spec=True, return_value=[]))
+        # filter_monitors sleeps 0.4s between retries. patch that to speed up tests
+        mocker.patch.object(sbc.time, 'sleep', Mock())
+        with pytest.raises(sbc.NoValidDisplayError):
+            sbc.filter_monitors()
+
+    class TestDisplayKwarg:
+        sample_monitors: List[dict]
+
+        @pytest.fixture(autouse=True, scope='function')
+        def setup(self, mocker: MockerFixture):
+            methods = tuple(sbc.get_methods().values())
+            self.sample_monitors = [
+                {
+                    'index': 0,
+                    'method': methods[0],
+                    'name': 'Dell Sample 1',
+                    'serial': '1234',
+                    'edid': '00ffwhatever'
+                },
+                {
+                    'index': 1,
+                    'method': methods[0],
+                    # duplicate of sample 1
+                    'name': 'Dell Sample 1',
+                    'serial': '1234',
+                    'edid': '00ffwhatever'
+                },
+                {
+                    'index': 0,
+                    'method': methods[1],
+                    'name': 'Dell Sample 2'
+                }
+            ]
+            mocker.patch.object(sbc, 'list_monitors_info', Mock(spec=True, return_value=self.sample_monitors))
+            return self.sample_monitors
+
+        @pytest.mark.parametrize('invalid_input', [[], 0.0])
+        def test_raises_type_error_on_invalid_display_kwarg(self, invalid_input):
+            with pytest.raises(TypeError):
+                sbc.filter_monitors(display=invalid_input)
+
+        def test_filters_displays_by_global_index(self):
+            result = sbc.filter_monitors(display=0)
+            assert len(result) == 1 and result[0] == self.sample_monitors[0]
+
+            # also test that it correctly identifies sample_monitors[1] as a duplicate and filters it out
+            assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
+
+        class TestDuplicateFilteringAndIncludeKwarg:
+            default_identifiers = ['edid', 'serial', 'name']
+            @pytest.fixture(scope='function')
+            def sample_monitors(self, setup):
+                return deepcopy(setup[:2])
+
+            @pytest.mark.parametrize('field', default_identifiers)
+            def test_filters_duplicates_by_first_not_none_identifier(self, sample_monitors: list[dict], field: str, include=None):
+                '''
+                There are 3 properties of a display we can use to identify it: edid, serial and name.
+                EDID contains the serial and is the most unique. Two monitors with the same edid are
+                the same display, but we can't always get the EDID (laptop displays). Serial is also
+                pretty unique, but again we can't always get it.
+                The name is only somewhat unique due to the fact that I rarely see someone with two
+                of the same display. It's always a primary and some random.
+
+                We should prioritize these identifiers in terms of uniqueness, with edid first and name
+                last. If one is not available, fall back to the next one.
+                '''
+                include = include or []
+                identifier_fields = deepcopy(self.default_identifiers) + include
+                for item in sample_monitors:
+                    # delete all identifier fields that take priority over this one
+                    for f in identifier_fields:
+                        if f == field:
+                            break
+                        del item[f]
+
+                assert sbc.filter_monitors(
+                    haystack=sample_monitors, include=include
+                ) == [sample_monitors[0]], (
+                    f'both displays have same {field!r}, second should be filtered out'
+                )
+
+                sample_monitors[0][field] = str(reversed(sample_monitors[1][field]))
+                assert sbc.filter_monitors(
+                    haystack=sample_monitors, include=include
+                    ) == sample_monitors, (
+                    f'both displays have different {field!r}s, neither should be filtered out'
+                )
+
+                del sample_monitors[0][field]
+                if field == identifier_fields[-1]:
+                    # special case for 'name' because this is the last valid identifier
+                    assert sbc.filter_monitors(
+                        haystack=sample_monitors, include=include
+                        ) == [sample_monitors[1]], (
+                        'first display has no valid identifiers and should be removed'
+                    )
+                else:
+                    assert sbc.filter_monitors(
+                        haystack=sample_monitors, include=include
+                    ) == sample_monitors, (
+                        f'one display is missing {field!r}, neither should be filtered'
+                    )
+
+                del sample_monitors[1][field]
+                if field == identifier_fields[-1]:
+                    with pytest.raises(sbc.NoValidDisplayError):
+                        # neither display has any valid identifiers. Both should be removed
+                        sbc.filter_monitors(
+                            haystack=sample_monitors, include=include
+                        )
+                else:
+                    assert sbc.filter_monitors(
+                        haystack=sample_monitors, include=include
+                    ) == [sample_monitors[0]], (
+                        f'neither display has {field!r}, second should be filtered out'
+                    )
+
+            @pytest.mark.parametrize('field', [default_identifiers[-1], 'extra'])
+            def test_include_kwarg_acts_as_identifier_when_filtering_duplicates(self, sample_monitors: list[dict], field: str):
+                for item in sample_monitors:
+                    item['extra'] = '12345'
+
+                self.test_filters_duplicates_by_first_not_none_identifier(sample_monitors, field, [field])
+
+            def test_include_kwarg_can_identify_displays(self, sample_monitors: list[dict]):
+                for item in sample_monitors:
+                    for field in self.default_identifiers:
+                        del item[field]
+
+                sample_monitors[0]['extra'] = 'extra_info'
+                with pytest.raises(sbc.NoValidDisplayError):
+                    # it shouldn't work without the include
+                    sbc.filter_monitors(display='extra_info', haystack=sample_monitors)
+
+                assert sbc.filter_monitors(display='extra_info', include=['extra'], haystack=sample_monitors) == [sample_monitors[0]]
+
+            def test_identifiers_that_do_not_match_display_kwarg_are_not_used(self):
+                '''
+                If two displays have the same edid but different names and we search for
+                the second name, it should return the second display. It should not filter it out
+                as a duplicate of the first.
+                '''
+                primary = sbc.list_monitors_info()[0]
+                displays = [deepcopy(primary) for i in range(3)]
+                displays[-1]['name'] = 'Display with weird name'
+                assert sbc.filter_monitors(haystack=displays) == [displays[0]], (
+                    'no display kwarg, duplciates are filtered on edid'
+                )
+                assert sbc.filter_monitors(
+                    haystack=displays, display=displays[-1]['name']
+                ) == [displays[-1]], 'display kwarg present, displays are filtered by whaever identifier matches'
+
+    class TestHaystackAndMethodKwargs:
+        class TestWithHaystack:
+            def test_skips_calling_list_monitors_info(self, mocker: MockerFixture):
+                displays = sbc.list_monitors_info()
+                spy = mocker.spy(sbc, 'list_monitors_info')
+                sbc.filter_monitors(haystack=displays)
+                spy.assert_not_called()
+
+            def test_filters_by_method(self):
+                method_name, method_class = next(iter(sbc.get_methods().items()))
+                result = sbc.filter_monitors(method=method_name, haystack=sbc.list_monitors_info())
+                assert all(display['method'] == method_class for display in result)
+
+            def test_does_not_mutate_the_haystack(self):
+                haystack = sbc.list_monitors_info()
+                haystack_orig = deepcopy(haystack)
+                sbc.filter_monitors(method=haystack[0]['method'].__name__, haystack=haystack)
+                assert haystack == haystack_orig
+
+        class TestWithoutHaystack:
+            def test_filters_from_list_with_duplicates(self, mocker: MockerFixture):
+                '''It should allow duplictaes to be returned from `list_monitors_info` and filter the whole list'''
+                spy = mocker.spy(sbc, 'list_monitors_info')
+                sbc.filter_monitors()
+                spy.assert_called()
+                assert spy.mock_calls[0].kwargs.get('allow_duplicates', False) is True
+
+            def test_passes_method_kwarg_along(self, mocker: MockerFixture):
+                spy = mocker.spy(sbc, 'list_monitors_info')
+                method = next(iter(sbc.get_methods().keys()))
+                sbc.filter_monitors(method=method)
+                spy.assert_called()
+                assert spy.mock_calls[0].kwargs.get('method', None) == method
+
+        @pytest.mark.parametrize('haystack', [None, []])
+        def test_error_raised_on_invalid_method_kwarg(self, haystack):
+            with pytest.raises(ValueError):
+                sbc.filter_monitors(method='not real method', haystack=haystack)

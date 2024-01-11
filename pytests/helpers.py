@@ -208,6 +208,8 @@ class BrightnessFunctionTest(ABC):
 
         return (func, args, returns_none)
 
+    ### TODO: add tests for set/fade for invalid brightness value inputs
+
     class TestDisplayKwarg:
         @pytest.mark.parametrize('identifier', ['index', 'name', 'serial', 'edid'])
         def test_identifiers(self, patch_methods: BFPatchType, operation_type: BFOpType, operation, displays, identifier: str):
@@ -245,6 +247,14 @@ class BrightnessFunctionTest(ABC):
             for display in displays:
                 patch_methods[display['method']][operation_type].assert_any_call(*args, display=display['index'])
 
+        def test_invalid_display(self, operation):
+            func, args, _ = operation
+            with pytest.raises(sbc.NoValidDisplayError):
+                func(*args, display='does not exist')
+
+            with pytest.raises(TypeError):
+                func(*args, display=0.0)
+
     class TestMethodKwarg:
         def test_none(self, patch_methods: BFPatchType, operation_type: BFOpType, operation):
             '''Test all methods get called if no method kwarg given'''
@@ -265,3 +275,12 @@ class BrightnessFunctionTest(ABC):
                         continue
                     other_spies[operation_type].assert_not_called()
                 spy.reset_mock()
+
+        def test_invalid_method(self, operation):
+            func, args, _ = operation
+            with pytest.raises(ValueError):
+                func(*args, method='does not exist')
+
+            # cannot guarantee TypeError as method kwarg does not always go through `get_methods`
+            with pytest.raises(Exception):
+                func(*args, method=0.0)
