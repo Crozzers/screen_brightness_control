@@ -727,6 +727,7 @@ def filter_monitors(
 
     Raises:
         NoValidDisplayError: if the display does not have a match
+        TypeError: if the `display` kwarg is not `int` or `str`
 
     Example:
         ```python
@@ -824,7 +825,6 @@ def __brightness(
 
     output: List[Union[int, None]] = []
     errors = []
-    method = method.lower() if isinstance(method, str) else method
 
     for monitor in filter_monitors(display=display, method=method):
         try:
