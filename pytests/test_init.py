@@ -306,6 +306,8 @@ class TestDisplay:
             display.fade_brightness(target, start=0, interval=0)
             # at this point, fade_brightness should have manually set the final brightness
             assert setter.mock_calls[-1].args[0] == target
+            # it should have also passed the `force` kwarg along to the final call
+            assert 'force' in setter.mock_calls[-1].kwargs, 'force kwarg should be propagated'
 
     class TestFromDict:
         def test_returns_valid_instance(self):

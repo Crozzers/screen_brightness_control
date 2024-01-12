@@ -422,11 +422,11 @@ class Display():
             f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
 
         for value in range_func(start, finish, increment):
-            self.set_brightness(value)
+            self.set_brightness(value, force=force)
             time.sleep(interval)
 
         if self.get_brightness() != finish:
-            self.set_brightness(finish)
+            self.set_brightness(finish, force=force)
 
         return self.get_brightness()
 
