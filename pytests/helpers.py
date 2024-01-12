@@ -2,6 +2,7 @@ from abc import ABC
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type, Union
 from unittest.mock import Mock
 import pytest
+from pytest import MonkeyPatch
 
 from pytest_mock import MockerFixture
 
@@ -208,7 +209,48 @@ class BrightnessFunctionTest(ABC):
 
         return (func, args, returns_none)
 
-    ### TODO: add tests for set/fade for invalid brightness value inputs
+    @pytest.mark.parametrize('set_value,expected_value', [
+        # get_brightness mock is overriden to always return 50
+        (100, 100),
+        (50, 50),
+        (1, 1),
+        # relative values
+        ('+40', 90),
+        ('-40', 10),
+        # out of bounds relative values
+        ('+99', 100),
+        ('+500', 100),
+        ('-99', 0),
+        ('-500', 0),
+        # out of bounds normal values
+        (10000, 100),
+        (-10000, 0),
+        # pushing the limits but still valid
+        (5.5, 5),
+    ])
+    def test_brightness_values(
+        self, operation_type: BFOpType, patch_methods: BFPatchType, operation,
+        monkeypatch: MonkeyPatch, set_value: Union[int, str], expected_value: int
+    ):
+        '''
+        Test that for brightness setters, when we say "set brightness to X", test that this actually
+        happens.
+        '''
+        if operation_type == 'get':
+            pytest.skip('setting brightness values does not apply to brightness getters')
+
+        func, args, _ = operation
+        method = next(iter(patch_methods.keys()))
+        mock = patch_methods[method]['set']
+
+        # this is scoped just to this function
+        # I checked by setting the side effect to raise an exception, and only this test failed
+        monkeypatch.setattr(patch_methods[method]['get'], 'side_effect', lambda *a, **kw: [50])
+
+        # apply force kwarg so we don't have to deal with lower bounds on linux
+        func(set_value, *args[1:], display=0, force=True)
+        called_with = mock.mock_calls[-1].args[0]
+        assert called_with == expected_value, f'{called_with}, {expected_value}'
 
     class TestDisplayKwarg:
         @pytest.mark.parametrize('identifier', ['index', 'name', 'serial', 'edid'])
