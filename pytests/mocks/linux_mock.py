@@ -3,26 +3,7 @@ import textwrap
 from typing import Dict, List, Tuple
 
 from screen_brightness_control.linux import I2C
-
-
-def fake_edid(mfg_id: str, name: str, serial: str) -> str:
-    def descriptor(string: str) -> str:
-        return string.encode('utf-8').hex() + ('20' * (13 - len(string)))
-
-    mfg_ords = [ord(i) - 64 for i in mfg_id]
-    mfg = mfg_ords[0] << 10 | mfg_ords[1] << 5 | mfg_ords[2]
-
-    return ''.join((
-        '00ffffffffffff00',  # header
-        f'{mfg:04x}',  # 'DEL' mfg id
-        '00' * 44,  # product id -> edid timings
-        '00' * 18,  # empty descriptor block
-        f'000000fc00{descriptor(name)}',  # name descriptor
-        f'000000ff00{descriptor(serial)}',  # serial descriptor
-        '00' * 18,  # empty descriptor
-        '00'  # extension flag
-        '00'  # checksum - TODO: make this actually work
-    ))
+from ..helpers import fake_edid
 
 
 class MockI2C:

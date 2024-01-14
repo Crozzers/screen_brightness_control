@@ -326,3 +326,32 @@ class BrightnessFunctionTest(ABC):
             # cannot guarantee TypeError as method kwarg does not always go through `get_methods`
             with pytest.raises(Exception):
                 func(*args, method=0.0)
+
+
+def fake_edid(mfg_id: str, name: Optional[str] = None, serial: Optional[str] = None) -> str:
+    def descriptor(string: str) -> str:
+        assert len(string) <= 13, (
+            f'descriptor block contents cannot be >13 bytes long (got {len(string)})'
+        )
+        return string.encode('utf-8').hex() + ('20' * (13 - len(string)))
+
+    # TODO: this breaks for lowercase inputs. Should be looked into
+    mfg_ords = [ord(i) - 64 for i in mfg_id]
+    mfg = mfg_ords[0] << 10 | mfg_ords[1] << 5 | mfg_ords[2]
+
+    empty_descriptor_block = '00' * 18
+    descriptor_blocks = [
+        empty_descriptor_block,
+        f'000000fc00{descriptor(name)}' if name else empty_descriptor_block,
+        f'000000ff00{descriptor(serial)}' if serial else empty_descriptor_block,
+        empty_descriptor_block
+    ]
+
+    return ''.join((
+        '00ffffffffffff00',  # header
+        f'{mfg:04x}',  # 'DEL' mfg id
+        '00' * 44,  # product id -> edid timings
+        *descriptor_blocks,
+        '00'  # extension flag
+        '00'  # checksum - TODO: make this actually work
+    ))
