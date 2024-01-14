@@ -61,7 +61,8 @@ class SysFiles(BrightnessMethod):
                 # subsystems like intel_backlight usually have an acpi_video0
                 # counterpart, which we don't want so lets find the 'best' candidate
                 try:
-                    with open(os.path.join(f'/sys/class/backlight/{folder}/max_brightness')) as f:
+                    with open(f'/sys/class/backlight/{folder}/max_brightness') as f:
+                        # scale for SysFiles is just a multiplier for the set/get brightness values
                         scale = int(f.read().rstrip(' \n')) / 100
 
                     # use the display with the highest resolution scale
@@ -546,7 +547,7 @@ class XRandr(BrightnessMethodAdv):
             elif 'EDID:' in line:
                 # extract the edid from the chunk of the output that will contain the edid
                 edid = ''.join(
-                    i.replace('\t', '') for i in xrandr_output[line_index + 1: line_index + 9]
+                    i.replace('\t', '').replace(' ', '') for i in xrandr_output[line_index + 1: line_index + 9]
                 )
                 tmp_display['edid'] = edid
 
@@ -839,3 +840,6 @@ def list_monitors_info(
         return filter_monitors(haystack=haystack)
     except NoValidDisplayError:
         return []
+
+
+METHODS = (SysFiles, I2C, XRandr, DDCUtil, Light)

@@ -182,7 +182,7 @@ def fade_brightness(
         By default, this function calls `get_brightness()` to return the new
         brightness of any adjusted displays.
 
-        If the `blocking` is set to `False`, then a list of threads are
+        If `blocking` is set to `False`, then a list of threads are
         returned, one for each display being faded.
 
     Example:
@@ -361,7 +361,7 @@ class Display():
     serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
-    _logger: logging.Logger = field(init=False)
+    _logger: logging.Logger = field(init=False, repr=False)
 
     def __post_init__(self):
         self._logger = _logger.getChild(self.__class__.__name__).getChild(
@@ -422,11 +422,11 @@ class Display():
             f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
 
         for value in range_func(start, finish, increment):
-            self.set_brightness(value)
+            self.set_brightness(value, force=force)
             time.sleep(interval)
 
         if self.get_brightness() != finish:
-            self.set_brightness(finish)
+            self.set_brightness(finish, force=force)
 
         return self.get_brightness()
 
@@ -505,7 +505,7 @@ class Display():
 
         value = percentage(
             value,
-            current=lambda: self.method.get_brightness(display=self.index)[0],
+            current=self.get_brightness,
             lower_bound=lower_bound
         )
 
@@ -727,6 +727,7 @@ def filter_monitors(
 
     Raises:
         NoValidDisplayError: if the display does not have a match
+        TypeError: if the `display` kwarg is not `int` or `str`
 
     Example:
         ```python
@@ -766,7 +767,6 @@ def filter_monitors(
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
             for identifier in ['edid', 'serial', 'name'] + include:
-                # check we haven't already added the monitor
                 if monitor.get(identifier, None) is None:
                     continue
 
@@ -777,6 +777,7 @@ def filter_monitors(
                 if isinstance(display, str) and m_id != display:
                     continue
 
+                # check we haven't already added the monitor
                 if not added:
                     filtered_displays[m_id] = monitor
                     added = True
@@ -824,7 +825,6 @@ def __brightness(
 
     output: List[Union[int, None]] = []
     errors = []
-    method = method.lower() if isinstance(method, str) else method
 
     for monitor in filter_monitors(display=display, method=method):
         try:
@@ -879,15 +879,11 @@ _OS_METHODS: Tuple[Type[BrightnessMethod], ...]
 if platform.system() == 'Windows':
     from . import windows
     _OS_MODULE = windows
-    _OS_METHODS = (_OS_MODULE.WMI, _OS_MODULE.VCP)
+    _OS_METHODS = windows.METHODS
 elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
-    _OS_METHODS = (
-        _OS_MODULE.SysFiles, _OS_MODULE.I2C,
-        _OS_MODULE.XRandr, _OS_MODULE.DDCUtil,
-        _OS_MODULE.Light
-    )
+    _OS_METHODS = linux.METHODS
 else:
     _logger.warning(
         f'package imported on unsupported platform ({platform.system()})')

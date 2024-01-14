@@ -48,20 +48,9 @@ pip install .[all]   # install all optional dependencies
 
 ## Testing
 
-Tests can be run in 2 modes, synthetic and real. The synthetic tests are much quicker because they spoof your monitors, however, they have limited code coverage.
-Real tests will test against your actual monitors but are slow and have a tendency to create errors from hammering your monitor's I2C bus.
-I find synthetic tests sufficient to test most high-level code changes but a real test should ideally be run at least once before releasing code.
-
-To run the tests, use these commands:
-```bash
-python tests/testall.py --synthetic  # synthetic tests
-python tests/testall.py              # real tests
+Tests are written with [pytest](https://docs.pytest.org) and can be run with the following command:
 ```
-
-If you have `make` installed, you can run:
-```powershell
-make test     # run synthetic tests
-make testall  # run real tests
+pytest
 ```
 
 ## Documentation

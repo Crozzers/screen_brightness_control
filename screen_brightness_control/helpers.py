@@ -38,7 +38,7 @@ MONITOR_MANUFACTURER_CODES = {
     "CMO": "Acer",
     "CPL": "Compal",
     "CPQ": "Compaq",
-    "CPT": "Chunghwa Pciture Tubes, Ltd.",
+    "CPT": "Chunghwa Picture Tubes, Ltd.",
     "CTX": "CTX",
     "DEC": "DEC",
     "DEL": "Dell",
@@ -257,7 +257,7 @@ class EDID:
         "B"     # vertical size in cm (1 byte)
         "B"     # display gamma (1 byte)
         "B"     # supported features (1 byte)
-        "10s"   # color characteristics (10 bytes)
+        "10s"   # colour characteristics (10 bytes)
         "H"     # supported timings (2 bytes)
         "B"     # reserved timing (1 byte)
         "16s"   # EDID supported timings (16 bytes)
@@ -294,7 +294,8 @@ class EDID:
                 Otherwise, expect a string
 
         Raises:
-            EDIDParseError
+            EDIDParseError: if the EDID info cannot be unpacked
+            TypeError: if `edid` is not `str` or `bytes`
 
         Example:
             ```python
@@ -309,8 +310,10 @@ class EDID:
             ```
         '''
         # see https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#EDID_1.4_data_format
-        if not isinstance(edid, bytes):
+        if isinstance(edid, str):
             edid = bytes.fromhex(edid)
+        elif not isinstance(edid, bytes):
+            raise TypeError(f'edid must be of type bytes or str, not {type(edid)!r}')
 
         try:
             blocks = struct.unpack(cls.EDID_FORMAT, edid)
@@ -352,12 +355,14 @@ class EDID:
         model = None
         if name is not None:
             if manufacturer is not None and name.startswith(manufacturer):
-                # eg: 'BenQ GL2450H' -> ['BenQ', 'GL2450H']
+                # eg: 'BenQ GL2450H' -> 'GL2450H'
                 model = name.replace(manufacturer, '', 1).strip()
 
-            # if previous method did not work, try taking last word of name
+            # if previous method did not work (or if we don't know the manufacturer),
+            # try taking last word of name
             if not model:
                 try:
+                    # eg: 'BenQ GL2450H' -> ['BenQ', 'GL2450H']
                     model = name.strip().rsplit(' ', 1)[1]
                 except IndexError:
                     # If the name does not include model information then
@@ -501,7 +506,7 @@ def percentage(
         lower_bound: the minimum value the brightness can be set to
 
     Returns:
-        The new brightness percentage, between `lower_bound` and 100
+        `.types.IntPercentage`: The new brightness percentage, between `lower_bound` and 100
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
         if callable(current):

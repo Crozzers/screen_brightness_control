@@ -35,7 +35,7 @@ String values may come in two forms:
     For example, if the current brightness is 50%, a value of `'+40'` would imply 90% brightness
     and a value of `'-40'` would imply 10% brightness.
 
-Relative brightness values will usually be resolved by the `helpers.percentage` function.
+Relative brightness values will usually be resolved by the `.helpers.percentage` function.
 '''
 
 

@@ -37,7 +37,9 @@ dist = [
 dev = [
     "mypy",
     "flake8",
-    "types-pywin32 ; platform_system=='Windows'"
+    "types-pywin32 ; platform_system=='Windows'",
+    "pytest",
+    "pytest-mock"
 ]
 docs = [
     "jsmin",
@@ -58,3 +60,8 @@ include = ["screen_brightness_control"]
 
 [tool.mypy]
 check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
