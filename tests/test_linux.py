@@ -130,7 +130,7 @@ class TestI2C(BrightnessMethodTest):
         return linux.I2C
 
     class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
-        def test_returned_dicts_contain_required_keys(self, method: type[BrightnessMethod]):
+        def test_returned_dicts_contain_required_keys(self, method: Type[BrightnessMethod]):
             return super().test_returned_dicts_contain_required_keys(method, {'i2c_bus': str})
 
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):

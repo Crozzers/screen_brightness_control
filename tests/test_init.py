@@ -465,7 +465,7 @@ class TestFilterMonitors:
                 return deepcopy(setup[:2])
 
             @pytest.mark.parametrize('field', default_identifiers)
-            def test_filters_duplicates_by_first_not_none_identifier(self, sample_monitors: list[dict], field: str, include=None):
+            def test_filters_duplicates_by_first_not_none_identifier(self, sample_monitors: List[dict], field: str, include=None):
                 '''
                 There are 3 properties of a display we can use to identify it: edid, serial and name.
                 EDID contains the serial and is the most unique. Two monitors with the same edid are
@@ -529,13 +529,13 @@ class TestFilterMonitors:
                     )
 
             @pytest.mark.parametrize('field', [default_identifiers[-1], 'extra'])
-            def test_include_kwarg_acts_as_identifier_when_filtering_duplicates(self, sample_monitors: list[dict], field: str):
+            def test_include_kwarg_acts_as_identifier_when_filtering_duplicates(self, sample_monitors: List[dict], field: str):
                 for item in sample_monitors:
                     item['extra'] = '12345'
 
                 self.test_filters_duplicates_by_first_not_none_identifier(sample_monitors, field, [field])
 
-            def test_include_kwarg_can_identify_displays(self, sample_monitors: list[dict]):
+            def test_include_kwarg_can_identify_displays(self, sample_monitors: List[dict]):
                 for item in sample_monitors:
                     for field in self.default_identifiers:
                         del item[field]
