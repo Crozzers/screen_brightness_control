@@ -355,12 +355,14 @@ class EDID:
         model = None
         if name is not None:
             if manufacturer is not None and name.startswith(manufacturer):
-                # eg: 'BenQ GL2450H' -> ['BenQ', 'GL2450H']
+                # eg: 'BenQ GL2450H' -> 'GL2450H'
                 model = name.replace(manufacturer, '', 1).strip()
 
-            # if previous method did not work, try taking last word of name
+            # if previous method did not work (or if we don't know the manufacturer),
+            # try taking last word of name
             if not model:
                 try:
+                    # eg: 'BenQ GL2450H' -> ['BenQ', 'GL2450H']
                     model = name.strip().rsplit(' ', 1)[1]
                 except IndexError:
                     # If the name does not include model information then

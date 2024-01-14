@@ -547,7 +547,7 @@ class XRandr(BrightnessMethodAdv):
             elif 'EDID:' in line:
                 # extract the edid from the chunk of the output that will contain the edid
                 edid = ''.join(
-                    i.replace('\t', '') for i in xrandr_output[line_index + 1: line_index + 9]
+                    i.replace('\t', '').replace(' ', '') for i in xrandr_output[line_index + 1: line_index + 9]
                 )
                 tmp_display['edid'] = edid
 
