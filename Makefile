@@ -6,7 +6,7 @@ lint:
 
 .PHONY: testquick
 testquick:
-	python tests/testall.py --synthetic
+	python -m pytest
 
 .PHONY: test
 test: lint
@@ -14,7 +14,7 @@ test: lint
 
 .PHONY: testall
 testall:
-	python tests/testall.py
+	python -m pytest
 
 .PHONY: mypy
 mypy:
