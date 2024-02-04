@@ -274,32 +274,35 @@ class TestMonitorBrandLookup:
             == ('DEL', 'Dell')
         )
 
-    @pytest.mark.parametrize('mfg_id,manufacturer', sbc.helpers.MONITOR_MANUFACTURER_CODES.items())
-    def test_bidirectional_lookups(self, mfg_id, manufacturer):
-        all_ids = self.get_all_ids(manufacturer)
+    def test_bidirectional_lookups(self, subtests):
+        for mfg_id, manufacturer in sbc.helpers.MONITOR_MANUFACTURER_CODES.items():
+            with subtests.test(mfg_id=mfg_id, manufacturer=manufacturer):
+                all_ids = self.get_all_ids(manufacturer)
 
-        id_lookup = _monitor_brand_lookup(mfg_id)
-        assert id_lookup is not None, 'ID lookup should be successful'
-        assert id_lookup[0] in all_ids and id_lookup[1] == manufacturer, (
-            'ID lookup should return valid ID and manufacturer name'
-        )
+                id_lookup = _monitor_brand_lookup(mfg_id)
+                assert id_lookup is not None, 'ID lookup should be successful'
+                assert id_lookup[0] in all_ids and id_lookup[1] == manufacturer, (
+                    'ID lookup should return valid ID and manufacturer name'
+                )
 
-        name_lookup = _monitor_brand_lookup(manufacturer)
-        assert name_lookup is not None, 'name lookup should be successful'
-        assert name_lookup[1] == manufacturer and name_lookup[0] in all_ids,(
-            'name lookup should return valid ID and manufacturer name'
-        )
+                name_lookup = _monitor_brand_lookup(manufacturer)
+                assert name_lookup is not None, 'name lookup should be successful'
+                assert name_lookup[1] == manufacturer and name_lookup[0] in all_ids,(
+                    'name lookup should return valid ID and manufacturer name'
+                )
 
-    @pytest.mark.parametrize('manufacturer', list(
-        itertools.chain(*[
-            [value, value.upper(), value.lower(), value.lower().capitalize()]
-            for value in sbc.helpers.MONITOR_MANUFACTURER_CODES.values()
-        ])
-    ))
-    def test_lookup_names_are_case_corrected(self, manufacturer):
-        all_ids = self.get_all_ids(manufacturer)
-        lookup = _monitor_brand_lookup(manufacturer)
-        assert lookup is not None and lookup[0] in all_ids and lookup[1].lower() == manufacturer.lower()
+    def test_lookup_names_are_case_corrected(self, subtests):
+        for manufacturer in sbc.helpers.MONITOR_MANUFACTURER_CODES.values():
+            for variation in [
+                manufacturer,
+                manufacturer.upper(),
+                manufacturer.lower(),
+                manufacturer.lower().capitalize()
+            ]:
+                with subtests.test(manufacturer=manufacturer, variation=variation):
+                    all_ids = self.get_all_ids(variation)
+                    lookup = _monitor_brand_lookup(variation)
+                    assert lookup is not None and lookup[0] in all_ids and lookup[1].lower() == variation.lower()
 
     def test_invalid_lookups(self):
         assert _monitor_brand_lookup('NUL') is None

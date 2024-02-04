@@ -50,16 +50,17 @@ class TestWMI(BrightnessMethodTest):
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, freeze_display_info, method):
+            def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
                 wmi = sbc.windows._wmi_init()
                 mocker.patch.object(sbc.windows, '_wmi_init', Mock(return_value=wmi, spec=True))
                 brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
                 mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
                 spy = mocker.spy(brightness_method, 'WmiSetBrightness')
                 for index, display in enumerate(freeze_display_info):
-                    method.set_brightness(100, display=index)
-                    spy.assert_called_once_with(100, 0)
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        spy.assert_called_once_with(100, 0)
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, freeze_display_info, method):
                 wmi = sbc.windows._wmi_init()

@@ -120,15 +120,16 @@ class TestFadeBrightness(BrightnessFunctionTest):
         # `type: ignore` because fade brightness could return `list[Thread]`
         assert sorted(result) == sorted(d['index'] for d in displays)  # type: ignore
 
-    def test_blocking_kwarg(self):
+    def test_blocking_kwarg(self, subtests):
         threads = sbc.fade_brightness(100, blocking=False, interval=0)
         assert isinstance(threads, list) and all(isinstance(t, threading.Thread) for t in threads)
-        for thread in threads:
-            # assert again for type checker
-            assert isinstance(thread, threading.Thread)
-            thread.join()
+        for index, thread in enumerate(threads):
+            with subtests.test(index=index, thread=thread):
+                # assert again for type checker
+                assert isinstance(thread, threading.Thread)
+                thread.join()
 
-    def test_passes_kwargs_to_display_class(self, mocker: MockerFixture):
+    def test_passes_kwargs_to_display_class(self, mocker: MockerFixture, subtests):
         '''
         Most of the fade logic has been moved to `Display.fade_brightness`. The top level
         `fade_brightness` function is just responsible for coordinating all the different displays.
@@ -146,8 +147,9 @@ class TestFadeBrightness(BrightnessFunctionTest):
             start=0, interval=0, increment=10, force=False, logarithmic=False
         )
         sbc.fade_brightness(*args, **kwargs)
-        for mock_call in spy.mock_calls:
-            assert mock_call == call(*args, **kwargs)
+        for index, mock_call in enumerate(spy.mock_calls):
+            with subtests.test(index=index, mock_call=mock_call):
+                assert mock_call == call(*args, **kwargs)
 
 
 def test_list_monitors_info(mock_os_module, mocker: MockerFixture):
@@ -185,15 +187,16 @@ def test_list_monitors(mock_os_module, mocker: MockerFixture):
 
 
 class TestGetMethods:
-    def test_returns_dict_of_brightness_methods(self):
+    def test_returns_dict_of_brightness_methods(self, subtests):
         methods = sbc.get_methods()
         assert isinstance(methods, dict)
         # check all methods included
         assert tuple(methods.values()) == sbc._OS_METHODS
         # check names match up
         for name, method_class in methods.items():
-            assert name == method_class.__name__.lower()
-            assert issubclass(method_class, sbc.BrightnessMethod)
+            with subtests.test(method=name):
+                assert name == method_class.__name__.lower()
+                assert issubclass(method_class, sbc.BrightnessMethod)
 
     class TestNameKwarg:
         def test_non_str_raises_type_error(self):
@@ -310,14 +313,15 @@ class TestDisplay:
             assert 'force' in setter.mock_calls[-1].kwargs, 'force kwarg should be propagated'
 
     class TestFromDict:
-        def test_returns_valid_instance(self):
+        def test_returns_valid_instance(self, subtests):
             info = sbc.list_monitors_info()[0]
             display = sbc.Display.from_dict(info)
             assert isinstance(display, sbc.Display)
             for field in dataclasses.fields(sbc.Display):
                 if field.name.startswith('_'):
                     continue
-                assert getattr(display, field.name) == info[field.name]
+                with subtests.test(field=field):
+                    assert getattr(display, field.name) == info[field.name]
 
         def test_excludes_extra_fields(self):
             info = {**sbc.list_monitors_info()[0], 'extra': '12345'}

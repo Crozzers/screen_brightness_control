@@ -59,12 +59,13 @@ class TestSysFiles(BrightnessMethodTest):
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(read_data='100'), spec=True)
                 for index, display in enumerate(freeze_display_info):
-                    method.get_brightness(display=index)
-                    mock.assert_called_once_with(os.path.join(display['path'], 'brightness'), 'r')
-                    mock.reset_mock()
+                    with subtests.test(index=index):
+                        method.get_brightness(display=index)
+                        mock.assert_called_once_with(os.path.join(display['path'], 'brightness'), 'r')
+                        mock.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(read_data='100'), spec=True)
@@ -85,22 +86,24 @@ class TestSysFiles(BrightnessMethodTest):
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(), spec=True)
                 for index, display in enumerate(freeze_display_info):
-                    method.set_brightness(100, display=index)
-                    mock.assert_called_once_with(os.path.join(display['path'], 'brightness'), 'w')
-                    mock().write.assert_called_once_with('100')
-                    mock.reset_mock()
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        mock.assert_called_once_with(os.path.join(display['path'], 'brightness'), 'w')
+                        mock().write.assert_called_once_with('100')
+                        mock.reset_mock()
 
-            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(), spec=True)
                 method.set_brightness(100)
                 write = mock().write
 
                 for index, display in enumerate(freeze_display_info):
-                    mock.assert_any_call(os.path.join(display['path'], 'brightness'), 'w')
-                    assert write.call_args_list[index][0][0] == '100'
+                    with subtests.test(index=index):
+                        mock.assert_any_call(os.path.join(display['path'], 'brightness'), 'w')
+                        assert write.call_args_list[index][0][0] == '100'
 
 
 class TestI2C(BrightnessMethodTest):
@@ -138,12 +141,13 @@ class TestI2C(BrightnessMethodTest):
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(method, 'DDCInterface')
                 for index, display in enumerate(freeze_display_info):
-                    method.get_brightness(display=index)
-                    spy.assert_called_once_with(display['i2c_bus'])
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.get_brightness(display=index)
+                        spy.assert_called_once_with(display['i2c_bus'])
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
                 spy = mocker.spy(method, 'DDCInterface')
@@ -154,13 +158,14 @@ class TestI2C(BrightnessMethodTest):
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(method, 'DDCInterface')
                 for index, display in enumerate(freeze_display_info):
-                    method.set_brightness(100, display=index)
-                    # one call for populating max brightness cache, another for setting brightness
-                    spy.assert_has_calls([call(display['i2c_bus'])] * 2)
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        # one call for populating max brightness cache, another for setting brightness
+                        spy.assert_has_calls([call(display['i2c_bus'])] * 2)
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
                 spy = mocker.spy(method, 'DDCInterface')
@@ -216,14 +221,15 @@ class TestXRandr(BrightnessMethodTest):
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[linux.XRandr], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[linux.XRandr], freeze_display_info, subtests):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 for index, monitor in enumerate(freeze_display_info):
-                    method.set_brightness(100, display=index)
-                    command = spy.call_args_list[0][0][0]
-                    assert command.index('--output') == command.index(monitor['interface']) - 1
-                    assert command.index('--brightness') == command.index('1.0') - 1
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        command = spy.call_args_list[0][0][0]
+                        assert command.index('--output') == command.index(monitor['interface']) - 1
+                        assert command.index('--brightness') == command.index('1.0') - 1
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[linux.XRandr], freeze_display_info):
                 spy = mocker.spy(sbc.linux, 'check_output')
@@ -265,14 +271,15 @@ class TestDDCUtil(BrightnessMethodTest):
             sbc.linux.__cache__._store = {}
 
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 for index, display in enumerate(freeze_display_info):
-                    method.get_brightness(display=index)
-                    spy.assert_called_once()
-                    command = spy.call_args_list[0][0][0]
-                    assert command.index('-b') == command.index(str(display['bus_number'])) - 1
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.get_brightness(display=index)
+                        spy.assert_called_once()
+                        command = spy.call_args_list[0][0][0]
+                        assert command.index('-b') == command.index(str(display['bus_number'])) - 1
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
                 spy = mocker.spy(sbc.linux, 'check_output')
@@ -287,14 +294,15 @@ class TestDDCUtil(BrightnessMethodTest):
             sbc.linux.__cache__._store = {}
 
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 for index, display in enumerate(freeze_display_info):
-                    method.set_brightness(100, display=index)
-                    spy.assert_called_once()
-                    command = spy.call_args_list[0][0][0]
-                    assert command.index('-b') == command.index(str(display['bus_number'])) - 1
-                    spy.reset_mock()
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        spy.assert_called_once()
+                        command = spy.call_args_list[0][0][0]
+                        assert command.index('-b') == command.index(str(display['bus_number'])) - 1
+                        spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info):
                 spy = mocker.spy(sbc.linux, 'check_output')
