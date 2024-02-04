@@ -156,5 +156,7 @@ jobs:
         working-directory: docs/docs
         run: |
           git add -A
-          git commit -m "Bump ${{ needs.getversion.outputs.version }}"
+          git commit -m "Bump $VERSION"
           git push
+        env:
+          VERSION: ${{ needs.getversion.outputs.version }}
