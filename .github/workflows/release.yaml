@@ -113,7 +113,7 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages-dir: ./
       - name: Draft release
-        if: ${{ inputs.github != false }}
+        if: ${{ inputs.github == true || github.event_name == 'push' }}
         uses: softprops/action-gh-release@v1
         with:
           draft: true
