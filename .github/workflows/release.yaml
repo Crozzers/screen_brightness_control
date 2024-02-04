@@ -69,7 +69,7 @@ jobs:
         with:
           ref: ${{ needs.getversion.outputs.gitRef }}
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
@@ -96,7 +96,7 @@ jobs:
         with:
           name: packages
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Publish to Test PyPI
@@ -130,7 +130,7 @@ jobs:
         with:
           ref: ${{ needs.getversion.outputs.gitRef }}
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
