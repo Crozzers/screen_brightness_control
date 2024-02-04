@@ -82,6 +82,8 @@ class TestVCP(BrightnessMethodTest):
             displays = method.get_display_info()
             for display in displays[start:]:
                 yield displays.index(display)
+                # call cleanup function for testing convenience
+                ctypes.windll.dxva2.DestroyPhysicalMonitor(0)
 
         mocker.patch.object(ctypes, 'windll', FakeWinDLL, create=True)
         # also patch locally imported version
@@ -108,11 +110,16 @@ class TestVCP(BrightnessMethodTest):
         return sbc.windows.VCP
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
-        @pytest.skip('proper iter_physical_monitors mocks not set up yet')
-        def test_handles_are_cleaned_up(self, mocker: MockerFixture, method):
-            num_displays = len(method.get_display_info())
+        @pytest.mark.parametrize('display_kw', [None, 0, 1, 2])
+        def test_handles_are_cleaned_up(self, mocker: MockerFixture, method, display_kw):
+            '''
+            DestroyPhysicalMonitor should be called ONCE for each monitor iterated over.
+            When using the `display` kwarg, only one monitor should be iterated over and therefore only one
+            handle should be destroyed
+            '''
+            num_displays = 1 if display_kw is not None else len(method.get_display_info())
             spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
-            method.get_brightness()
+            method.get_brightness(display=display_kw)
             assert spy.call_count == num_displays
 
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
@@ -136,6 +143,14 @@ class TestVCP(BrightnessMethodTest):
                         assert spy.mock_calls[index].args[0] == handle
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
+        @pytest.mark.parametrize('display_kw', [None, 0, 1, 2])
+        def test_handles_are_cleaned_up(self, mocker: MockerFixture, method, display_kw):
+            '''See equivalent test in `TestGetBrightness`'''
+            num_displays = 1 if display_kw is not None else len(method.get_display_info())
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            method.set_brightness(100, display=display_kw)
+            assert spy.call_count == num_displays
+
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
                 spy = mocker.spy(ctypes.windll.dxva2, 'SetVCPFeature')

@@ -326,13 +326,11 @@ class VCP(BrightnessMethod):
                 values.append(current)
 
             if display == index:
-                # if we have just got the display we wanted then exit here
-                # no point iterating through all the other ones
+                # if we've got the display we wanted then exit here, no point iterating through all the others.
+                # Cleanup function usually called in iter_physical_monitors won't get called if we break, so call now
+                windll.dxva2.DestroyPhysicalMonitor(handle)
                 break
 
-        if 'handle' in locals():
-            # make sure final handle is destroyed
-            windll.dxva2.DestroyPhysicalMonitor(handle)
         return values
 
     @classmethod
@@ -347,20 +345,19 @@ class VCP(BrightnessMethod):
         code = BYTE(0x10)
         value_dword = DWORD(value)
         start = display if display is not None else 0
-        for index, monitor in enumerate(cls.iter_physical_monitors(start=start), start=start):
-            if display is None or display == index:
-                handle = HANDLE(monitor)
-                for attempt in range(max_tries):
-                    if windll.dxva2.SetVCPFeature(handle, code, value_dword):
-                        break
-                    time.sleep(0.02 if attempt < 20 else 0.1)
-                else:
-                    cls._logger.error(
-                        f'failed to set display:{index}->{value} after {attempt} tries')
+        for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
+            for attempt in range(max_tries):
+                if windll.dxva2.SetVCPFeature(handle, code, value_dword):
+                    break
+                time.sleep(0.02 if attempt < 20 else 0.1)
+            else:
+                cls._logger.error(
+                    f'failed to set display:{index}->{value} after {attempt} tries')
 
-        if 'handle' in locals():
-            # make sure final handle is destroyed
-            windll.dxva2.DestroyPhysicalMonitor(handle)
+            if display == index:
+                # we have the display we wanted, exit and cleanup
+                windll.dxva2.DestroyPhysicalMonitor(handle)
+                break
 
 
 def list_monitors_info(
