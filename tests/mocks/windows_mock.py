@@ -1,5 +1,8 @@
 import re
 from collections import namedtuple
+
+import win32con
+
 from ..helpers import fake_edid
 
 FAKE_DISPLAYS = [
@@ -66,6 +69,26 @@ class FakePyDISPLAY_DEVICE:
     def __init__(self, fake: dict):
         self.__fake = fake
         self.DeviceID = instance_name(fake)
+        self.StateFlags = win32con.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP
+
+
+class FakeWinDLL:
+    class dxva2:
+        @staticmethod
+        def DestroyPhysicalMonitor(handle):
+            pass
+
+        @staticmethod
+        def GetVCPFeatureAndVCPFeatureReply(
+                handle, code, code_type_out=None, current_value_out=None, max_value_out=None
+        ):
+            assert current_value_out is not None
+            current_value_out._obj.value = 100
+            return 1
+
+        @staticmethod
+        def SetVCPFeature(handle, code, value_in):
+            return 1
 
 
 def mock_wmi_init():

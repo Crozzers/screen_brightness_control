@@ -39,7 +39,8 @@ dev = [
     "flake8",
     "types-pywin32 ; platform_system=='Windows'",
     "pytest",
-    "pytest-mock"
+    "pytest-mock",
+    "pytest-subtests"
 ]
 docs = [
     "jsmin",

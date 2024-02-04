@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+import ctypes
 import screen_brightness_control as sbc
 from typing import Type
 from unittest.mock import Mock
@@ -8,7 +8,8 @@ from unittest.mock import call
 
 from .helpers import BrightnessMethodTest
 from screen_brightness_control.helpers import BrightnessMethod
-from .mocks.windows_mock import mock_enum_display_devices, mock_wmi_init
+from .mocks.windows_mock import mock_enum_display_devices, mock_wmi_init, FakeWinDLL
+
 
 @pytest.fixture
 def patch_global_get_display_info(mocker: MockerFixture):
@@ -53,7 +54,7 @@ class TestWMI(BrightnessMethodTest):
                 wmi = sbc.windows._wmi_init()
                 mocker.patch.object(sbc.windows, '_wmi_init', Mock(return_value=wmi, spec=True))
                 brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
-                mocker.patch.object(wmi,'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
+                mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
                 spy = mocker.spy(brightness_method, 'WmiSetBrightness')
                 for index, display in enumerate(freeze_display_info):
                     method.set_brightness(100, display=index)
@@ -64,9 +65,93 @@ class TestWMI(BrightnessMethodTest):
                 wmi = sbc.windows._wmi_init()
                 mocker.patch.object(sbc.windows, '_wmi_init', Mock(return_value=wmi, spec=True))
                 brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
-                mocker.patch.object(wmi,'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
+                mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
                 spy = mocker.spy(brightness_method, 'WmiSetBrightness')
 
                 method.set_brightness(100)
                 spy.assert_has_calls([call(100, 0)] * 3)
                 spy.reset_mock()
+
+
+class TestVCP(BrightnessMethodTest):
+    @pytest.fixture
+    def patch_get_display_info(self, patch_global_get_display_info, mocker: MockerFixture, method):
+        '''Mock everything needed to get `VCP.get_display_info` to run'''
+
+        def mock_iter_physical_monitors(start=0):
+            displays = method.get_display_info()
+            for display in displays[start:]:
+                yield displays.index(display)
+
+        mocker.patch.object(ctypes, 'windll', FakeWinDLL, create=True)
+        # also patch locally imported version
+        mocker.patch.object(sbc.windows, 'windll', FakeWinDLL)
+
+        sbc.windows.__cache__.enabled = False
+
+        return mocker.patch.object(
+            sbc.windows.VCP, 'iter_physical_monitors',
+            Mock(side_effect=mock_iter_physical_monitors, spec=True),
+            create=True
+        )
+
+    @pytest.fixture
+    def patch_get_brightness(self, mocker: MockerFixture, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def patch_set_brightness(self, mocker: MockerFixture, patch_get_display_info):
+        pass
+
+    @pytest.fixture
+    def method(self) -> Type[BrightnessMethod]:
+        return sbc.windows.VCP
+
+    class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
+        @pytest.skip('proper iter_physical_monitors mocks not set up yet')
+        def test_handles_are_cleaned_up(self, mocker: MockerFixture, method):
+            num_displays = len(method.get_display_info())
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            method.get_brightness()
+            assert spy.call_count == num_displays
+
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
+                spy = mocker.spy(ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply')
+                handles = tuple(sbc.windows.VCP.iter_physical_monitors())
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        method.get_brightness(display=index)
+                        spy.assert_called_once()
+                        assert spy.mock_calls[0].args[0] == handles[index]
+                        spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method, subtests):
+                spy = mocker.spy(ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply')
+                handles = tuple(sbc.windows.VCP.iter_physical_monitors())
+                method.get_brightness()
+                spy.assert_called()
+                for index, handle in enumerate(handles):
+                    with subtests.test(index=index):
+                        assert spy.mock_calls[index].args[0] == handle
+
+    class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
+                spy = mocker.spy(ctypes.windll.dxva2, 'SetVCPFeature')
+                handles = tuple(sbc.windows.VCP.iter_physical_monitors())
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        spy.assert_called_once()
+                        assert spy.mock_calls[0].args[0] == handles[index]
+                        spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method, subtests):
+                spy = mocker.spy(ctypes.windll.dxva2, 'SetVCPFeature')
+                handles = tuple(sbc.windows.VCP.iter_physical_monitors())
+                method.set_brightness(100)
+                spy.assert_called()
+                for index, handle in enumerate(handles):
+                    with subtests.test(index=index):
+                        assert spy.mock_calls[index].args[0] == handle
