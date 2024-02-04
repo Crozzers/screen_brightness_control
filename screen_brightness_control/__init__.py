@@ -8,10 +8,8 @@ from dataclasses import dataclass, field, fields
 from types import ModuleType
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
-from ._debug import info as debug_info  # noqa: F401
 from ._version import __author__, __version__  # noqa: F401
-from .exceptions import NoValidDisplayError, format_exc  # noqa: F401
-from .helpers import MONITOR_MANUFACTURER_CODES  # noqa: F401
+from .exceptions import NoValidDisplayError, format_exc
 from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
