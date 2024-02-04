@@ -122,6 +122,18 @@ class TestVCP(BrightnessMethodTest):
             method.get_brightness(display=display_kw)
             assert spy.call_count == num_displays
 
+        # 0 is included here to make sure loop variables aren't referenced before assignment
+        @pytest.mark.parametrize('tries', [0, 1, 2, 3, 50, 100])
+        def test_max_tries(self, mocker: MockerFixture, method, tries):
+            mock = mocker.patch.object(
+                sbc.windows.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply',
+                Mock(return_value=0, spec=True)
+            )
+            # patch sleep func so tests aren't slowed down
+            mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
+            method.get_brightness(display=0, max_tries=tries)
+            assert mock.call_count == tries
+
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
                 spy = mocker.spy(ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply')
@@ -150,6 +162,18 @@ class TestVCP(BrightnessMethodTest):
             spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
             method.set_brightness(100, display=display_kw)
             assert spy.call_count == num_displays
+
+        # 0 is included here to make sure loop variables aren't referenced before assignment
+        @pytest.mark.parametrize('tries', [0, 1, 2, 3, 50, 100])
+        def test_max_tries(self, mocker: MockerFixture, method, tries):
+            mock = mocker.patch.object(
+                sbc.windows.windll.dxva2, 'SetVCPFeature',
+                Mock(return_value=0, spec=True)
+            )
+            # patch sleep func so tests aren't slowed down
+            mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
+            method.set_brightness(100, display=0, max_tries=tries)
+            assert mock.call_count == tries
 
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):

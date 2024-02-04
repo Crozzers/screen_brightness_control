@@ -218,7 +218,7 @@ class VCP(BrightnessMethod):
                     ('description', WCHAR * 128)]
 
     @classmethod
-    def iter_physical_monitors(cls, start: int = 0) -> Generator[ctypes.wintypes.HANDLE, None, None]:
+    def iter_physical_monitors(cls, start: int = 0) -> Generator[HANDLE, None, None]:
         '''
         A generator to iterate through all physical monitors
         and then close them again afterwards, yielding their handles.
@@ -237,7 +237,7 @@ class VCP(BrightnessMethod):
         monitors: List[HMONITOR] = []
         if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
             cls._logger.error('EnumDisplayMonitors failed')
-            raise WinError('EnumDisplayMonitors failed')
+            raise WinError(None, 'EnumDisplayMonitors failed')
 
         # user index keeps track of valid monitors
         user_index = 0
@@ -260,17 +260,15 @@ class VCP(BrightnessMethod):
             # Get physical monitor count
             count = DWORD()
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
-                raise WinError(
-                    'call to GetNumberOfPhysicalMonitorsFromHMONITOR returned invalid result')
+                raise WinError(None, 'call to GetNumberOfPhysicalMonitorsFromHMONITOR returned invalid result')
             if count.value > 0:
                 # Get physical monitor handles
                 physical_array = (cls._PHYSICAL_MONITOR * count.value)()
                 if not windll.dxva2.GetPhysicalMonitorsFromHMONITOR(monitor, count.value, physical_array):
-                    raise WinError(
-                        'call to GetPhysicalMonitorsFromHMONITOR returned invalid result')
+                    raise WinError(None, 'call to GetPhysicalMonitorsFromHMONITOR returned invalid result')
                 for item in physical_array:
                     # check that the monitor is not a pseudo monitor by
-                    # checking it's StateFlags for the
+                    # checking its StateFlags for the
                     # win32con DISPLAY_DEVICE_ATTACHED_TO_DESKTOP flag
                     if display_devices[monitor_index].StateFlags & win32con.DISPLAY_DEVICE_ATTACHED_TO_DESKTOP:
                         # check if monitor is actually a laptop display
@@ -305,11 +303,11 @@ class VCP(BrightnessMethod):
         code = BYTE(0x10)
         values = []
         start = display if display is not None else 0
-        for index, monitor in enumerate(cls.iter_physical_monitors(start=start), start=start):
+        for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
             current = __cache__.get(f'vcp_brightness_{index}')
             if current is None:
                 cur_out = DWORD()
-                handle = HANDLE(monitor)
+                attempt = 0  # avoid UnboundLocalError in else clause if max_tries is 0
                 for attempt in range(max_tries):
                     if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(handle, code, None, byref(cur_out), None):
                         current = cur_out.value
@@ -337,6 +335,7 @@ class VCP(BrightnessMethod):
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None, max_tries: int = 50):
         '''
         Args:
+            value: percentage brightness to set the display to
             display: The specific display you wish to query.
             max_tries: the maximum allowed number of attempts to
                 send the VCP input to the display
@@ -346,6 +345,7 @@ class VCP(BrightnessMethod):
         value_dword = DWORD(value)
         start = display if display is not None else 0
         for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
+            attempt = 0  # avoid UnboundLocalError in else clause if max_tries is 0
             for attempt in range(max_tries):
                 if windll.dxva2.SetVCPFeature(handle, code, value_dword):
                     break
