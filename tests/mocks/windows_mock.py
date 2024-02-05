@@ -1,5 +1,7 @@
 import re
 from collections import namedtuple
+from ctypes.wintypes import RECT, HMONITOR
+from typing import Callable
 
 import win32con
 
@@ -79,6 +81,24 @@ class FakeWinDLL:
             pass
 
         @staticmethod
+        def GetNumberOfPhysicalMonitorsFromHMONITOR(monitor: HMONITOR, count_out):
+            for fake in FAKE_DISPLAYS:
+                if fake['laptop']:
+                    continue
+                if fake['uid'].strip('0') != str(monitor.value):
+                    continue
+                count_out._obj.value = 1
+                break
+            else:
+                count_out._obj.value = 0
+            return 1
+
+        @staticmethod
+        def GetPhysicalMonitorsFromHMONITOR(monitor: HMONITOR, array_size, array_out):
+            array_out[0].handle = int(monitor.value)
+            return 1
+
+        @staticmethod
         def GetVCPFeatureAndVCPFeatureReply(
                 handle, code, code_type_out=None, current_value_out=None, max_value_out=None
         ):
@@ -88,6 +108,15 @@ class FakeWinDLL:
 
         @staticmethod
         def SetVCPFeature(handle, code, value_in):
+            return 1
+
+    class user32:
+        @staticmethod
+        def EnumDisplayMonitors(_hdc, _rect, enum_proc: Callable, _data):
+            for fake in FAKE_DISPLAYS:
+                if fake['laptop']:
+                    continue
+                enum_proc(int(fake['uid'].strip('0')), 0, RECT(0, 0, 0, 0), 0)
             return 1
 
 

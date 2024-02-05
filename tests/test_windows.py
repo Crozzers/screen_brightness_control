@@ -78,25 +78,11 @@ class TestVCP(BrightnessMethodTest):
     @pytest.fixture
     def patch_get_display_info(self, patch_global_get_display_info, mocker: MockerFixture, method):
         '''Mock everything needed to get `VCP.get_display_info` to run'''
-
-        def mock_iter_physical_monitors(start=0):
-            displays = method.get_display_info()
-            for display in displays[start:]:
-                yield displays.index(display)
-                # call cleanup function for testing convenience
-                ctypes.windll.dxva2.DestroyPhysicalMonitor(0)
-
         mocker.patch.object(ctypes, 'windll', FakeWinDLL, create=True)
         # also patch locally imported version
         mocker.patch.object(sbc.windows, 'windll', FakeWinDLL)
 
         sbc.windows.__cache__.enabled = False
-
-        return mocker.patch.object(
-            sbc.windows.VCP, 'iter_physical_monitors',
-            Mock(side_effect=mock_iter_physical_monitors, spec=True),
-            create=True
-        )
 
     @pytest.fixture
     def patch_get_brightness(self, mocker: MockerFixture, patch_get_display_info):
@@ -115,10 +101,11 @@ class TestVCP(BrightnessMethodTest):
         def test_handles_are_cleaned_up(self, mocker: MockerFixture, method, display_kw):
             '''
             DestroyPhysicalMonitor should be called ONCE for each monitor iterated over.
-            When using the `display` kwarg, only one monitor should be iterated over and therefore only one
-            handle should be destroyed
+            When using the `display` kwarg, we still have to iterate over those displays in
+            `iter_physical_monitors`, but we only yield from the `start` kw, meaning that
+            `n + 1` handles must be destroyed, where n is the target display index.
             '''
-            num_displays = 1 if display_kw is not None else len(method.get_display_info())
+            num_displays = display_kw + 1 if display_kw is not None else len(method.get_display_info())
             spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
             method.get_brightness(display=display_kw)
             assert spy.call_count == num_displays
@@ -158,8 +145,13 @@ class TestVCP(BrightnessMethodTest):
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         @pytest.mark.parametrize('display_kw', [None, 0, 1, 2])
         def test_handles_are_cleaned_up(self, mocker: MockerFixture, method, display_kw):
-            '''See equivalent test in `TestGetBrightness`'''
-            num_displays = 1 if display_kw is not None else len(method.get_display_info())
+            '''
+            DestroyPhysicalMonitor should be called ONCE for each monitor iterated over.
+            When using the `display` kwarg, we still have to iterate over those displays in
+            `iter_physical_monitors`, but we only yield from the `start` kw, meaning that
+            `n + 1` handles must be destroyed, where n is the target display index.
+            '''
+            num_displays = display_kw + 1 if display_kw is not None else len(method.get_display_info())
             spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
             method.set_brightness(100, display=display_kw)
             assert spy.call_count == num_displays
