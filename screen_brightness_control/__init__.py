@@ -17,6 +17,13 @@ from .types import DisplayIdentifier, IntPercentage, Percentage
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
+# Global variable to control whether duplicate monitors are allowed
+# Duplicate monitor info could occur due to two known reasons
+# 1. The same monitor is connected through different interfaces (e.g., HDMI, DisplayPort, DVI, VGA) at the same time.
+# 2. Different monitors share the exactly same identifiers, including EDID, serial number and name, due to careless manufacturer.
+# In case #1, duplicate monitor info is considered redundant and should be filtered out.
+# In case #2, it is essential and should be preserved.
+ALLOW_DUPLICATES = False
 
 def get_brightness(
     display: Optional[DisplayIdentifier] = None,
@@ -233,7 +240,7 @@ def fade_brightness(
 
 
 def list_monitors_info(
-    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+    method: Optional[str] = None, allow_duplicates: bool = ALLOW_DUPLICATES, unsupported: bool = False
 ) -> List[dict]:
     '''
     List detailed information about all displays that are controllable by this library
@@ -762,10 +769,23 @@ def filter_monitors(
         # 2. Matches the display kwarg (if applicable)
         
         # If 'display' variable is an integer, it is supposed to be the index of the monitor
-        if isinstance(display, int):
-            return to_filter[display:display + 1]   # return a list with the monitor at the index or an empty list if the index is out of range
-        
         # If 'display' variable is a string, it is supposed to be an identifier of the monitor.
+        
+        # If duplicates are allowed, the logic is simple:
+        if ALLOW_DUPLICATES:
+            if isinstance(display, int):
+                # return a list with the monitor at the index or an empty list if the index is out of range
+                return to_filter[display:display + 1]
+            elif isinstance(display, str):
+                monitors = []
+                for monitor in to_filter:
+                    for identifier in ['edid', 'serial', 'name'] + include:
+                        if display == monitor.get(identifier, None):
+                            monitors.append(monitor)
+                            break
+                return monitors
+                            
+                            
         filtered_displays = {}
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
@@ -785,6 +805,10 @@ def filter_monitors(
                 if not added:
                     filtered_displays[m_id] = monitor
                     added = True
+                    
+                # if the display kwarg is an integer and we are currently at that index
+                if isinstance(display, int) and len(filtered_displays) - 1 == display:
+                    return [monitor]
 
                 if added:
                     break

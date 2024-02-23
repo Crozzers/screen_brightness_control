@@ -461,6 +461,11 @@ class TestFilterMonitors:
 
             # also test that it correctly identifies sample_monitors[1] as a duplicate and filters it out
             assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
+            
+            # test that the duplicate is preserved when ALLOW_DUPLICATES is set to True
+            sbc.ALLOW_DUPLICATES = True
+            assert sbc.filter_monitors(display=1) == [self.sample_monitors[1]]
+            
 
         class TestDuplicateFilteringAndIncludeKwarg:
             default_identifiers = ['edid', 'serial', 'name']
