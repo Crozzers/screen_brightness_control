@@ -760,6 +760,12 @@ def filter_monitors(
         # This loop does two things:
         # 1. Filters out duplicate monitors
         # 2. Matches the display kwarg (if applicable)
+        
+        # If 'display' variable is an integer, it is supposed to be the index of the monitor
+        if isinstance(display, int):
+            return to_filter[display:display + 1]   # return a list with the monitor at the index or an empty list if the index is out of range
+        
+        # If 'display' variable is a string, it is supposed to be an identifier of the monitor.
         filtered_displays = {}
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
@@ -779,10 +785,6 @@ def filter_monitors(
                 if not added:
                     filtered_displays[m_id] = monitor
                     added = True
-
-                # if the display kwarg is an integer and we are currently at that index
-                if isinstance(display, int) and len(filtered_displays) - 1 == display:
-                    return [monitor]
 
                 if added:
                     break
