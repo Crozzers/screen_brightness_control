@@ -768,12 +768,15 @@ def filter_monitors(
         # 1. Filters out duplicate monitors
         # 2. Matches the display kwarg (if applicable)
         
-        # If 'display' variable is an integer, it is supposed to be the index of the monitor
+        # If 'display' variable is None, no monitor is supposed to be filtered out;
+        # If 'display' variable is an integer, it is supposed to be the index of the monitor;
         # If 'display' variable is a string, it is supposed to be an identifier of the monitor.
         
         # When duplicates are allowed, the logic is simple:
         if ALLOW_DUPLICATES:
-            if isinstance(display, int):
+            if display is None:
+                return to_filter
+            elif isinstance(display, int):
                 # return a list with the monitor at the index or an empty list if the index is out of range
                 return to_filter[display:display + 1]
             elif isinstance(display, str):
