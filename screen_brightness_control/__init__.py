@@ -771,7 +771,7 @@ def filter_monitors(
         # If 'display' variable is an integer, it is supposed to be the index of the monitor
         # If 'display' variable is a string, it is supposed to be an identifier of the monitor.
         
-        # If duplicates are allowed, the logic is simple:
+        # When duplicates are allowed, the logic is simple:
         if ALLOW_DUPLICATES:
             if isinstance(display, int):
                 # return a list with the monitor at the index or an empty list if the index is out of range
@@ -805,7 +805,7 @@ def filter_monitors(
                 if not added:
                     filtered_displays[m_id] = monitor
                     added = True
-                    
+
                 # if the display kwarg is an integer and we are currently at that index
                 if isinstance(display, int) and len(filtered_displays) - 1 == display:
                     return [monitor]
