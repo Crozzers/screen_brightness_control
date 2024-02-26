@@ -24,10 +24,10 @@ if __name__ == '__main__':
     parser.add_argument('--allow-duplicates', action='store_true', help='allow duplicate monitors')
 
     args = parser.parse_args()
-    
+
     if args.allow_duplicates:
         SBC.ALLOW_DUPLICATES = True
-    
+
     if args.display is not None:
         if type(args.display) not in (str, int):
             raise TypeError('display arg must be str or int')

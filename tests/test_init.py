@@ -459,15 +459,25 @@ class TestFilterMonitors:
             result = sbc.filter_monitors(display=0)
             assert len(result) == 1 and result[0] == self.sample_monitors[0]
 
-            # also test that it correctly identifies sample_monitors[1] as a duplicate and filters it out
-            assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
-            
-            # test that the duplicate is preserved when ALLOW_DUPLICATES is set to True
             sbc.ALLOW_DUPLICATES = True
-            assert sbc.filter_monitors(display=1) == [self.sample_monitors[1]]
+            # test that the duplicate is preserved when ALLOW_DUPLICATES is set to True and parameter is not passed
             assert len(sbc.filter_monitors()) == 3
-            sbc.ALLOW_DUPLICATES = False
+            assert sbc.filter_monitors(display=1) == [self.sample_monitors[1]]
+            # test that parameter 'allow_duplicates' should override the global variable 'ALLOW_DUPLICATES'.
+            assert len(sbc.filter_monitors(allow_duplicates=True)) == 3
+            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
+            assert sbc.filter_monitors(display=1, allow_duplicates=True) == [self.sample_monitors[1]]
+            assert sbc.filter_monitors(display=1, allow_duplicates=False) == [self.sample_monitors[2]]
 
+            sbc.ALLOW_DUPLICATES = False
+            # test that the duplicate is filtered out when ALLOW_DUPLICATES is False and parameter is not passed.
+            assert len(sbc.filter_monitors()) == 2
+            assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
+            # test that parameter 'allow_duplicates' should override the global variable 'ALLOW_DUPLICATES'.
+            assert len(sbc.filter_monitors(allow_duplicates=True)) == 3
+            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
+            assert sbc.filter_monitors(display=1, allow_duplicates=True) == [self.sample_monitors[1]]
+            assert sbc.filter_monitors(display=1, allow_duplicates=False) == [self.sample_monitors[2]]
 
         class TestDuplicateFilteringAndIncludeKwarg:
             default_identifiers = ['edid', 'serial', 'name']
