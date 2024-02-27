@@ -178,7 +178,8 @@ def test_list_monitors(mock_os_module, mocker: MockerFixture):
         Mock(return_value=mock_return, spec=True)
     )
     supported_kw = {
-        'method': 123
+        'method': 123,
+        'allow_duplicates': 456
     }
     result = sbc.list_monitors(**supported_kw)  # type:ignore
     # check that kwargs passed along and result passed back

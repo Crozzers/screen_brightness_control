@@ -6,7 +6,7 @@ import traceback
 import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
-from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union
 from functools import wraps
 
 from ._version import __author__, __version__  # noqa: F401
@@ -33,17 +33,7 @@ _logger.addHandler(logging.NullHandler())
 def check_allow_duplicates(func):
     """
     This decorator prioritizes the 'allow_duplicates' parameter over the global variable 'ALLOW_DUPLICATES'.
-
-    The 'allow_duplicates' parameter is exclusively utilized within the 'filter_monitors' function.
-    The propagation of this parameter across numerous function calls would introduce verbosity to the code.
-    Given that 'filter_monitors' function can readily access the global 'ALLOW_DUPLICATES' variable,
-    we have opted to directly modify this global variable for the duration of the function call.
-    Importantly, the modification of the 'ALLOW_DUPLICATES' variable is temporary and its original value is
-    restored after the function call, ensuring the global state remains consistent.
-
-    If 'allow_duplicates' is not specified by the user, the global variable ALLOW_DUPLICATES is used.
-    If it is specified, ALLOW_DUPLICATES will be temporarily overridden to it during the execution of the function.
-
+    If the 'allow_duplicates' parameter is not specified, the global variable 'ALLOW_DUPLICATES' is used.
     This decorator should be applied to all functions that interact with the user.
 
     Args:
@@ -56,15 +46,8 @@ def check_allow_duplicates(func):
     def wrapper(*args, **kwargs):
         global ALLOW_DUPLICATES
         if kwargs.get('allow_duplicates') is None:
-            kwargs['allow_duplicates'] = ALLOW_DUPLICATES   # not necessary, but makes it explicit
-            return func(*args, **kwargs)
-        else:
-            original_allow_duplicates = ALLOW_DUPLICATES
-            ALLOW_DUPLICATES = kwargs['allow_duplicates']
-            try:
-                return func(*args, **kwargs)
-            finally:
-                ALLOW_DUPLICATES = original_allow_duplicates
+            kwargs['allow_duplicates'] = ALLOW_DUPLICATES
+        return func(*args, **kwargs)
     return wrapper
 
 
@@ -82,9 +65,7 @@ def get_brightness(
         display (.types.DisplayIdentifier): the specific display to query
         method: the method to use to get the brightness. See `get_methods` for
             more info on available methods
-        allow_duplicates: controls whether to filter out duplicate displays or not. This parameter is used by
-            the 'check_allow_duplicates' decorator, not by the function itself. If not specified, the global
-            variable 'ALLOW_DUPLICATES' is used.
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         verbose_error: controls the level of detail in the error messages
 
     Returns:
@@ -105,7 +86,13 @@ def get_brightness(
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    result = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    result = __brightness(
+        display=display,
+        method=method,
+        meta_method='get',
+        allow_duplicates=allow_duplicates,
+        verbose_error=verbose_error
+    )
     # __brightness can return None depending on the `no_return` kwarg. That obviously would never happen here
     # but the type checker doesn't see it that way.
     return [] if result is None else result
@@ -132,9 +119,7 @@ def set_brightness(
         force: [*Linux Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
-        allow_duplicates: controls whether to filter out duplicate displays or not. This parameter is used by
-            the 'check_allow_duplicates' decorator, not by the function itself. If not specified, the global
-            variable 'ALLOW_DUPLICATES' is used.
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         verbose_error: boolean value controls the amount of detail error messages will contain
         no_return: don't return the new brightness level(s)
 
@@ -165,10 +150,10 @@ def set_brightness(
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
         output: List[Union[IntPercentage, None]] = []
-        for monitor in filter_monitors(display=display, method=method):
+        for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
             identifier = Display.from_dict(monitor).get_identifier()[1]
 
-            current_value = get_brightness(display=identifier)[0]
+            current_value = get_brightness(display=identifier, allow_duplicates=allow_duplicates)[0]
             if current_value is None:
                 # invalid displays can return None. In this case, assume
                 # the brightness to be 100, which is what many displays default to.
@@ -184,6 +169,7 @@ def set_brightness(
                 percentage(value, current=current_value),
                 display=identifier,
                 force=force,
+                allow_duplicates=allow_duplicates,
                 verbose_error=verbose_error,
                 no_return=no_return
             )
@@ -204,6 +190,7 @@ def set_brightness(
     return __brightness(
         value, display=display, method=method,
         meta_method='set', no_return=no_return,
+        allow_duplicates=allow_duplicates,
         verbose_error=verbose_error
     )
 
@@ -235,9 +222,7 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
-        allow_duplicates: controls whether to filter out duplicate displays or not. This parameter is used by
-            the 'check_allow_duplicates' decorator, not by the function itself. If not specified, the global
-            variable 'ALLOW_DUPLICATES' is used.
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
@@ -269,9 +254,10 @@ def fade_brightness(
         ```
     '''
     # make sure only compatible kwargs are passed to filter_monitors
+    kwargs.update({'allow_duplicates': allow_duplicates})
     available_monitors = filter_monitors(
         **{k: v for k, v in kwargs.items() if k in (
-            'display', 'haystack', 'method', 'include'
+            'display', 'haystack', 'method', 'include', 'allow_duplicates'
         )}
     )
 
@@ -307,9 +293,7 @@ def list_monitors_info(
     Args:
         method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
-        allow_duplicates: controls whether to filter out duplicate displays or not. This parameter is used by
-            the 'check_allow_duplicates' decorator, not by the function itself. If not specified, the global
-            variable 'ALLOW_DUPLICATES' is used.
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         unsupported: include detected displays that are invalid or unsupported
 
     Returns:
@@ -352,9 +336,7 @@ def list_monitors(method: Optional[str] = None, allow_duplicates: Optional[bool]
     Args:
         method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
-        allow_duplicates: controls whether to filter out duplicate displays or not. This parameter is used by
-            the 'check_allow_duplicates' decorator, not by the function itself. If not specified, the global
-            variable 'ALLOW_DUPLICATES' is used.
+        allow_duplicates: controls whether to filter out duplicate displays or not.
 
     Example:
         ```python
@@ -363,7 +345,7 @@ def list_monitors(method: Optional[str] = None, allow_duplicates: Optional[bool]
         # eg: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    return [i['name'] for i in list_monitors_info(method=method)]
+    return [i['name'] for i in list_monitors_info(method=method, allow_duplicates=allow_duplicates)]
 
 
 def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]:
@@ -796,6 +778,7 @@ def filter_monitors(
         method: the method the monitors use. See `get_methods` for
             more info on available methods
         include: extra fields of information to sort by
+        allow_duplicates: controls whether to filter out duplicate displays or not
 
     Raises:
         NoValidDisplayError: if the display does not have a match
@@ -836,7 +819,7 @@ def filter_monitors(
         # 2. Matches the display kwarg (if applicable)
 
         # When duplicates are allowed, the logic is straightforward:
-        if ALLOW_DUPLICATES:
+        if allow_duplicates:
             if display is None:
                 # no monitor should be filtered out
                 return to_filter
@@ -909,8 +892,14 @@ def filter_monitors(
 
 
 def __brightness(
-    *args, display=None, method=None, meta_method='get', no_return=False,
-    verbose_error=False, **kwargs
+    *args: Any,
+    display: Optional[DisplayIdentifier] = None,
+    method: Optional[str] = None,
+    meta_method: str = 'get',
+    no_return: bool = False,
+    allow_duplicates: Optional[bool] = None,
+    verbose_error: bool = False,
+    **kwargs: Any
 ) -> Optional[List[Union[IntPercentage, None]]]:
     '''Internal function used to get/set brightness'''
     _logger.debug(
@@ -919,7 +908,7 @@ def __brightness(
     output: List[Union[int, None]] = []
     errors = []
 
-    for monitor in filter_monitors(display=display, method=method):
+    for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
         try:
             if meta_method == 'set':
                 monitor['method'].set_brightness(
