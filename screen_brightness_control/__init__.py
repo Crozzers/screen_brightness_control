@@ -7,7 +7,6 @@ import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
 from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union
-from functools import wraps
 
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
@@ -15,47 +14,15 @@ from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
 
-ALLOW_DUPLICATES = False
-"""Global variable to control whether duplicate monitors are allowed.
-
-Duplicate monitor info could occur due to two known reasons:
-1. The same monitor is connected through different interfaces (e.g., HDMI, DisplayPort, DVI, VGA) at the same time.
-2. Different monitors share identical identifiers, including EDID, serial number, due to careless manufacturer.
-
-In case #1, duplicate monitor info is considered redundant and should be filtered out.
-In case #2, it is essential and should be preserved.
-"""
 
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
 
-def check_allow_duplicates(func):
-    """
-    This decorator prioritizes the 'allow_duplicates' parameter over the global variable 'ALLOW_DUPLICATES'.
-    If the 'allow_duplicates' parameter is not specified, the global variable 'ALLOW_DUPLICATES' is used.
-    This decorator should be applied to all functions that interact with the user.
-
-    Args:
-        func (Callable): The function to be decorated. It should be a function that interacts with the user.
-
-    Returns:
-        Callable: The decorated function.
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        global ALLOW_DUPLICATES
-        if kwargs.get('allow_duplicates') is None:
-            kwargs['allow_duplicates'] = ALLOW_DUPLICATES
-        return func(*args, **kwargs)
-    return wrapper
-
-
-@check_allow_duplicates
 def get_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
-    allow_duplicates: Optional[bool] = None,
+    allow_duplicates: bool = False,
     verbose_error: bool = False
 ) -> List[Union[IntPercentage, None]]:
     '''
@@ -98,13 +65,12 @@ def get_brightness(
     return [] if result is None else result
 
 
-@check_allow_duplicates
 def set_brightness(
     value: Percentage,
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     force: bool = False,
-    allow_duplicates: Optional[bool] = None,
+    allow_duplicates: bool = False,
     verbose_error: bool = False,
     no_return: bool = True
 ) -> Optional[List[Union[IntPercentage, None]]]:
@@ -195,7 +161,6 @@ def set_brightness(
     )
 
 
-@check_allow_duplicates
 def fade_brightness(
     finish: Percentage,
     start: Optional[Percentage] = None,
@@ -204,7 +169,7 @@ def fade_brightness(
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
-    allow_duplicates: Optional[bool] = None,
+    allow_duplicates: bool = False,
     **kwargs
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
@@ -283,9 +248,8 @@ def fade_brightness(
     return get_brightness(**kwargs)
 
 
-@check_allow_duplicates
 def list_monitors_info(
-    method: Optional[str] = None, allow_duplicates: Optional[bool] = None, unsupported: bool = False
+    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
 ) -> List[dict]:
     '''
     List detailed information about all displays that are controllable by this library
@@ -328,8 +292,7 @@ def list_monitors_info(
     )
 
 
-@check_allow_duplicates
-def list_monitors(method: Optional[str] = None, allow_duplicates: Optional[bool] = None) -> List[str]:
+def list_monitors(method: Optional[str] = None, allow_duplicates: bool = False) -> List[str]:
     '''
     List the names of all detected displays
 
@@ -758,13 +721,12 @@ class Monitor(Display):
         return vars_self()
 
 
-@check_allow_duplicates
 def filter_monitors(
     display: Optional[DisplayIdentifier] = None,
     haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
     include: List[str] = [],
-    allow_duplicates: Optional[bool] = None
+    allow_duplicates: bool = False
 ) -> List[dict]:
     '''
     Searches through the information for all detected displays
@@ -897,7 +859,7 @@ def __brightness(
     method: Optional[str] = None,
     meta_method: str = 'get',
     no_return: bool = False,
-    allow_duplicates: Optional[bool] = None,
+    allow_duplicates: bool = False,
     verbose_error: bool = False,
     **kwargs: Any
 ) -> Optional[List[Union[IntPercentage, None]]]:

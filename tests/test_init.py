@@ -460,24 +460,17 @@ class TestFilterMonitors:
             result = sbc.filter_monitors(display=0)
             assert len(result) == 1 and result[0] == self.sample_monitors[0]
 
-            sbc.ALLOW_DUPLICATES = True
-            # test that the duplicate is preserved when ALLOW_DUPLICATES is set to True and parameter is not passed
-            assert len(sbc.filter_monitors()) == 3
-            assert sbc.filter_monitors(display=1) == [self.sample_monitors[1]]
-            # test that parameter 'allow_duplicates' should override the global variable 'ALLOW_DUPLICATES'.
-            assert len(sbc.filter_monitors(allow_duplicates=True)) == 3
-            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
-            assert sbc.filter_monitors(display=1, allow_duplicates=True) == [self.sample_monitors[1]]
-            assert sbc.filter_monitors(display=1, allow_duplicates=False) == [self.sample_monitors[2]]
-
-            sbc.ALLOW_DUPLICATES = False
-            # test that the duplicate is filtered out when ALLOW_DUPLICATES is False and parameter is not passed.
+            # Test filtering duplicates with different parameters
+            # - When 'allow_duplicates' parameter is not set (using default value False), the duplicate is filtered out
             assert len(sbc.filter_monitors()) == 2
             assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
-            # test that parameter 'allow_duplicates' should override the global variable 'ALLOW_DUPLICATES'.
+
+            # - When 'allow_duplicates' is set to True, the duplicate is preserved
             assert len(sbc.filter_monitors(allow_duplicates=True)) == 3
-            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
             assert sbc.filter_monitors(display=1, allow_duplicates=True) == [self.sample_monitors[1]]
+
+            # - When 'allow_duplicates' is set to False, the duplicate is filtered out
+            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
             assert sbc.filter_monitors(display=1, allow_duplicates=False) == [self.sample_monitors[2]]
 
         class TestDuplicateFilteringAndIncludeKwarg:
