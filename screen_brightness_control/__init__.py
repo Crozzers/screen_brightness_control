@@ -6,13 +6,14 @@ import traceback
 import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
-from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union
 
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
 from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
+
 
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -21,6 +22,7 @@ _logger.addHandler(logging.NullHandler())
 def get_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
+    allow_duplicates: bool = False,
     verbose_error: bool = False
 ) -> List[Union[IntPercentage, None]]:
     '''
@@ -30,6 +32,7 @@ def get_brightness(
         display (.types.DisplayIdentifier): the specific display to query
         method: the method to use to get the brightness. See `get_methods` for
             more info on available methods
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         verbose_error: controls the level of detail in the error messages
 
     Returns:
@@ -50,7 +53,13 @@ def get_brightness(
         secondary_brightness = sbc.get_brightness(display=1)
         ```
     '''
-    result = __brightness(display=display, method=method, meta_method='get', verbose_error=verbose_error)
+    result = __brightness(
+        display=display,
+        method=method,
+        meta_method='get',
+        allow_duplicates=allow_duplicates,
+        verbose_error=verbose_error
+    )
     # __brightness can return None depending on the `no_return` kwarg. That obviously would never happen here
     # but the type checker doesn't see it that way.
     return [] if result is None else result
@@ -61,6 +70,7 @@ def set_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     force: bool = False,
+    allow_duplicates: bool = False,
     verbose_error: bool = False,
     no_return: bool = True
 ) -> Optional[List[Union[IntPercentage, None]]]:
@@ -75,6 +85,7 @@ def set_brightness(
         force: [*Linux Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         verbose_error: boolean value controls the amount of detail error messages will contain
         no_return: don't return the new brightness level(s)
 
@@ -105,10 +116,10 @@ def set_brightness(
     '''
     if isinstance(value, str) and ('+' in value or '-' in value):
         output: List[Union[IntPercentage, None]] = []
-        for monitor in filter_monitors(display=display, method=method):
+        for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
             identifier = Display.from_dict(monitor).get_identifier()[1]
 
-            current_value = get_brightness(display=identifier)[0]
+            current_value = get_brightness(display=identifier, allow_duplicates=allow_duplicates)[0]
             if current_value is None:
                 # invalid displays can return None. In this case, assume
                 # the brightness to be 100, which is what many displays default to.
@@ -124,6 +135,7 @@ def set_brightness(
                 percentage(value, current=current_value),
                 display=identifier,
                 force=force,
+                allow_duplicates=allow_duplicates,
                 verbose_error=verbose_error,
                 no_return=no_return
             )
@@ -144,6 +156,7 @@ def set_brightness(
     return __brightness(
         value, display=display, method=method,
         meta_method='set', no_return=no_return,
+        allow_duplicates=allow_duplicates,
         verbose_error=verbose_error
     )
 
@@ -156,6 +169,7 @@ def fade_brightness(
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
+    allow_duplicates: bool = False,
     **kwargs
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
@@ -173,6 +187,7 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
@@ -204,9 +219,10 @@ def fade_brightness(
         ```
     '''
     # make sure only compatible kwargs are passed to filter_monitors
+    kwargs.update({'allow_duplicates': allow_duplicates})
     available_monitors = filter_monitors(
         **{k: v for k, v in kwargs.items() if k in (
-            'display', 'haystack', 'method', 'include'
+            'display', 'haystack', 'method', 'include', 'allow_duplicates'
         )}
     )
 
@@ -241,7 +257,7 @@ def list_monitors_info(
     Args:
         method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
-        allow_duplicates: whether to filter out duplicate displays or not
+        allow_duplicates: controls whether to filter out duplicate displays or not.
         unsupported: include detected displays that are invalid or unsupported
 
     Returns:
@@ -276,13 +292,14 @@ def list_monitors_info(
     )
 
 
-def list_monitors(method: Optional[str] = None) -> List[str]:
+def list_monitors(method: Optional[str] = None, allow_duplicates: bool = False) -> List[str]:
     '''
     List the names of all detected displays
 
     Args:
         method: the method to use to list the available displays. See `get_methods` for
             more info on available methods
+        allow_duplicates: controls whether to filter out duplicate displays or not.
 
     Example:
         ```python
@@ -291,7 +308,7 @@ def list_monitors(method: Optional[str] = None) -> List[str]:
         # eg: ['BenQ GL2450H', 'Dell U2211H']
         ```
     '''
-    return [i['name'] for i in list_monitors_info(method=method)]
+    return [i['name'] for i in list_monitors_info(method=method, allow_duplicates=allow_duplicates)]
 
 
 def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]:
@@ -708,7 +725,8 @@ def filter_monitors(
     display: Optional[DisplayIdentifier] = None,
     haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
-    include: List[str] = []
+    include: List[str] = [],
+    allow_duplicates: bool = False
 ) -> List[dict]:
     '''
     Searches through the information for all detected displays
@@ -722,6 +740,7 @@ def filter_monitors(
         method: the method the monitors use. See `get_methods` for
             more info on available methods
         include: extra fields of information to sort by
+        allow_duplicates: controls whether to filter out duplicate displays or not
 
     Raises:
         NoValidDisplayError: if the display does not have a match
@@ -760,6 +779,27 @@ def filter_monitors(
         # This loop does two things:
         # 1. Filters out duplicate monitors
         # 2. Matches the display kwarg (if applicable)
+
+        # When duplicates are allowed, the logic is straightforward:
+        if allow_duplicates:
+            if display is None:
+                # no monitor should be filtered out
+                return to_filter
+            elif isinstance(display, int):
+                # 'display' variable should be the index of the monitor
+                # return a list with the monitor at the index or an empty list if the index is out of range
+                return to_filter[display:display + 1]
+            elif isinstance(display, str):
+                # 'display' variable should be an identifier of the monitor
+                # multiple monitors with the same identifier are allowed here, so return all of them
+                monitors = []
+                for monitor in to_filter:
+                    for identifier in ['edid', 'serial', 'name'] + include:
+                        if display == monitor.get(identifier, None):
+                            monitors.append(monitor)
+                            break
+                return monitors
+
         filtered_displays = {}
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
@@ -814,8 +854,14 @@ def filter_monitors(
 
 
 def __brightness(
-    *args, display=None, method=None, meta_method='get', no_return=False,
-    verbose_error=False, **kwargs
+    *args: Any,
+    display: Optional[DisplayIdentifier] = None,
+    method: Optional[str] = None,
+    meta_method: str = 'get',
+    no_return: bool = False,
+    allow_duplicates: bool = False,
+    verbose_error: bool = False,
+    **kwargs: Any
 ) -> Optional[List[Union[IntPercentage, None]]]:
     '''Internal function used to get/set brightness'''
     _logger.debug(
@@ -824,7 +870,7 @@ def __brightness(
     output: List[Union[int, None]] = []
     errors = []
 
-    for monitor in filter_monitors(display=display, method=method):
+    for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
         try:
             if meta_method == 'set':
                 monitor['method'].set_brightness(

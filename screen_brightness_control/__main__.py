@@ -21,8 +21,13 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
     parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
     parser.add_argument('-V', '--version', action='store_true', help='print the current version')
+    parser.add_argument('--allow-duplicates', action='store_true', help='allow duplicate monitors')
 
     args = parser.parse_args()
+
+    if args.allow_duplicates:
+        SBC.ALLOW_DUPLICATES = True
+
     if args.display is not None:
         if type(args.display) not in (str, int):
             raise TypeError('display arg must be str or int')

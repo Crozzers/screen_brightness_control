@@ -178,7 +178,8 @@ def test_list_monitors(mock_os_module, mocker: MockerFixture):
         Mock(return_value=mock_return, spec=True)
     )
     supported_kw = {
-        'method': 123
+        'method': 123,
+        'allow_duplicates': 456
     }
     result = sbc.list_monitors(**supported_kw)  # type:ignore
     # check that kwargs passed along and result passed back
@@ -459,8 +460,18 @@ class TestFilterMonitors:
             result = sbc.filter_monitors(display=0)
             assert len(result) == 1 and result[0] == self.sample_monitors[0]
 
-            # also test that it correctly identifies sample_monitors[1] as a duplicate and filters it out
+            # Test filtering duplicates with different parameters
+            # - When 'allow_duplicates' parameter is not set (using default value False), the duplicate is filtered out
+            assert len(sbc.filter_monitors()) == 2
             assert sbc.filter_monitors(display=1) == [self.sample_monitors[2]]
+
+            # - When 'allow_duplicates' is set to True, the duplicate is preserved
+            assert len(sbc.filter_monitors(allow_duplicates=True)) == 3
+            assert sbc.filter_monitors(display=1, allow_duplicates=True) == [self.sample_monitors[1]]
+
+            # - When 'allow_duplicates' is set to False, the duplicate is filtered out
+            assert len(sbc.filter_monitors(allow_duplicates=False)) == 2
+            assert sbc.filter_monitors(display=1, allow_duplicates=False) == [self.sample_monitors[2]]
 
         class TestDuplicateFilteringAndIncludeKwarg:
             default_identifiers = ['edid', 'serial', 'name']
