@@ -4,7 +4,7 @@ import screen_brightness_control as SBC
 
 
 def get_monitors(args):
-    filtered = SBC.filter_monitors(display=args.display, method=args.method)
+    filtered = SBC.filter_monitors(display=args.display, method=args.method, allow_duplicates=args.allow_duplicates)
     for monitor in filtered:
         yield SBC.Display.from_dict(monitor)
 
@@ -19,14 +19,11 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--fade', type=int, help='fade the brightness to this value', metavar='VALUE')
     parser.add_argument('-m', '--method', type=str, help=f'the method to use ({" or ".join(SBC.get_methods())})')
     parser.add_argument('-l', '--list', action='store_true', help='list all monitors')
+    parser.add_argument('-a', '--allow-duplicates', action='store_true', help='allow duplicate monitors')
     parser.add_argument('-v', '--verbose', action='store_true', help='some messages will be more detailed')
     parser.add_argument('-V', '--version', action='store_true', help='print the current version')
-    parser.add_argument('--allow-duplicates', action='store_true', help='allow duplicate monitors')
 
     args = parser.parse_args()
-
-    if args.allow_duplicates:
-        SBC.ALLOW_DUPLICATES = True
 
     if args.display is not None:
         if type(args.display) not in (str, int):
@@ -56,7 +53,12 @@ if __name__ == '__main__':
                     else:
                         print(f'{name}{arrow} Failed')
         except Exception:
-            kw = {'display': args.display, 'method': args.method, 'verbose_error': args.verbose}
+            kw = {
+                'display': args.display,
+                'method': args.method,
+                'verbose_error': args.verbose,
+                'allow_duplicates': args.allow_duplicates
+            }
             if args.get:
                 print(SBC.get_brightness(**kw))
             else:
@@ -91,16 +93,17 @@ if __name__ == '__main__':
                     args.fade,
                     display=args.display,
                     method=args.method,
-                    verbose_error=args.verbose
+                    verbose_error=args.verbose,
+                    allow_duplicates=args.allow_duplicates
                 )
             )
     elif args.version:
         print(SBC.__version__)
     elif args.list:
         if args.verbose:
-            monitors = SBC.list_monitors_info(method=args.method)
+            monitors = SBC.list_monitors_info(method=args.method, allow_duplicates=args.allow_duplicates)
         else:
-            monitors = SBC.list_monitors(method=args.method)
+            monitors = SBC.list_monitors(method=args.method, allow_duplicates=args.allow_duplicates)
         if len(monitors) == 0:
             print('No monitors detected')
         else:
