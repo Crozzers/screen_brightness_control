@@ -540,7 +540,7 @@ class XRandr(BrightnessMethodAdv):
                     'manufacturer': None,
                     'manufacturer_id': None,
                     'edid': None,
-                    'unsupported': line.startswith('XWAYLAND')
+                    'unsupported': line.startswith('XWAYLAND') or 'WAYLAND_DISPLAY' in os.environ
                 }
                 display_count += 1
 
