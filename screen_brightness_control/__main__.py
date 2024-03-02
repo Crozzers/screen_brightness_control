@@ -39,7 +39,6 @@ if __name__ == '__main__':
                 if args.verbose:
                     name += f' ({monitor.serial}) [{monitor.method.__name__}]'
                 try:
-
                     if args.set:
                         monitor.set_brightness(args.set)
                     ret_val = monitor.get_brightness()
