@@ -503,7 +503,7 @@ class Display():
             )
             return False
 
-    def set_brightness(self, value: Percentage, force: bool = False, no_return: bool = True):
+    def set_brightness(self, value: Percentage, force: bool = False):
         '''
         Sets the brightness for this display. See `set_brightness` for the full docs
 
@@ -525,8 +525,6 @@ class Display():
         )
 
         self.method.set_brightness(value, display=self.index)
-
-        return None if no_return else self.get_brightness()
 
 
 class Monitor(Display):
