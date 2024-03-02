@@ -13,16 +13,18 @@ from .exceptions import NoValidDisplayError, format_exc
 from .helpers import (BrightnessMethod, ScreenBrightnessError,
                       logarithmic_range, percentage)
 from .types import DisplayIdentifier, IntPercentage, Percentage
+from . import config
 
 
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
 
+@config.default_params
 def get_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
-    allow_duplicates: bool = False,
+    allow_duplicates: Optional[bool] = None,
     verbose_error: bool = False
 ) -> List[Union[IntPercentage, None]]:
     '''
@@ -65,12 +67,13 @@ def get_brightness(
     return [] if result is None else result
 
 
+@config.default_params
 def set_brightness(
     value: Percentage,
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     force: bool = False,
-    allow_duplicates: bool = False,
+    allow_duplicates: Optional[bool] = None,
     verbose_error: bool = False,
     no_return: bool = True
 ) -> Optional[List[Union[IntPercentage, None]]]:
@@ -161,6 +164,7 @@ def set_brightness(
     )
 
 
+@config.default_params
 def fade_brightness(
     finish: Percentage,
     start: Optional[Percentage] = None,
@@ -169,7 +173,6 @@ def fade_brightness(
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
-    allow_duplicates: bool = False,
     **kwargs
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
@@ -187,7 +190,6 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
-        allow_duplicates: controls whether to filter out duplicate displays or not.
         **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
@@ -219,7 +221,6 @@ def fade_brightness(
         ```
     '''
     # make sure only compatible kwargs are passed to filter_monitors
-    kwargs.update({'allow_duplicates': allow_duplicates})
     available_monitors = filter_monitors(
         **{k: v for k, v in kwargs.items() if k in (
             'display', 'haystack', 'method', 'include', 'allow_duplicates'
@@ -248,8 +249,9 @@ def fade_brightness(
     return get_brightness(**kwargs)
 
 
+@config.default_params
 def list_monitors_info(
-    method: Optional[str] = None, allow_duplicates: bool = False, unsupported: bool = False
+    method: Optional[str] = None, allow_duplicates: Optional[bool] = None, unsupported: bool = False
 ) -> List[dict]:
     '''
     List detailed information about all displays that are controllable by this library
@@ -292,7 +294,8 @@ def list_monitors_info(
     )
 
 
-def list_monitors(method: Optional[str] = None, allow_duplicates: bool = False) -> List[str]:
+@config.default_params
+def list_monitors(method: Optional[str] = None, allow_duplicates: Optional[bool] = None) -> List[str]:
     '''
     List the names of all detected displays
 
@@ -721,12 +724,13 @@ class Monitor(Display):
         return vars_self()
 
 
+@config.default_params
 def filter_monitors(
     display: Optional[DisplayIdentifier] = None,
     haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
     include: List[str] = [],
-    allow_duplicates: bool = False
+    allow_duplicates: Optional[bool] = None
 ) -> List[dict]:
     '''
     Searches through the information for all detected displays
