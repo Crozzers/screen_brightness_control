@@ -439,11 +439,21 @@ class Display():
         self._logger.debug(
             f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
 
+        # Record the time when the next brightness change should start
+        next_change_start_time = time.time()
         for value in range_func(start, finish, increment):
+            # `value` is ensured not to hit `finish` in loop, this will be handled in the final step.
             self.set_brightness(value, force=force)
-            time.sleep(interval)
 
-        if self.get_brightness() != finish:
+            # `interval` is the intended time between the start of each brightness change.
+            next_change_start_time += interval
+            sleep_time = next_change_start_time - time.time()
+            # Skip sleep if the scheduled time has already passed
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+        else:
+            # As `value` doesn't hit `finish` in loop, we explicitly set brightness to `finish`.
+            # This also avoids an unnecessary sleep in the last iteration.
             self.set_brightness(finish, force=force)
 
         return self.get_brightness()
