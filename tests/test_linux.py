@@ -5,6 +5,7 @@ from typing import Type
 from unittest.mock import Mock, call
 
 import pytest
+from pytest import MonkeyPatch
 from .mocks.linux_mock import MockI2C, mock_check_output
 from pytest_mock import MockerFixture
 
@@ -178,10 +179,12 @@ class TestI2C(BrightnessMethodTest):
 
 class TestXRandr(BrightnessMethodTest):
     @pytest.fixture
-    def patch_get_display_info(self, mocker: MockerFixture):
+    def patch_get_display_info(self, mocker: MockerFixture, monkeypatch: MonkeyPatch):
         mock = Mock(side_effect=mock_check_output, spec=True)
         mocker.patch.object(sbc.helpers, 'check_output', mock)
         mocker.patch.object(sbc.linux, 'check_output', mock)
+        # remove wayland from env to bypass compat checks
+        monkeypatch.delitem(os.environ, 'WAYLAND_DISPLAY', raising=False)
 
     @pytest.fixture
     def patch_get_brightness(self, patch_get_display_info):
@@ -208,6 +211,10 @@ class TestXRandr(BrightnessMethodTest):
                 and 0 <= d['brightness'] <= 100
                 for d in with_brightness
             )
+
+        def test_wayland(self, method: Type[linux.XRandr], monkeypatch: MonkeyPatch):
+            monkeypatch.setitem(os.environ, 'WAYLAND_DISPLAY', 'wayland-0')
+            assert method.get_display_info() == [], 'wayland displays not supported by xrandr'
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
