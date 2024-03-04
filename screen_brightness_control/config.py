@@ -2,7 +2,7 @@
 Contains globally applicable configuration variables.
 '''
 from functools import wraps
-from typing import Callable
+from typing import Callable, Optional
 
 
 def default_params(func: Callable):
@@ -11,13 +11,20 @@ def default_params(func: Callable):
     '''
     @wraps(func)
     def wrapper(*args, **kwargs):
-        global ALLOW_DUPLICATES
         kwargs.setdefault('allow_duplicates', ALLOW_DUPLICATES)
+        kwargs.setdefault('method', METHOD)
         return func(*args, **kwargs)
     return wrapper
 
 
-ALLOW_DUPLICATES = False
+ALLOW_DUPLICATES: bool = False
 '''
-Global configuration variable that sets the default value for `allow_duplicates` kwargs.
+Default value for the `allow_duplicates` parameter in top-level functions.
+'''
+
+METHOD: Optional[str] = None
+'''
+Default value for the `method` parameter in top-level functions.
+
+For available values, see `.get_methods`
 '''
