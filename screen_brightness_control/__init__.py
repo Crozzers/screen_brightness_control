@@ -120,7 +120,11 @@ def set_brightness(
     if isinstance(value, str) and ('+' in value or '-' in value):
         output: List[Union[IntPercentage, None]] = []
         for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
-            identifier = Display.from_dict(monitor).get_identifier()[1]
+            if allow_duplicates:
+                # duplicates share the identical indentifers except for the index.
+                identifier = monitor['index']
+            else:
+                identifier = Display.from_dict(monitor).get_identifier()[1]
 
             current_value = get_brightness(display=identifier, allow_duplicates=allow_duplicates)[0]
             if current_value is None:
