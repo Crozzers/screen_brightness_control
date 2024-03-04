@@ -173,7 +173,6 @@ def fade_brightness(
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
-    strict_interval: bool = False,
     **kwargs
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
@@ -191,13 +190,6 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
-        strict_interval: determines how the 'interval' is applied between brightness changes.
-            - If False, 'interval' is the time delay between the end of one brightness change and the
-            start of the next. This means the actual time between brightness changes will always be longer
-            than the specified 'interval', as it includes the time taken by the brightness change itself.
-            - If True, 'interval' is the intended time between the start of each brightness change.
-            However, if a brightness change takes longer than the specified 'interval', the actual
-            interval will be longer, as the next change can't start until the current one finishes.
         **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
@@ -244,8 +236,7 @@ def fade_brightness(
             'interval': interval,
             'increment': increment,
             'force': force,
-            'logarithmic': logarithmic,
-            'strict_interval': strict_interval
+            'logarithmic': logarithmic
         })
         thread.start()
         threads.append(thread)
@@ -401,8 +392,7 @@ class Display():
         interval: float = 0.01,
         increment: int = 1,
         force: bool = False,
-        logarithmic: bool = True,
-        strict_interval: bool = False
+        logarithmic: bool = True
     ) -> IntPercentage:
         '''
         Gradually change the brightness of this display to a set value.
@@ -420,13 +410,6 @@ class Display():
                 often turns off the backlight
             logarithmic: follow a logarithmic curve when setting brightness values.
                 See `logarithmic_range` for rationale
-            strict_interval: determines how the 'interval' is applied between brightness changes.
-                - If False, 'interval' is the time delay between the end of one brightness change and the
-                start of the next. This means the actual time between brightness changes will always be longer
-                than the specified 'interval', as it includes the time taken by the brightness change itself.
-                - If True, 'interval' is the intended time between the start of each brightness change.
-                However, if a brightness change takes longer than the specified 'interval', the actual
-                interval will be longer, as the next change can't start until the current one finishes.
 
         Returns:
             The brightness of the display after the fade is complete.
@@ -459,22 +442,18 @@ class Display():
         # Record the time when the next brightness change should start
         next_change_start_time = time.time()
         for value in range_func(start, finish, increment):
-            # 'value' is ensured not to hit 'finish' in loop, this will be handled in the final step.
+            # `value` is ensured not to hit `finish` in loop, this will be handled in the final step.
             self.set_brightness(value, force=force)
 
-            if not strict_interval:
-                # 'interval' is the time delay between the end of one brightness change and the start of the next.
-                sleep_time = interval
-            else:
-                # 'interval' is the intended time between the start of each brightness change.
-                next_change_start_time += interval
-                sleep_time = next_change_start_time - time.time()
-                if sleep_time <= 0:
-                    # Skip sleep if the scheduled time has already passed
-                    continue
+            # `interval` is the intended time between the start of each brightness change.
+            next_change_start_time += interval
+            sleep_time = next_change_start_time - time.time()
+            if sleep_time <= 0:
+                # Skip sleep if the scheduled time has already passed
+                continue
             time.sleep(sleep_time)
         else:
-            # As 'value' doesn't hit 'finish' in loop, we explicitly set brightness to 'finish'.
+            # As `value` doesn't hit `finish` in loop, we explicitly set brightness to `finish`.
             # This also avoids an unnecessary sleep in the last iteration.
             self.set_brightness(finish, force=force)
 

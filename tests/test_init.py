@@ -144,7 +144,7 @@ class TestFadeBrightness(BrightnessFunctionTest):
         args = (100,)
         # all the kwargs that get passed to `Display`
         kwargs: Dict[str, Any] = dict(
-            start=0, interval=0, increment=10, force=False, logarithmic=False, strict_interval=False
+            start=0, interval=0, increment=10, force=False, logarithmic=False
         )
         sbc.fade_brightness(*args, **kwargs)
         for index, mock_call in enumerate(spy.mock_calls):
