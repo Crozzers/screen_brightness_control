@@ -448,10 +448,9 @@ class Display():
             # `interval` is the intended time between the start of each brightness change.
             next_change_start_time += interval
             sleep_time = next_change_start_time - time.time()
-            if sleep_time <= 0:
-                # Skip sleep if the scheduled time has already passed
-                continue
-            time.sleep(sleep_time)
+            # Skip sleep if the scheduled time has already passed
+            if sleep_time > 0:
+                time.sleep(sleep_time)
         else:
             # As `value` doesn't hit `finish` in loop, we explicitly set brightness to `finish`.
             # This also avoids an unnecessary sleep in the last iteration.
