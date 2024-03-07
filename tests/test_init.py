@@ -78,12 +78,10 @@ class TestSetBrightness(BrightnessFunctionTest):
             self.percentage_spy = mocker.spy(sbc, 'percentage')
 
         def test_relative_values_are_calculated(self, mocker: MockerFixture):
-            mocker.patch.object(sbc, 'get_brightness', new=lambda *a, **k: [10])
+            mocker.patch.object(sbc.Display, 'get_brightness', new=lambda *a, **k: 10)
             sbc.set_brightness('+5', display=0)
-            # check `percentage` is called
-            assert self.percentage_spy.call_args_list[0] == call('+5', current=10)
-            # check the result is passed back to `set_brightness`
-            assert self.setter_spy.mock_calls[1].args[0] == 15
+            # check `percentage` is called and returns the correct value
+            assert self.percentage_spy.spy_return == 15
 
         def test_current_value_if_get_brightness_fails(self, mocker: MockerFixture):
             '''

@@ -120,38 +120,12 @@ def set_brightness(
     if isinstance(value, str) and ('+' in value or '-' in value):
         output: List[Union[IntPercentage, None]] = []
         for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
-            if allow_duplicates:
-                # duplicates share the identical indentifers except for the index.
-                identifier = monitor['index']
-            else:
-                identifier = Display.from_dict(monitor).get_identifier()[1]
+            # `filter_monitors()` will raise an error if no valid displays are found
+            display_instance = Display.from_dict(monitor)
+            display_instance.set_brightness(value=value, force=force)
+            output.append(None if no_return else display_instance.get_brightness())
 
-            current_value = get_brightness(display=identifier, allow_duplicates=allow_duplicates)[0]
-            if current_value is None:
-                # invalid displays can return None. In this case, assume
-                # the brightness to be 100, which is what many displays default to.
-                logging.warning(
-                    'set_brightness: unable to get current brightness level for display with identifier'
-                    f' {identifier}. Assume value to be 100'
-                )
-                current_value = 100
-
-            result = set_brightness(
-                # don't need to calculate lower bound here because it will be
-                # done by the other path in `set_brightness`
-                percentage(value, current=current_value),
-                display=identifier,
-                force=force,
-                allow_duplicates=allow_duplicates,
-                verbose_error=verbose_error,
-                no_return=no_return
-            )
-            if result is None:
-                output.append(result)
-            else:
-                output += result
-
-        return output
+        return None if no_return else output
 
     if platform.system() == 'Linux' and not force:
         lower_bound = 1
