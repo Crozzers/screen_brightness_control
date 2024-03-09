@@ -6,7 +6,7 @@ import traceback
 import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
-from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet
 
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
@@ -173,6 +173,7 @@ def fade_brightness(
     blocking: bool = True,
     force: bool = False,
     logarithmic: bool = True,
+    stoppable: bool = True,
     **kwargs
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
@@ -190,6 +191,7 @@ def fade_brightness(
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
+        stoppable: whether the fade can be stopped by starting a new fade on the same display
         **kwargs: passed through to `filter_monitors` for display selection.
             Will also be passed to `get_brightness` if `blocking is True`
 
@@ -231,12 +233,13 @@ def fade_brightness(
     for i in available_monitors:
         display = Display.from_dict(i)
 
-        thread = threading.Thread(target=display.fade_brightness, args=(finish,), kwargs={
+        thread = threading.Thread(target=display.fade_brightness_thread, args=(finish,), kwargs={
             'start': start,
             'interval': interval,
             'increment': increment,
             'force': force,
-            'logarithmic': logarithmic
+            'logarithmic': logarithmic,
+            'stoppable': stoppable
         })
         thread.start()
         threads.append(thread)
@@ -380,6 +383,21 @@ class Display():
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
     _logger: logging.Logger = field(init=False, repr=False)
+    _instances: Dict[FrozenSet[Tuple[Any, Any]], 'Display'] = field(default_factory=dict)
+    '''A dictionary of all instances of this class, indexed by their args and kwargs'''
+    _fade_thread: Optional[threading.Thread] = None
+    '''The latest thread that is fading the brightness of the same display'''
+
+    def __new__(cls, *args, **kwargs):
+        '''Ensure that only one instance of this class is created for each set of args and kwargs'''
+        if not hasattr(cls, '_instances'):
+            cls._instances = {}
+        # convert the args and kwargs to a hashable type
+        dict_repr = frozenset(list(args) + list(kwargs.items()))
+        if dict_repr not in cls._instances:
+            cls._instances[dict_repr] = super().__new__(cls)
+
+        return cls._instances[dict_repr]
 
     def __post_init__(self):
         self._logger = _logger.getChild(self.__class__.__name__).getChild(
@@ -392,7 +410,60 @@ class Display():
         interval: float = 0.01,
         increment: int = 1,
         force: bool = False,
-        logarithmic: bool = True
+        logarithmic: bool = True,
+        blocking: bool = True,
+        stoppable: bool = True
+    ) -> IntPercentage:
+        '''
+        Gradually change the brightness of this display to a set value.
+        Can execute in the current thread, blocking until completion,
+        or in a separate thread, allowing concurrent operations.
+        When set as non-blocking and stoppable, a new fade can halt the this operation.
+
+        Args:
+            finish (.types.Percentage): the brightness level to end up on
+            start (.types.Percentage): where the fade should start from. Defaults
+                to whatever the current brightness level for the display is
+            interval: time delay between each change in brightness
+            increment: amount to change the brightness by each time (as a percentage)
+            force: [*Linux only*] allow the brightness to be set to 0. By default,
+                brightness values will never be set lower than 1, since setting them to 0
+                often turns off the backlight
+            logarithmic: follow a logarithmic curve when setting brightness values.
+                See `logarithmic_range` for rationale
+            blocking: run this function in the current thread and block until it completes
+            stoppable: whether this fade will be stopped by starting a new fade on the same display
+
+        Returns:
+            The brightness of the display after the fade is complete.
+            See `.types.IntPercentage`
+
+            .. warning:: Deprecated
+               This function will return `None` in v0.23.0 and later.
+        '''
+        thread = threading.Thread(target=self.fade_brightness_thread, args=(finish,), kwargs={
+            'start': start,
+            'interval': interval,
+            'increment': increment,
+            'force': force,
+            'logarithmic': logarithmic,
+            'stoppable': stoppable
+        })
+        thread.start()
+        if blocking:
+            thread.join()
+
+        return self.get_brightness()
+
+    def fade_brightness_thread(
+        self,
+        finish: Percentage,
+        start: Optional[Percentage] = None,
+        interval: float = 0.01,
+        increment: int = 1,
+        force: bool = False,
+        logarithmic: bool = True,
+        stoppable: bool = True
     ) -> IntPercentage:
         '''
         Gradually change the brightness of this display to a set value.
@@ -410,6 +481,7 @@ class Display():
                 often turns off the backlight
             logarithmic: follow a logarithmic curve when setting brightness values.
                 See `logarithmic_range` for rationale
+            stoppable: whether the fade can be stopped by starting a new fade on the same display
 
         Returns:
             The brightness of the display after the fade is complete.
@@ -418,6 +490,8 @@ class Display():
             .. warning:: Deprecated
                This function will return `None` in v0.23.0 and later.
         '''
+        # Record the latest thread so that other stoppable threads can be stopped
+        self._fade_thread = threading.current_thread()
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
             lower_bound = 1
@@ -442,6 +516,9 @@ class Display():
         # Record the time when the next brightness change should start
         next_change_start_time = time.time()
         for value in range_func(start, finish, increment):
+            if stoppable and threading.current_thread() != self._fade_thread:
+                # If the current thread is stoppable and it's not the latest thread, stop fading
+                break
             # `value` is ensured not to hit `finish` in loop, this will be handled in the final step.
             self.set_brightness(value, force=force)
 
@@ -454,7 +531,8 @@ class Display():
         else:
             # As `value` doesn't hit `finish` in loop, we explicitly set brightness to `finish`.
             # This also avoids an unnecessary sleep in the last iteration.
-            self.set_brightness(finish, force=force)
+            if not stoppable or threading.current_thread() == self._fade_thread:
+                self.set_brightness(finish, force=force)
 
         return self.get_brightness()
 
