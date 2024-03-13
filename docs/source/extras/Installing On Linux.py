@@ -51,19 +51,19 @@ users to adjust the backlight without having to manually fiddle with permissions
 Here is an outline of all of the external programs that `screen_brightness_control` can call upon:
 
 Program       | Works on laptop displays | Works on external monitors | Per-display brightness control        | Requires Special Permissions After Install
---------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------
-ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*` [2]
-xrandr        | Yes                      | Yes           [3]          | Yes                                   | No
-light         | Yes                      | No                         | Yes                                   | User must be in the `video` group [3]
-[No program]  | Yes                      | Yes (slow)                 | Yes                                   | Read/write access for `/dev/i2c*` and `/sys/class/backlight`
+--------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------------
+ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*` (see [above](#desktop-displays))
+xrandr [2]    | Yes                      | Yes                        | Yes                                   | No
+light [3]     | Yes                      | No                         | Yes                                   | User must be in the `video` group [4]
+[No program]  | Yes                      | Yes (slow)                 | Yes                                   | See [above](#without-using-a-3rd-party-program)
 
 #### Footnotes
 [1] While both DDCUtil and the 1st party `linux.I2C` class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the [Monitor Control Command Set over USB](https://www.ddcutil.com/usb)
 
-[2] Read/write access for the `i2c` bus can be granted via the steps outlined in the [Desktop displays](#desktop-displays) section or by running the script using `sudo`.
+[2] Xrandr has two key limitations. It doesn't support Wayland and it doesn't actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
-[3] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+[3] This method is deprecated as the original Light project was archived in April 2023 and the repository has since been deleted. Unofficial packages are still available for some distros.
 
 [4] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
 

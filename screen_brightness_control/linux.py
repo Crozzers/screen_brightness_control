@@ -5,6 +5,7 @@ import logging
 import operator
 import os
 import re
+import warnings
 import time
 from typing import List, Optional, Tuple
 
@@ -439,10 +440,9 @@ class Light(BrightnessMethod):
     3rd party tool that can control brightness levels for e-DP displays.
 
     .. warning::
-       As of April 2nd 2023, the official repository for the light project has
-       [been archived](https://github.com/haikarainen/light/issues/147) and
-       will no longer receive any updates unless another maintainer picks it
-       up.
+       The official repository was archived in April 2023 and has since been deleted.
+       Due to [having no maintainer](https://github.com/haikarainen/light/issues/147)
+       or official packages, this feature has been marked as deprecated.
     '''
 
     executable: str = 'light'
@@ -456,6 +456,14 @@ class Light(BrightnessMethod):
         Works by taking the output of `SysFiles.get_display_info` and
         filtering out any displays that aren't supported by Light
         '''
+        warnings.warn(
+            (
+                'Light is unmaintained and has been deprecated.'
+                ' Please use `SysFiles` instead'
+            ),
+            DeprecationWarning
+        )
+
         light_output = check_output([cls.executable, '-L']).decode()
         displays = []
         index = 0
@@ -479,6 +487,13 @@ class Light(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
+        warnings.warn(
+            (
+                'Light is unmaintained and has been deprecated.'
+                ' Please use `SysFiles` instead'
+            ),
+            DeprecationWarning
+        )
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
@@ -489,6 +504,13 @@ class Light(BrightnessMethod):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
+        warnings.warn(
+            (
+                'Light is unmaintained and has been deprecated.'
+                ' Please use `SysFiles` instead'
+            ),
+            DeprecationWarning
+        )
         info = cls.get_display_info()
         if display is not None:
             info = [info[display]]
