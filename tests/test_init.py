@@ -337,7 +337,7 @@ class TestDisplay:
             setter = mocker.patch.object(display, 'set_brightness', autospec=True)
 
             duration = 0.1          # seconds to run the fade
-            interval = 0.02         # seconds between each step
+            interval = 0.01         # seconds between each step
             steps = int(duration / interval) + 1    # +1 because the start brightness is set without waiting
 
             def fade_brightness_thread(stoppable: bool):
@@ -368,6 +368,10 @@ class TestDisplay:
             expected_call_count = steps * 2
             # Allow for a small margin of error due to two incomplete last steps
             assert expected_call_count - call_count <= 2
+
+            # Ensure all threads complete to prevent interference with subsequent tests.
+            while threading.active_count() > 1:
+                time.sleep(interval)
 
     class TestFromDict:
         def test_returns_valid_instance(self, subtests):
