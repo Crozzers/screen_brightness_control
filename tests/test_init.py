@@ -338,7 +338,8 @@ class TestDisplay:
 
             duration = 0.1          # seconds to run the fade
             interval = 0.02         # seconds between each step
-            duration += interval/2  # add a little extra time to ensure the last brightness set is completed
+            # add a little extra time to ensure the last brightness set is completed. Warning: this is a bit of a hack
+            duration += interval/4
             steps = int(duration / interval) + 1    # +1 because the start brightness is set without waiting
 
             def fade_brightness_thread(stoppable: bool):
