@@ -334,17 +334,19 @@ class TestDisplay:
             assert 'force' in setter.mock_calls[-1].kwargs, 'force kwarg should be propagated'
 
         def test_stoppable_kwarg(self, display: sbc.Display, mocker: MockerFixture):
-            mocker.patch.object(display, 'get_brightness', Mock(return_value=1))
-            setter = mocker.patch.object(display, 'set_brightness', autospec=True)
+            start = 1
+            finish = 20             # smaller value could introduce errors; greater value will extend the test.
+            interval = 0.05         # smaller value could introduce errors.
+            steps = int((finish - start) / 2)   # half the steps to ensure the thread is still active when checking.
+            duration = interval * (steps - 1)   # -1 because the first step is immediate.
 
-            duration = 0.1          # seconds to run the fade
-            interval = 0.01         # seconds between each step
-            steps = int(duration / interval) + 1    # +1 because the start brightness is set without waiting
+            mocker.patch.object(display, 'get_brightness', Mock(return_value=start))
+            setter = mocker.patch.object(display, 'set_brightness', autospec=True)
 
             def fade_brightness_thread(stoppable: bool):
                 '''mainly for Mypy to stop complaining about the return type of `display.fade_brightness`'''
                 return cast(threading.Thread,
-                            display.fade_brightness(100, interval=interval, blocking=False, stoppable=stoppable))
+                            display.fade_brightness(finish, interval=interval, blocking=False, stoppable=stoppable))
 
             thread_0 = fade_brightness_thread(stoppable=True)
             thread_1 = fade_brightness_thread(stoppable=True)
