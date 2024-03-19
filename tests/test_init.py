@@ -1,8 +1,9 @@
 import dataclasses
 import threading
+import time
 from copy import deepcopy
 from timeit import timeit
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from unittest.mock import Mock, call
 
 import pytest
@@ -228,6 +229,21 @@ class TestDisplay:
         display.set_brightness(50)
         return display
 
+    def test_singleton(self):
+        '''`Display` should be a singleton class that returns the same instance for the same input'''
+        monitors = sbc.list_monitors_info()
+        for i in range(2):
+            for monitor in monitors:
+                if i == 0:
+                    sbc.Display.from_dict(monitor)
+                else:
+                    # check that the same instance is returned
+                    dict_repr = frozenset(list(monitor.items()))
+                    assert sbc.Display._instances[dict_repr] == sbc.Display.from_dict(monitor)
+        else:
+            # after two iterations, the `_instances` dict should still have the same length as the number of monitors
+            assert len(sbc.Display._instances) == len(monitors)
+
     class TestFadeBrightness:
         @pytest.mark.parametrize('value', [100, 0, 75, 50, 150, -10])
         def test_returns_int_percentage(self, display: sbc.Display, value: int):
@@ -315,6 +331,39 @@ class TestDisplay:
             assert setter.mock_calls[-1].args[0] == target
             # it should have also passed the `force` kwarg along to the final call
             assert 'force' in setter.mock_calls[-1].kwargs, 'force kwarg should be propagated'
+
+        def test_stoppable_kwarg(self, display: sbc.Display, mocker: MockerFixture):
+            mocker.patch.object(display, 'get_brightness', Mock(return_value=1))
+            setter = mocker.patch.object(display, 'set_brightness', autospec=True)
+
+            duration = 0.1          # seconds to run the fade
+            interval = 0.02         # seconds between each step
+            duration += interval/2  # add a little extra time to ensure the last brightness set is completed
+            steps = int(duration / interval) + 1    # +1 because the start brightness is set without waiting
+
+            def fade_brightness_thread(stoppable: bool):
+                '''mainly for Mypy to stop complaining about the return type of `display.fade_brightness`'''
+                return cast(threading.Thread,
+                            display.fade_brightness(100, interval=interval, blocking=False, stoppable=stoppable))
+
+            thread_0 = fade_brightness_thread(stoppable=True)
+            thread_1 = fade_brightness_thread(stoppable=True)
+            time.sleep(duration)    # block the main thread to allow non-blocking fades to occur.
+            # The second fade should have stopped the first one.
+            assert not thread_0.is_alive() and thread_1.is_alive()
+            call_count = len(setter.mock_calls)
+            # *1 because only the second (latest) fade should run and the first should be stopped.
+            # Extra increment (+1) is added due to the immediate setting of the start brightness in the first thread,
+            # which occurs right after the first thread starts and before the second thread can signal it to stop.
+            assert call_count == steps * 1 + 1
+
+            # The fades below can't be stopped but they will halt the two above, which is essential for call count.
+            thread_2 = fade_brightness_thread(stoppable=False)
+            thread_3 = fade_brightness_thread(stoppable=False)
+            time.sleep(duration)
+            # Both two new threads will run without stopping.
+            assert thread_2.is_alive() and thread_3.is_alive()
+            assert len(setter.mock_calls) - call_count == steps * 2
 
     class TestFromDict:
         def test_returns_valid_instance(self, subtests):

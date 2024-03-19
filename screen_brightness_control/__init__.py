@@ -211,7 +211,7 @@ def fade_brightness(
     for i in available_monitors:
         display = Display.from_dict(i)
 
-        thread = threading.Thread(target=display.fade_brightness_thread, args=(finish,), kwargs={
+        thread = threading.Thread(target=display._fade_brightness, args=(finish,), kwargs={
             'start': start,
             'interval': interval,
             'increment': increment,
@@ -391,7 +391,7 @@ class Display():
         logarithmic: bool = True,
         blocking: bool = True,
         stoppable: bool = True
-    ) -> IntPercentage:
+    ) -> Union[threading.Thread, IntPercentage]:
         '''
         Gradually change the brightness of this display to a set value.
         Can execute in the current thread, blocking until completion,
@@ -419,7 +419,7 @@ class Display():
             .. warning:: Deprecated
                This function will return `None` in v0.23.0 and later.
         '''
-        thread = threading.Thread(target=self.fade_brightness_thread, args=(finish,), kwargs={
+        thread = threading.Thread(target=self._fade_brightness, args=(finish,), kwargs={
             'start': start,
             'interval': interval,
             'increment': increment,
@@ -428,12 +428,14 @@ class Display():
             'stoppable': stoppable
         })
         thread.start()
-        if blocking:
+
+        if not blocking:
+            return thread
+        else:
             thread.join()
+            return self.get_brightness()
 
-        return self.get_brightness()
-
-    def fade_brightness_thread(
+    def _fade_brightness(
         self,
         finish: Percentage,
         start: Optional[Percentage] = None,
@@ -442,7 +444,7 @@ class Display():
         force: bool = False,
         logarithmic: bool = True,
         stoppable: bool = True
-    ) -> IntPercentage:
+    ) -> None:
         '''
         Gradually change the brightness of this display to a set value.
         This works by incrementally changing the brightness until the desired
@@ -462,11 +464,7 @@ class Display():
             stoppable: whether the fade can be stopped by starting a new fade on the same display
 
         Returns:
-            The brightness of the display after the fade is complete.
-            See `.types.IntPercentage`
-
-            .. warning:: Deprecated
-               This function will return `None` in v0.23.0 and later.
+            None
         '''
         # Record the latest thread so that other stoppable threads can be stopped
         self._fade_thread = threading.current_thread()
@@ -511,8 +509,6 @@ class Display():
             # This also avoids an unnecessary sleep in the last iteration.
             if not stoppable or threading.current_thread() == self._fade_thread:
                 self.set_brightness(finish, force=force)
-
-        return self.get_brightness()
 
     @classmethod
     def from_dict(cls, display: dict) -> 'Display':
