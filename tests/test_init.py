@@ -232,17 +232,18 @@ class TestDisplay:
     def test_singleton(self):
         '''`Display` should be a singleton class that returns the same instance for the same input'''
         monitors = sbc.list_monitors_info()
-        for i in range(2):
-            for monitor in monitors:
-                if i == 0:
-                    sbc.Display.from_dict(monitor)
-                else:
-                    # check that the same instance is returned
-                    dict_repr = frozenset(list(monitor.items()))
-                    assert sbc.Display._instances[dict_repr] == sbc.Display.from_dict(monitor)
-        else:
-            # after two iterations, the `_instances` dict should still have the same length as the number of monitors
-            assert len(sbc.Display._instances) == len(monitors)
+
+        # Create instance for each monitor
+        for monitor in monitors:
+            sbc.Display.from_dict(monitor)
+
+        # Check that the same instance is returned
+        for monitor in monitors:
+            dict_repr = frozenset(list(monitor.items()))
+            assert sbc.Display._instances[dict_repr] == sbc.Display.from_dict(monitor)
+
+        # After two iterations, the `_instances` dict should still have the same length as the number of monitors
+        assert len(sbc.Display._instances) == len(monitors)
 
     class TestFadeBrightness:
         @pytest.mark.parametrize('value', [100, 0, 75, 50, 150, -10])
@@ -356,7 +357,7 @@ class TestDisplay:
             # which occurs right after the first thread starts and before the second thread can signal it to stop.
             expected_call_count = steps * 1 + 1
             # Allow for a small margin of error due to one incomplete last step
-            assert expected_call_count - call_count <= 1
+            assert 0 <= expected_call_count - call_count <= 1
 
             # The fades below can't be stopped but they will halt the two above, which is essential for call count.
             thread_2 = fade_brightness_thread(stoppable=False)
@@ -367,7 +368,7 @@ class TestDisplay:
             call_count = len(setter.mock_calls) - call_count
             expected_call_count = steps * 2
             # Allow for a small margin of error due to two incomplete last steps
-            assert expected_call_count - call_count <= 2
+            assert 0 <= expected_call_count - call_count <= 2
 
             # Ensure all threads complete to prevent interference with subsequent tests.
             while threading.active_count() > 1:

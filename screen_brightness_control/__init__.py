@@ -413,8 +413,9 @@ class Display():
             stoppable: whether this fade will be stopped by starting a new fade on the same display
 
         Returns:
-            The brightness of the display after the fade is complete.
-            See `.types.IntPercentage`
+            If `blocking` is `False`, returns a `threading.Thread` object representing the
+            thread in which the fade operation is running.
+            If `blocking` is `True`, returns the current brightness level after the fade operation completes.
 
             .. warning:: Deprecated
                This function will return `None` in v0.23.0 and later.
