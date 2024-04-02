@@ -229,22 +229,6 @@ class TestDisplay:
         display.set_brightness(50)
         return display
 
-    def test_singleton(self):
-        '''`Display` should be a singleton class that returns the same instance for the same input'''
-        monitors = sbc.list_monitors_info()
-
-        # Create instance for each monitor
-        for monitor in monitors:
-            sbc.Display.from_dict(monitor)
-
-        # Check that the same instance is returned
-        for monitor in monitors:
-            dict_repr = frozenset(list(monitor.items()))
-            assert sbc.Display._instances[dict_repr] == sbc.Display.from_dict(monitor)
-
-        # After two iterations, the `_instances` dict should still have the same length as the number of monitors
-        assert len(sbc.Display._instances) == len(monitors)
-
     class TestFadeBrightness:
         @pytest.mark.parametrize('value', [100, 0, 75, 50, 150, -10])
         def test_returns_int_percentage(self, display: sbc.Display, value: int):
@@ -336,7 +320,7 @@ class TestDisplay:
         def test_stoppable_kwarg(self, display: sbc.Display, mocker: MockerFixture):
             start = 1
             finish = 20             # smaller value could introduce errors; greater value will extend the test.
-            interval = 0.05         # smaller value could introduce errors.
+            interval = 0.05         # same as above
             steps = int((finish - start) / 2)   # half the steps to ensure the thread is still active when checking.
             duration = interval * (steps - 1)   # -1 because the first step is immediate.
 
@@ -346,7 +330,8 @@ class TestDisplay:
             def fade_brightness_thread(stoppable: bool):
                 '''mainly for Mypy to stop complaining about the return type of `display.fade_brightness`'''
                 return cast(threading.Thread,
-                            display.fade_brightness(finish, interval=interval, blocking=False, stoppable=stoppable))
+                            display.fade_brightness(finish=finish, start=start, interval=interval,
+                                                    logarithmic=False, blocking=False, stoppable=stoppable))
 
             thread_0 = fade_brightness_thread(stoppable=True)
             thread_1 = fade_brightness_thread(stoppable=True)

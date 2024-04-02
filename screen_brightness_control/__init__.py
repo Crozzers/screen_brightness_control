@@ -6,8 +6,7 @@ import traceback
 import warnings
 from dataclasses import dataclass, field, fields
 from types import ModuleType
-from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet
-
+from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet, ClassVar
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
 from .helpers import (BrightnessMethod, ScreenBrightnessError,
@@ -361,21 +360,8 @@ class Display():
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
     _logger: logging.Logger = field(init=False, repr=False)
-    _instances: Dict[FrozenSet[Tuple[Any, Any]], 'Display'] = field(default_factory=dict)
-    '''A dictionary of all instances of this class, indexed by their args and kwargs'''
-    _fade_thread: Optional[threading.Thread] = None
-    '''The latest thread that is fading the brightness of the same display'''
-
-    def __new__(cls, *args, **kwargs):
-        '''Ensure that only one instance of this class is created for each set of args and kwargs'''
-        if not hasattr(cls, '_instances'):
-            cls._instances = {}
-        # convert the args and kwargs to a hashable type
-        dict_repr = frozenset(list(args) + list(kwargs.items()))
-        if dict_repr not in cls._instances:
-            cls._instances[dict_repr] = super().__new__(cls)
-
-        return cls._instances[dict_repr]
+    _fade_thread_dict: ClassVar[Dict[FrozenSet[Tuple[Any, Any]], threading.Thread]] = {}
+    '''A dictionary mapping display identifiers to latest fade threads for stopping fades.'''
 
     def __post_init__(self):
         self._logger = _logger.getChild(self.__class__.__name__).getChild(
@@ -467,8 +453,9 @@ class Display():
         Returns:
             None
         '''
-        # Record the latest thread so that other stoppable threads can be stopped
-        self._fade_thread = threading.current_thread()
+        # Record the latest thread for this display so that other stoppable threads can be stopped
+        display_key = frozenset((self.method, self.index))
+        self._fade_thread_dict[display_key] = threading.current_thread()
         # minimum brightness value
         if platform.system() == 'Linux' and not force:
             lower_bound = 1
@@ -493,7 +480,7 @@ class Display():
         # Record the time when the next brightness change should start
         next_change_start_time = time.time()
         for value in range_func(start, finish, increment):
-            if stoppable and threading.current_thread() != self._fade_thread:
+            if stoppable and threading.current_thread() != self._fade_thread_dict[display_key]:
                 # If the current thread is stoppable and it's not the latest thread, stop fading
                 break
             # `value` is ensured not to hit `finish` in loop, this will be handled in the final step.
@@ -508,7 +495,7 @@ class Display():
         else:
             # As `value` doesn't hit `finish` in loop, we explicitly set brightness to `finish`.
             # This also avoids an unnecessary sleep in the last iteration.
-            if not stoppable or threading.current_thread() == self._fade_thread:
+            if not stoppable or threading.current_thread() == self._fade_thread_dict[display_key]:
                 self.set_brightness(finish, force=force)
 
     @classmethod
