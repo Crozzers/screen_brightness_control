@@ -231,8 +231,8 @@ class TestDisplay:
 
     class TestFadeBrightness:
         @pytest.mark.parametrize('value', [100, 0, 75, 50, 150, -10])
-        def test_returns_int_percentage(self, display: sbc.Display, value: int):
-            assert 0 <= display.fade_brightness(value, interval=0) <= 100
+        def test_returns_none(self, display: sbc.Display, value: int):
+            assert display.fade_brightness(value, interval=0) is None
 
         @pytest.mark.parametrize('value', ['60', '70.0', '+10', '-10', '500'])
         def test_relative_values(self, display: sbc.Display, value):

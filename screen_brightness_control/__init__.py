@@ -377,7 +377,7 @@ class Display():
         logarithmic: bool = True,
         blocking: bool = True,
         stoppable: bool = True
-    ) -> Union[threading.Thread, IntPercentage]:
+    ) -> Optional[threading.Thread]:
         '''
         Gradually change the brightness of this display to a set value.
         Can execute in the current thread, blocking until completion,
@@ -401,10 +401,7 @@ class Display():
         Returns:
             If `blocking` is `False`, returns a `threading.Thread` object representing the
             thread in which the fade operation is running.
-            If `blocking` is `True`, returns the current brightness level after the fade operation completes.
-
-            .. warning:: Deprecated
-               This function will return `None` in v0.23.0 and later.
+            Otherwise, it returns None.
         '''
         thread = threading.Thread(target=self._fade_brightness, args=(finish,), kwargs={
             'start': start,
@@ -420,7 +417,7 @@ class Display():
             return thread
         else:
             thread.join()
-            return self.get_brightness()
+            return None
 
     def _fade_brightness(
         self,
