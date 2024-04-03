@@ -432,27 +432,6 @@ class Display():
         logarithmic: bool = True,
         stoppable: bool = True
     ) -> None:
-        '''
-        Gradually change the brightness of this display to a set value.
-        This works by incrementally changing the brightness until the desired
-        value is reached.
-
-        Args:
-            finish (.types.Percentage): the brightness level to end up on
-            start (.types.Percentage): where the fade should start from. Defaults
-                to whatever the current brightness level for the display is
-            interval: time delay between each change in brightness
-            increment: amount to change the brightness by each time (as a percentage)
-            force: [*Linux only*] allow the brightness to be set to 0. By default,
-                brightness values will never be set lower than 1, since setting them to 0
-                often turns off the backlight
-            logarithmic: follow a logarithmic curve when setting brightness values.
-                See `logarithmic_range` for rationale
-            stoppable: whether the fade can be stopped by starting a new fade on the same display
-
-        Returns:
-            None
-        '''
         # Record the latest thread for this display so that other stoppable threads can be stopped
         display_key = frozenset((self.method, self.index))
         self._fade_thread_dict[display_key] = threading.current_thread()
