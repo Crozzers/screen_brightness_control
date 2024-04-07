@@ -3,8 +3,7 @@ import platform
 import threading
 import time
 import traceback
-import warnings
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet, ClassVar
 from ._version import __author__, __version__  # noqa: F401
