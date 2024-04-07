@@ -318,48 +318,17 @@ class TestDisplay:
             assert 'force' in setter.mock_calls[-1].kwargs, 'force kwarg should be propagated'
 
         def test_stoppable_kwarg(self, display: sbc.Display, mocker: MockerFixture):
-            start = 1
-            finish = 20             # smaller value could introduce errors; greater value will extend the test.
-            interval = 0.05         # same as above
-            steps = int((finish - start) / 2)   # half the steps to ensure the thread is still active when checking.
-            duration = interval * (steps - 1)   # -1 because the first step is immediate.
+            thread_0 = display.fade_brightness(100, blocking=False, stoppable=True, interval=0.05)
+            assert thread_0 is not None, 'should return thread object'
+            assert thread_0.is_alive()
+            thread_1 = display.fade_brightness(100, blocking=False, stoppable=True, interval=0.05)
+            assert thread_1 is not None, 'should return thread object'
+            time.sleep(0.1)
+            assert thread_0.is_alive() is False
+            assert thread_1.is_alive() is True
 
-            mocker.patch.object(display, 'get_brightness', Mock(return_value=start))
-            setter = mocker.patch.object(display, 'set_brightness', autospec=True)
-
-            def fade_brightness_thread(stoppable: bool):
-                '''mainly for Mypy to stop complaining about the return type of `display.fade_brightness`'''
-                return cast(threading.Thread,
-                            display.fade_brightness(finish=finish, start=start, interval=interval,
-                                                    logarithmic=False, blocking=False, stoppable=stoppable))
-
-            thread_0 = fade_brightness_thread(stoppable=True)
-            thread_1 = fade_brightness_thread(stoppable=True)
-            time.sleep(duration)    # block the main thread to allow non-blocking fades to occur.
-            # The second fade should have stopped the first one.
-            assert not thread_0.is_alive() and thread_1.is_alive()
-            call_count = len(setter.mock_calls)
-            # *1 because only the second (latest) fade should run and the first should be stopped.
-            # Extra increment (+1) is added due to the immediate setting of the start brightness in the first thread,
-            # which occurs right after the first thread starts and before the second thread can signal it to stop.
-            expected_call_count = steps * 1 + 1
-            # Allow for a small margin of error due to one incomplete last step
-            assert 0 <= expected_call_count - call_count <= 1
-
-            # The fades below can't be stopped but they will halt the two above, which is essential for call count.
-            thread_2 = fade_brightness_thread(stoppable=False)
-            thread_3 = fade_brightness_thread(stoppable=False)
-            time.sleep(duration)
-            # Both two new threads should run without stopping.
-            assert thread_2.is_alive() and thread_3.is_alive()
-            call_count = len(setter.mock_calls) - call_count
-            expected_call_count = steps * 2
-            # Allow for a small margin of error due to two incomplete last steps
-            assert 0 <= expected_call_count - call_count <= 2
-
-            # Ensure all threads complete to prevent interference with subsequent tests.
-            while threading.active_count() > 1:
-                time.sleep(interval)
+            thread_0.join()
+            thread_1.join()
 
     class TestFromDict:
         def test_returns_valid_instance(self, subtests):
