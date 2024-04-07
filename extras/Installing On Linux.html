@@ -66,7 +66,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.22.2</footer>
+                <footer>screen_brightness_control v0.23.0</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -152,28 +152,28 @@ users to adjust the backlight without having to manually fiddle with permissions
   <td>No</td>
   <td>Yes (slowest) [1]</td>
   <td>Yes</td>
-  <td>Read/write access for <code>/dev/i2c*</code> [2]</td>
+  <td>Read/write access for <code>/dev/i2c*</code> (see <a href="#desktop-displays">above</a>)</td>
 </tr>
 <tr>
-  <td>xrandr</td>
+  <td>xrandr [2]</td>
   <td>Yes</td>
-  <td>Yes           [3]</td>
+  <td>Yes</td>
   <td>Yes</td>
   <td>No</td>
 </tr>
 <tr>
-  <td>light</td>
+  <td>light [3]</td>
   <td>Yes</td>
   <td>No</td>
   <td>Yes</td>
-  <td>User must be in the <code>video</code> group [3]</td>
+  <td>User must be in the <code>video</code> group [4]</td>
 </tr>
 <tr>
   <td>[No program]</td>
   <td>Yes</td>
   <td>Yes (slow)</td>
   <td>Yes</td>
-  <td>Read/write access for <code>/dev/i2c*</code> and <code>/sys/class/backlight</code></td>
+  <td>See <a href="#without-using-a-3rd-party-program">above</a></td>
 </tr>
 </tbody>
 </table>
@@ -183,9 +183,9 @@ users to adjust the backlight without having to manually fiddle with permissions
 <p>[1] While both DDCUtil and the 1st party <code>linux.I2C</code> class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the <a href="https://www.ddcutil.com/usb">Monitor Control Command Set over USB</a></p>
 
-<p>[2] Read/write access for the <code>i2c</code> bus can be granted via the steps outlined in the <a href="#desktop-displays">Desktop displays</a> section or by running the script using <code>sudo</code>.</p>
+<p>[2] Xrandr has two key limitations. It doesn't support Wayland and it doesn't actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
 
-<p>[3] Xrandr does not actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.</p>
+<p>[3] This method is deprecated as the original Light project was archived in April 2023 and the repository has since been deleted. Unofficial packages are still available for some distros.</p>
 
 <p>[4] You can add yourself to the video user group by running <code>sudo usermod -a -G video [your username]</code> and then logging out and back in again for the changes to take effect.</p>
 
