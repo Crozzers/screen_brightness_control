@@ -83,20 +83,15 @@ def get_display_info() -> List[dict]:
                 f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
-        extras, desktop, laptop = [], 0, 0
         uid_keys = list(monitor_uids.keys())
         for monitor in wmi.WmiMonitorDescriptorMethods():
             model, serial, manufacturer, man_id, edid = None, None, None, None, None
             instance_name = monitor.InstanceName.replace(
                 '_0', '', 1).split('\\')[2]
-            try:
-                pydevice = monitor_uids[instance_name]
-            except KeyError:
+
+            pydevice = monitor_uids.get(instance_name)
+            if pydevice is None:
                 # if laptop display WAS connected but was later put to sleep (#33)
-                if instance_name in laptop_displays:
-                    laptop += 1
-                else:
-                    desktop += 1
                 _logger.warning(
                     f'display {instance_name!r} is detected but not present in monitor_uids.'
                     ' Maybe it is asleep?'
@@ -133,38 +128,26 @@ def get_display_info() -> List[dict]:
                         man_id, manufacturer = brand
 
             if (serial, model) != (None, None):
+                # Assign an index to each monitor, preferably matching the order in win32api.EnumDisplayMonitors()
+                if instance_name in uid_keys:
+                    # Directly use the default index of the monitor if it exists in win32api.EnumDisplayMonitors()
+                    index = uid_keys.index(instance_name)
+                else:
+                    # If the monitor is not in win32api.EnumDisplayMonitors(), assign the next available index
+                    max_existing_index = max(data['index'] for data in info)
+                    index = max(len(uid_keys), max_existing_index) + 1
+
                 data: dict = {
                     'name': f'{manufacturer} {model}',
                     'model': model,
                     'serial': serial,
                     'manufacturer': manufacturer,
                     'manufacturer_id': man_id,
-                    'edid': edid
+                    'edid': edid,
+                    'method': WMI if monitor.InstanceName in laptop_displays else VCP,
+                    'index': index,
                 }
-                if monitor.InstanceName in laptop_displays:
-                    data['index'] = laptop
-                    data['method'] = WMI
-                    laptop += 1
-                else:
-                    data['method'] = VCP
-                    desktop += 1
-
-                if instance_name in uid_keys:
-                    # insert the data into the uid_keys list because
-                    # uid_keys has the monitors sorted correctly. This
-                    # means we don't have to re-sort the list later
-                    uid_keys[uid_keys.index(instance_name)] = data
-                else:
-                    extras.append(data)
-
-        info = uid_keys + extras
-        if desktop:
-            # now make sure desktop monitors have the correct index
-            count = 0
-            for item in info:
-                if item['method'] == VCP:
-                    item['index'] = count
-                    count += 1
+                info.append(data)
 
         # return info only which has correct data
         info = [i for i in info if isinstance(i, dict)]
