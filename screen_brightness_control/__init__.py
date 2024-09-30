@@ -266,6 +266,9 @@ def list_monitors_info(
             print('Method:', display['method'])
             # the EDID string associated with that display
             print('EDID:', display['edid'])
+            # the UID of that display
+            # On Windows, this is extracted from the InstanceName of WMI or DeviceID of win32api
+            print('UID:', display['uid'])
         ```
     '''
     return _OS_MODULE.list_monitors_info(
@@ -357,6 +360,8 @@ class Display():
     '''The name of the display, often the manufacturer name plus the model name'''
     serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
+    uid: Optional[str] = None
+    '''Unique identifier for the display. On Windows, extracted from InstanceName of WMI or DeviceID of win32api'''
 
     _logger: logging.Logger = field(init=False, repr=False)
     _fade_thread_dict: ClassVar[Dict[FrozenSet[Tuple[Any, Any]], threading.Thread]] = {}
@@ -503,14 +508,14 @@ class Display():
     def get_identifier(self) -> Tuple[str, DisplayIdentifier]:
         '''
         Returns the `.types.DisplayIdentifier` for this display.
-        Will iterate through the EDID, serial, name and index and return the first
+        Will iterate through the EDID, serial, name, uid and index and return the first
         value that is not equal to None
 
         Returns:
             The name of the property returned and the value of said property.
             EG: `('serial', '123abc...')` or `('name', 'BenQ GL2450H')`
         '''
-        for key in ('edid', 'serial', 'name'):
+        for key in ('edid', 'serial', 'name', 'uid'):
             value = getattr(self, key, None)
             if value is not None:
                 return key, value
@@ -621,15 +626,15 @@ def filter_monitors(
                 # no monitor should be filtered out
                 return to_filter
             elif isinstance(display, int):
-                # 'display' variable should be the index of the monitor
-                # return a list with the monitor at the index or an empty list if the index is out of range
-                return to_filter[display:display + 1]
+                # 'display' variable should match the 'index' field of display info dict
+                # return all displays with matching index
+                return [monitor for monitor in to_filter if monitor['index'] == display]
             elif isinstance(display, str):
                 # 'display' variable should be an identifier of the monitor
                 # multiple monitors with the same identifier are allowed here, so return all of them
                 monitors = []
                 for monitor in to_filter:
-                    for identifier in ['edid', 'serial', 'name'] + include:
+                    for identifier in ['edid', 'serial', 'name', 'uid'] + include:
                         if display == monitor.get(identifier, None):
                             monitors.append(monitor)
                             break
@@ -639,7 +644,7 @@ def filter_monitors(
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
             added = False
-            for identifier in ['edid', 'serial', 'name'] + include:
+            for identifier in ['edid', 'serial', 'name', 'uid'] + include:
                 if monitor.get(identifier, None) is None:
                     continue
 

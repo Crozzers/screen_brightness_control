@@ -11,7 +11,7 @@ import pywintypes
 import win32api
 import win32con
 import wmi
-
+import re
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
 from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
@@ -139,7 +139,8 @@ def get_display_info() -> List[dict]:
                     'serial': serial,
                     'manufacturer': manufacturer,
                     'manufacturer_id': man_id,
-                    'edid': edid
+                    'edid': edid,
+                    'uid': uid_match.group(1) if (uid_match := re.search(r"UID(\d+)", instance_name)) else None,
                 }
                 if monitor.InstanceName in laptop_displays:
                     data['index'] = laptop
