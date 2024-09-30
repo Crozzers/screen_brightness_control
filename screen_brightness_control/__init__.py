@@ -492,7 +492,8 @@ class Display():
             manufacturer_id=display['manufacturer_id'],
             model=display['model'],
             name=display['name'],
-            serial=display['serial']
+            serial=display['serial'],
+            uid=display.get('uid')
         )
 
     def get_brightness(self) -> IntPercentage:

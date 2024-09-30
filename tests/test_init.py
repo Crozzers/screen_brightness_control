@@ -394,9 +394,9 @@ class TestDisplay:
             assert getattr(display, prop) == value
             assert value is not None
 
-        @pytest.mark.parametrize('prop', ['edid', 'serial', 'name', 'index'])
+        @pytest.mark.parametrize('prop', ['edid', 'serial', 'name', 'uid', 'index'])
         def test_returns_first_not_none_value(self, display: sbc.Display, prop: str):
-            all_props = ['edid', 'serial', 'name', 'index']
+            all_props = ['edid', 'serial', 'name', 'uid', 'index']
             for p in all_props:
                 if p == prop:
                     continue
