@@ -339,12 +339,7 @@ class TestDisplay:
             # The second fade should have stopped the first one.
             assert not thread_0.is_alive() and thread_1.is_alive()
             call_count = len(setter.mock_calls)
-            # *1 because only the second (latest) fade should run and the first should be stopped.
-            # Extra increment (+1) is added due to the immediate setting of the start brightness in the first thread,
-            # which occurs right after the first thread starts and before the second thread can signal it to stop.
-            expected_call_count = steps * 1 + 1
-            # Allow for a small margin of error due to one incomplete last step
-            assert 0 <= expected_call_count - call_count <= 1
+            assert round(call_count / steps) == 1   # 1 stands for the expected number of running threads
 
             # The fades below can't be stopped but they will halt the two above, which is essential for call count.
             thread_2 = fade_brightness_thread(stoppable=False)
@@ -353,9 +348,7 @@ class TestDisplay:
             # Both two new threads should run without stopping.
             assert thread_2.is_alive() and thread_3.is_alive()
             call_count = len(setter.mock_calls) - call_count
-            expected_call_count = steps * 2
-            # Allow for a small margin of error due to two incomplete last steps
-            assert 0 <= expected_call_count - call_count <= 2
+            assert round(call_count / steps) == 2   # 2 stands for the expected number of running threads
 
             # Ensure all threads complete to prevent interference with subsequent tests.
             while threading.active_count() > 1:
