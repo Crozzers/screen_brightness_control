@@ -140,7 +140,7 @@ def get_display_info() -> List[dict]:
                     'manufacturer': manufacturer,
                     'manufacturer_id': man_id,
                     'edid': edid,
-                    'connection_uid': uid_match.group(1) if (uid_match := re.search(r"UID(\d+)", instance_name)) else None,
+                    'connection_uid': match.group(1) if (match := re.search(r"UID(\d+)", instance_name)) else None,
                 }
                 if monitor.InstanceName in laptop_displays:
                     data['index'] = laptop
