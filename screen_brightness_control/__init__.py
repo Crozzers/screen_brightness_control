@@ -631,7 +631,7 @@ def filter_monitors(
             elif isinstance(display, int):
                 # 'display' variable should be the index of the monitor
                 # return a list with the monitor at the index or an empty list if the index is out of range
-                return to_filter[display : display + 1]
+                return to_filter[display:display + 1]
             elif isinstance(display, str):
                 # 'display' variable should be an identifier of the monitor
                 # multiple monitors with the same identifier are allowed here, so return all of them
