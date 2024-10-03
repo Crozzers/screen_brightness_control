@@ -5,7 +5,6 @@ import logging
 import operator
 import os
 import re
-import warnings
 import time
 from typing import List, Optional, Tuple
 
@@ -434,95 +433,6 @@ class I2C(BrightnessMethod):
             interface.setvcp(0x10, value)
 
 
-class Light(BrightnessMethod):
-    '''
-    Wraps around [light](https://github.com/haikarainen/light), an external
-    3rd party tool that can control brightness levels for e-DP displays.
-
-    .. warning::
-       The official repository was archived in April 2023 and has since been deleted.
-       Due to [having no maintainer](https://github.com/haikarainen/light/issues/147)
-       or official packages, this feature has been marked as deprecated.
-    '''
-
-    executable: str = 'light'
-    '''the light executable to be called'''
-
-    @classmethod
-    def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
-        '''
-        Implements `BrightnessMethod.get_display_info`.
-
-        Works by taking the output of `SysFiles.get_display_info` and
-        filtering out any displays that aren't supported by Light
-        '''
-        warnings.warn(
-            (
-                'Light is unmaintained and has been deprecated.'
-                ' Please use `SysFiles` instead'
-            ),
-            DeprecationWarning
-        )
-
-        light_output = check_output([cls.executable, '-L']).decode()
-        displays = []
-        index = 0
-        for device in SysFiles.get_display_info():
-            # SysFiles scrapes info from the same place that Light used to
-            # so it makes sense to use that output
-            if device['path'].replace('/sys/class', 'sysfs') in light_output:
-                del device['scale']
-                device['light_path'] = device['path'].replace(
-                    '/sys/class', 'sysfs')
-                device['method'] = cls
-                device['index'] = index
-
-                displays.append(device)
-                index += 1
-
-        if display is not None:
-            displays = filter_monitors(display=display, haystack=displays, include=[
-                                       'path', 'light_path'])
-        return displays
-
-    @classmethod
-    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        warnings.warn(
-            (
-                'Light is unmaintained and has been deprecated.'
-                ' Please use `SysFiles` instead'
-            ),
-            DeprecationWarning
-        )
-        info = cls.get_display_info()
-        if display is not None:
-            info = [info[display]]
-
-        for i in info:
-            check_output(
-                f'{cls.executable} -S {value} -s {i["light_path"]}'.split(" "))
-
-    @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        warnings.warn(
-            (
-                'Light is unmaintained and has been deprecated.'
-                ' Please use `SysFiles` instead'
-            ),
-            DeprecationWarning
-        )
-        info = cls.get_display_info()
-        if display is not None:
-            info = [info[display]]
-
-        results = []
-        for i in info:
-            results.append(
-                check_output([cls.executable, '-G', '-s', i['light_path']])
-            )
-        return [int(round(float(i.decode()), 0)) for i in results]
-
-
 class XRandr(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the xrandr executable'''
 
@@ -864,4 +774,4 @@ def list_monitors_info(
         return []
 
 
-METHODS = (SysFiles, I2C, XRandr, DDCUtil, Light)
+METHODS = (SysFiles, I2C, XRandr, DDCUtil)

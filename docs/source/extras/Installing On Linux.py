@@ -54,7 +54,6 @@ Program       | Works on laptop displays | Works on external monitors | Per-disp
 --------------|--------------------------|----------------------------|---------------------------------------|-------------------------------------------------------------------
 ddcutil       | No                       | Yes (slowest) [1]          | Yes                                   | Read/write access for `/dev/i2c*` (see [above](#desktop-displays))
 xrandr [2]    | Yes                      | Yes                        | Yes                                   | No
-light [3]     | Yes                      | No                         | Yes                                   | User must be in the `video` group [4]
 [No program]  | Yes                      | Yes (slow)                 | Yes                                   | See [above](#without-using-a-3rd-party-program)
 
 #### Footnotes
@@ -63,23 +62,16 @@ DDCUtil also supports communicating with monitors that implement the [Monitor Co
 
 [2] Xrandr has two key limitations. It doesn't support Wayland and it doesn't actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
-[3] This method is deprecated as the original Light project was archived in April 2023 and the repository has since been deleted. Unofficial packages are still available for some distros.
-
-[4] You can add yourself to the video user group by running `sudo usermod -a -G video [your username]` and then logging out and back in again for the changes to take effect.
-
 
 ## Install Instructions
 
 * Arch
     * Xrandr: `sudo pacman -S xorg-xrandr`
     * DDCUtil: `sudo pacman -S ddcutil`
-    * Light: `sudo pacman -S light-git`
 * Debian/Ubuntu
     * XRandr: `sudo apt install x11-xserver-utils`
     * DDCUtil: `sudo apt install ddcutil`
-    * Light: `sudo apt install light`
 * Fedora
     * Xrandr: `sudo dnf install libXrandr`
     * DDCUtil: `sudo dnf install ddcutil`
-    * Light: `sudo dnf install light`
 '''
