@@ -1,9 +1,8 @@
 import logging
 import threading
 import time
-from ctypes import POINTER, WINFUNCTYPE, Structure, WinError, byref, windll
-from ctypes.wintypes import (BOOL, BYTE, DWORD, HANDLE, HDC, HMONITOR, LPARAM,
-                             RECT, WCHAR)
+from ctypes import Structure, WinError, byref, windll
+from ctypes.wintypes import BYTE, DWORD, HANDLE, WCHAR
 from typing import List, Optional
 
 import pythoncom
@@ -35,7 +34,7 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
     '''
     for monitor_enum in win32api.EnumDisplayMonitors():
         pyhandle = monitor_enum[0]
-        monitor_info = win32api.GetMonitorInfo(pyhandle)
+        monitor_info = win32api.GetMonitorInfo(pyhandle.handle)
         for adaptor_index in range(5):
             try:
                 # EDD_GET_DEVICE_INTERFACE_NAME flag to populate DeviceID field
@@ -208,8 +207,6 @@ class WMI(BrightnessMethod):
 
 class VCP(BrightnessMethod):
     '''Collection of screen brightness related methods using the DDC/CI commands'''
-    _MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
-
     _logger = _logger.getChild('VCP')
 
     class _PHYSICAL_MONITOR(Structure):
@@ -230,15 +227,6 @@ class VCP(BrightnessMethod):
         Raises:
             ctypes.WinError: upon failure to enumerate through the monitors
         '''
-        def callback(hmonitor, *_):
-            monitors.append(HMONITOR(hmonitor))
-            return True
-
-        monitors: List[HMONITOR] = []
-        if not windll.user32.EnumDisplayMonitors(None, None, cls._MONITORENUMPROC(callback), None):
-            cls._logger.error('EnumDisplayMonitors failed')
-            raise WinError(None, 'EnumDisplayMonitors failed')
-
         # user index keeps track of valid monitors
         user_index = 0
         # monitor index keeps track of valid and pseudo monitors
@@ -256,7 +244,7 @@ class VCP(BrightnessMethod):
                 f'failed to gather list of laptop displays - {format_exc(e)}')
             laptop_displays = []
 
-        for monitor in monitors:
+        for monitor in map(lambda m: m[0].handle, win32api.EnumDisplayMonitors()):
             # Get physical monitor count
             count = DWORD()
             if not windll.dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, byref(count)):
