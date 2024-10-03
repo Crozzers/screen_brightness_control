@@ -387,9 +387,9 @@ class TestDisplay:
             assert getattr(display, prop) == value
             assert value is not None
 
-        @pytest.mark.parametrize('prop', ['edid', 'serial', 'name', 'connection_uid', 'index'])
+        @pytest.mark.parametrize('prop', ['uid', 'edid', 'serial', 'name', 'index'])
         def test_returns_first_not_none_value(self, display: sbc.Display, prop: str):
-            all_props = ['edid', 'serial', 'name', 'connection_uid', 'index']
+            all_props = ['uid', 'edid', 'serial', 'name', 'index']
             for p in all_props:
                 if p == prop:
                     continue
@@ -403,9 +403,9 @@ class TestDisplay:
             `get_identifier` should skip properties only if they are `None`.
             It's very easy to do an `if truthy` check but that's not what we want here.
             '''
-            display.edid = ''
+            display.uid = ''
             prop, value = display.get_identifier()
-            assert prop == 'edid' and value == ''
+            assert prop == 'uid' and value == ''
 
     def test_is_active(self, display: sbc.Display, mocker: MockerFixture):
         # normal operation, should return true

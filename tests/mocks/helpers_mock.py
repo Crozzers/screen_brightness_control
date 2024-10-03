@@ -14,7 +14,7 @@ class MockBrightnessMethod(BrightnessMethod):
             'serial': 'serial1',
             'edid': '00ffffffffff00edid1',
             'method': cls,
-            'connection_uid': '1000',
+            'uid': '1000',
             'index': 0
         }]
 

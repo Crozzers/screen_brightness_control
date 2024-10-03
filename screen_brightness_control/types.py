@@ -43,10 +43,10 @@ DisplayIdentifier = Union[int, str]
 '''
 Something that can be used to identify a particular display.
 Can be any one of the following properties of a display:
+- uid (str)
 - edid (str)
 - serial (str)
 - name (str)
-- connection_uid (str)
 - index (int)
 
 See `Display` for descriptions of each property and its type
