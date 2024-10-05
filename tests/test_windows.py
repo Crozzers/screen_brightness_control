@@ -8,7 +8,7 @@ from unittest.mock import call
 
 from .helpers import BrightnessMethodTest
 from screen_brightness_control.helpers import BrightnessMethod
-from .mocks.windows_mock import mock_enum_display_devices, mock_wmi_init, FakeWinDLL
+from .mocks.windows_mock import mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init, FakeWinDLL
 
 
 @pytest.fixture
@@ -16,6 +16,7 @@ def patch_global_get_display_info(mocker: MockerFixture):
     '''Mock everything needed to get `sbc.windows.get_display_info` to run'''
     mocker.patch.object(sbc.windows, 'enum_display_devices', mock_enum_display_devices)
     mocker.patch.object(sbc.windows, '_wmi_init', mock_wmi_init)
+    mocker.patch.object(sbc.windows.win32api, 'EnumDisplayMonitors', mock_enum_display_monitors)
 
 
 class TestWMI(BrightnessMethodTest):

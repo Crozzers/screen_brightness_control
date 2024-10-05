@@ -1,7 +1,6 @@
 import re
 from collections import namedtuple
-from ctypes.wintypes import RECT, HMONITOR
-from typing import Callable
+from ctypes.wintypes import HMONITOR
 
 import win32con
 
@@ -85,7 +84,7 @@ class FakeWinDLL:
             for fake in FAKE_DISPLAYS:
                 if fake['laptop']:
                     continue
-                if fake['uid'].strip('0') != str(monitor.value):
+                if fake['uid'].strip('0') != str(monitor):
                     continue
                 count_out._obj.value = 1
                 break
@@ -95,7 +94,7 @@ class FakeWinDLL:
 
         @staticmethod
         def GetPhysicalMonitorsFromHMONITOR(monitor: HMONITOR, array_size, array_out):
-            array_out[0].handle = int(monitor.value)
+            array_out[0].handle = int(monitor)
             return 1
 
         @staticmethod
@@ -110,15 +109,6 @@ class FakeWinDLL:
         def SetVCPFeature(handle, code, value_in):
             return 1
 
-    class user32:
-        @staticmethod
-        def EnumDisplayMonitors(_hdc, _rect, enum_proc: Callable, _data):
-            for fake in FAKE_DISPLAYS:
-                if fake['laptop']:
-                    continue
-                enum_proc(int(fake['uid'].strip('0')), 0, RECT(0, 0, 0, 0), 0)
-            return 1
-
 
 def mock_wmi_init():
     return FakeWMI()
@@ -127,3 +117,16 @@ def mock_wmi_init():
 def mock_enum_display_devices():
     for fake in FAKE_DISPLAYS:
         yield FakePyDISPLAY_DEVICE(fake)
+
+
+def mock_enum_display_monitors(*args):
+    ret = []
+    for fake in FAKE_DISPLAYS:
+        if fake['laptop']:
+            continue
+        ret.append(
+            (
+                namedtuple('pyhandle', ['handle'])(int(fake['uid'].strip('0'))),
+            )
+        )
+    return ret
