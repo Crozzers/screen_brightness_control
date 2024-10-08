@@ -4,7 +4,6 @@ import threading
 import time
 import traceback
 from dataclasses import dataclass, field
-from types import ModuleType
 from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet, ClassVar
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
@@ -320,7 +319,7 @@ def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]
             print('Associated monitors:', sbc.list_monitors(method=method_name))
         ```
     '''
-    methods = {i.__name__.lower(): i for i in _OS_METHODS}
+    methods: Dict[str, type[BrightnessMethod]] = {i.__name__.lower(): i for i in _OS_MODULE.METHODS}
 
     if name is None:
         return methods
@@ -366,7 +365,7 @@ class Display():
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
     _logger: logging.Logger = field(init=False, repr=False)
-    _fade_thread_dict: ClassVar[Dict[FrozenSet[Tuple[Any, Any]], threading.Thread]] = {}
+    _fade_thread_dict: ClassVar[Dict[FrozenSet[Any], threading.Thread]] = {}
     '''A dictionary mapping display identifiers to latest fade threads for stopping fades.'''
 
     def __post_init__(self):
@@ -761,16 +760,12 @@ def __brightness(
     raise ScreenBrightnessError(msg)
 
 
-_OS_MODULE: ModuleType
-_OS_METHODS: Tuple[Type[BrightnessMethod], ...]
 if platform.system() == 'Windows':
     from . import windows
     _OS_MODULE = windows
-    _OS_METHODS = windows.METHODS
 elif platform.system() == 'Linux':
     from . import linux
     _OS_MODULE = linux
-    _OS_METHODS = linux.METHODS
 else:
     _logger.warning(
         f'package imported on unsupported platform ({platform.system()})')

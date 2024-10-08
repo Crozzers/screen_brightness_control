@@ -196,7 +196,7 @@ class TestGetMethods:
         methods = sbc.get_methods()
         assert isinstance(methods, dict)
         # check all methods included
-        assert tuple(methods.values()) == sbc._OS_METHODS
+        assert tuple(methods.values()) == sbc._OS_MODULE.METHODS
         # check names match up
         for name, method_class in methods.items():
             with subtests.test(method=name):
@@ -206,7 +206,7 @@ class TestGetMethods:
     class TestNameKwarg:
         def test_non_str_raises_type_error(self):
             with pytest.raises(TypeError, match=r'name must be of type str.*'):
-                sbc.get_methods(sbc._OS_METHODS[0])  # type: ignore
+                sbc.get_methods(sbc._OS_MODULE.METHODS[0])  # type: ignore
 
         def test_raises_value_error_on_invalid_lookup(self):
             with pytest.raises(ValueError, match=r'invalid method.*'):
