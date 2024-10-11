@@ -42,6 +42,11 @@ class SysFiles(BrightnessMethod):
         displays_by_edid = {}
         index = 0
 
+        # map drm devices to their pci device paths
+        drm_paths = {}
+        for folder in glob.glob('/sys/class/drm/card*-*'):
+            drm_paths[os.path.realpath(folder)] = folder
+
         for subsystem in subsystems:
 
             device: dict = {
@@ -54,7 +59,8 @@ class SysFiles(BrightnessMethod):
                 'manufacturer': None,
                 'manufacturer_id': None,
                 'edid': None,
-                'scale': None
+                'scale': None,
+                'uid': None
             }
 
             for folder in subsystem:
@@ -76,6 +82,12 @@ class SysFiles(BrightnessMethod):
                         f' - {format_exc(e)}'
                     )
                     continue
+
+                # check if backlight subsystem device matches any of the PCI devices discovered earlier
+                # if so, extract the i2c bus from the drm device folder
+                pci_path = os.path.realpath(f'/sys/class/backlight/{folder}/device')
+                if pci_path in drm_paths:
+                    device['uid'] = device['uid'] or i2c_bus_from_drm_device(drm_paths[pci_path])
 
             if os.path.isfile('%s/device/edid' % device['path']):
                 device['edid'] = EDID.hexdump('%s/device/edid' % device['path'])
@@ -371,7 +383,8 @@ class I2C(BrightnessMethod):
                         'index': index,
                         # convert edid to hex string
                         'edid': ''.join(f'{i:02x}' for i in edid),
-                        'i2c_bus': i2c_path
+                        'i2c_bus': i2c_path,
+                        'uid': i2c_path.split('-')[-1]
                     }
                 )
                 index += 1
@@ -439,6 +452,37 @@ class XRandr(BrightnessMethodAdv):
     executable: str = 'xrandr'
     '''the xrandr executable to be called'''
 
+    @staticmethod
+    def _get_uid(interface: str) -> Optional[str]:
+        '''
+        Attempts to find a UID (I2C bus path) for a given display interface.
+
+        This works by parsing the interface name and matching it up to the entries in `/sys/class/drm`.
+        `i2c_bus_from_drm_device` is then used to extract the bus number
+
+        Args:
+            interface: the interface in question. EG: `eDP-1`, `eDP1`, `HDMI-1`...
+
+        Returns:
+            The bus number as a string if found. Otherwise, none.
+        '''
+        if not os.path.isdir('/sys/class/drm'):
+            return None
+
+        # use regex because sometimes it can be `eDP-1` and sometimes it's `eDP1`
+        if interface_match := re.match(r'([a-z]+)-?(\d+)', interface, re.I):
+            interface, count = interface_match.groups()
+        else:
+            return None
+
+        for dir in os.listdir('/sys/class/drm/'):
+            # use regex here for case insensitivity on the interface
+            if not re.match(r'card\d+-%s(?:-[A-Z])?-%s' % (interface, count), dir, re.I):
+                continue
+            dir = f'/sys/class/drm/{dir}'
+            if bus := i2c_bus_from_drm_device(dir):
+                return bus
+
     @classmethod
     def _gdi(cls):
         '''
@@ -472,7 +516,8 @@ class XRandr(BrightnessMethodAdv):
                     'manufacturer': None,
                     'manufacturer_id': None,
                     'edid': None,
-                    'unsupported': line.startswith('XWAYLAND') or 'WAYLAND_DISPLAY' in os.environ
+                    'unsupported': line.startswith('XWAYLAND') or 'WAYLAND_DISPLAY' in os.environ,
+                    'uid': cls._get_uid(line.split(' ')[0])
                 }
                 display_count += 1
 
@@ -606,7 +651,8 @@ class DDCUtil(BrightnessMethodAdv):
                     'manufacturer': None,
                     'manufacturer_id': None,
                     'edid': None,
-                    'unsupported': 'invalid display' in line.lower()
+                    'unsupported': 'invalid display' in line.lower(),
+                    'uid': None
                 }
                 display_count += 1
 
@@ -614,6 +660,7 @@ class DDCUtil(BrightnessMethodAdv):
                 tmp_display['i2c_bus'] = line[line.index('/'):]
                 tmp_display['bus_number'] = int(
                     tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
+                tmp_display['uid'] = tmp_display['i2c_bus'].split('-')[-1]
 
             elif 'Mfg id' in line:
                 # Recently ddcutil has started reporting manufacturer IDs like
@@ -737,6 +784,38 @@ class DDCUtil(BrightnessMethodAdv):
                     f'--sleep-multiplier={cls.sleep_multiplier}'
                 ], max_tries=cls.cmd_max_tries
             )
+
+
+def i2c_bus_from_drm_device(dir: str) -> Optional[str]:
+    '''
+    Extract the relevant I2C bus number from a device in `/sys/class/drm`.
+
+    This function works by searching the directory for `i2c-*` and `ddc/i2c-dev/i2c-*` folders.
+
+    Args:
+        dir: the DRM directory, in the format `/sys/class/drm/<device>`
+
+    Returns:
+        Returns the I2C bus number as a string if found. Otherwise, returns None
+    '''
+    # check for enabled file and skip device if monitor inactive
+    if os.path.isfile(f'{dir}/enabled'):
+        with open(f'{dir}/enabled') as f:
+            if f.read().strip().lower() != 'enabled':
+                return
+
+    # sometimes the i2c path is in /sys/class/drm/*/i2c-*
+    # do this first because, in my testing, sometimes a device can have both `.../i2c-X` and `.../ddc/i2c-dev/...`
+    # and the latter is usually the wrong i2c path
+    paths = glob.glob(f'{dir}/i2c-*')
+    if paths:
+        return paths[0].split('-')[-1]
+
+    # sometimes the i2c path is in /sys/class/drm/*/ddc/i2c-dev
+    if os.path.isdir(f'{dir}/ddc/i2c-dev'):
+        paths = os.listdir(f'{dir}/ddc/i2c-dev')
+        if paths:
+            return paths[0].replace('i2c-', '')
 
 
 def list_monitors_info(
