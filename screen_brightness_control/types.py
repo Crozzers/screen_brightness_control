@@ -49,5 +49,5 @@ Can be any one of the following properties of a display:
 - name (str)
 - index (int)
 
-See `Display` for descriptions of each property and its type
+See `.Display` for descriptions of each property and its type
 '''

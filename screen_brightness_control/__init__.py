@@ -265,10 +265,7 @@ def list_monitors_info(
             print('Method:', display['method'])
             # the EDID string associated with that display
             print('EDID:', display['edid'])
-            # The UID of the display.
-            # On Windows, this identifier is derived from the InstanceName (WMI) or DeviceID (win32api),
-            # and represents the connection details (e.g., port, path) rather than the physical display itself.
-            # It changes if the display is connected to a different port or system.
+            # The UID of the display
             print('UID:', display['uid'])
         ```
     '''
@@ -350,7 +347,7 @@ class Display():
     This will be a class from either the windows or linux sub-module'''
 
     uid: Optional[str] = None
-    """'UID for the display connection, extracted from InstanceName (WMI) or DeviceID (win32api) on Windows."""
+    '''A unique identifier for the display. This is usually inferred from the display's connection to the machine.'''
     edid: Optional[str] = None
     '''A 256 character hex string containing information about a display and its capabilities'''
     manufacturer: Optional[str] = None
