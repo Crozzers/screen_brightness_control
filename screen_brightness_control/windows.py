@@ -1,6 +1,5 @@
 import logging
 import re
-import threading
 import time
 from contextlib import contextmanager
 from ctypes import Structure, WinError, byref, windll
@@ -39,16 +38,21 @@ See also:
 @contextmanager
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
-    # WMI calls don't work in new threads so we have to run this check
-    com_init = threading.current_thread() != threading.main_thread()
-    if com_init:
+    com_init = False
+    try:
+        yield wmi.WMI(namespace='wmi')
+    except Exception as e:
+        # WMI init will fail outside the main thread, or if CoInitialize wasn't called first
+        _logger.debug(f'WMI init failed ({e!r}). Calling CoInitialize and retrying')
+        com_init = True
         if COM_MODEL is None:
             pythoncom.CoInitialize()
         else:
             pythoncom.CoInitializeEx(COM_MODEL)
 
-    yield wmi.WMI(namespace='wmi')
+        yield wmi.WMI(namespace='wmi')
 
+    # only uninitialise if we initialised. Avoid cleaning up resources being used by another library
     if com_init:
         pythoncom.CoUninitialize()
 
