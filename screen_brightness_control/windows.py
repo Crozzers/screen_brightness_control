@@ -19,12 +19,29 @@ from .types import DisplayIdentifier, Generator, IntPercentage
 __cache__ = __Cache()
 _logger = logging.getLogger(__name__)
 
+COM_MODEL = None
+'''
+The concurrency model and flags used when calling `pythoncom.CoInitializeEx`.
+If left as `None` the library will call `CoInitialize` instead with whatever defaults it chooses.
+
+Refer to the [MS docs](https://learn.microsoft.com/en-us/windows/win32/api/objbase/ne-objbase-coinit)
+for all the possible flags.
+
+See also:
+- https://timgolden.me.uk/pywin32-docs/pythoncom__CoInitialize_meth.html
+- https://timgolden.me.uk/pywin32-docs/pythoncom__CoInitializeEx_meth.html
+- https://github.com/Crozzers/screen_brightness_control/issues/42
+'''
+
 
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
     # WMI calls don't work in new threads so we have to run this check
     if threading.current_thread() != threading.main_thread():
-        pythoncom.CoInitialize()
+        if COM_MODEL is None:
+            pythoncom.CoInitialize()
+        else:
+            pythoncom.CoInitializeEx(COM_MODEL)
     return wmi.WMI(namespace='wmi')
 
 
