@@ -1,14 +1,21 @@
 import ctypes
-import screen_brightness_control as sbc
+from contextlib import contextmanager
 from typing import Type
-from unittest.mock import Mock
+from unittest.mock import Mock, call
+
 import pytest
 from pytest_mock import MockerFixture
-from unittest.mock import call
+
+import screen_brightness_control as sbc
+from screen_brightness_control.helpers import BrightnessMethod
 
 from .helpers import BrightnessMethodTest
-from screen_brightness_control.helpers import BrightnessMethod
-from .mocks.windows_mock import mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init, FakeWinDLL
+from .mocks.windows_mock import (
+    FakeWinDLL,
+    mock_enum_display_devices,
+    mock_enum_display_monitors,
+    mock_wmi_init,
+)
 
 
 @pytest.fixture
@@ -52,27 +59,35 @@ class TestWMI(BrightnessMethodTest):
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
-                wmi = sbc.windows._wmi_init()
-                mocker.patch.object(sbc.windows, '_wmi_init', Mock(return_value=wmi, spec=True))
-                brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
-                mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
-                spy = mocker.spy(brightness_method, 'WmiSetBrightness')
-                for index, display in enumerate(freeze_display_info):
-                    with subtests.test(index=index):
-                        method.set_brightness(100, display=index)
-                        spy.assert_called_once_with(100, 0)
-                        spy.reset_mock()
+                with sbc.windows._wmi_init() as wmi:
+                    mocker.patch.object(
+                        sbc.windows,
+                        '_wmi_init',
+                        Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
+                    )
+                    brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
+                    mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
+                    spy = mocker.spy(brightness_method, 'WmiSetBrightness')
+                    for index, display in enumerate(freeze_display_info):
+                        with subtests.test(index=index):
+                            method.set_brightness(100, display=index)
+                            spy.assert_called_once_with(100, 0)
+                            spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, freeze_display_info, method):
-                wmi = sbc.windows._wmi_init()
-                mocker.patch.object(sbc.windows, '_wmi_init', Mock(return_value=wmi, spec=True))
-                brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
-                mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
-                spy = mocker.spy(brightness_method, 'WmiSetBrightness')
+                with sbc.windows._wmi_init() as wmi:
+                    mocker.patch.object(
+                        sbc.windows,
+                        '_wmi_init',
+                        Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
+                    )
+                    brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
+                    mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
+                    spy = mocker.spy(brightness_method, 'WmiSetBrightness')
 
-                method.set_brightness(100)
-                spy.assert_has_calls([call(100, 0)] * 3)
-                spy.reset_mock()
+                    method.set_brightness(100)
+                    spy.assert_has_calls([call(100, 0)] * 3)
+                    spy.reset_mock()
 
 
 class TestVCP(BrightnessMethodTest):

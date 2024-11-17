@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import re
 from collections import namedtuple
 from ctypes.wintypes import HMONITOR
@@ -110,8 +111,9 @@ class FakeWinDLL:
             return 1
 
 
+@contextmanager
 def mock_wmi_init():
-    return FakeWMI()
+    yield FakeWMI()
 
 
 def mock_enum_display_devices():
