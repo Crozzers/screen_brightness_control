@@ -1,6 +1,8 @@
 import logging
+import re
 import threading
 import time
+from contextlib import contextmanager
 from ctypes import Structure, WinError, byref, windll
 from ctypes.wintypes import BYTE, DWORD, HANDLE, WCHAR
 from typing import List, Optional
@@ -10,7 +12,7 @@ import pywintypes
 import win32api
 import win32con
 import wmi
-import re
+
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
 from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
@@ -34,15 +36,21 @@ See also:
 '''
 
 
+@contextmanager
 def _wmi_init():
     '''internal function to create and return a wmi instance'''
     # WMI calls don't work in new threads so we have to run this check
-    if threading.current_thread() != threading.main_thread():
+    com_init = threading.current_thread() != threading.main_thread()
+    if com_init:
         if COM_MODEL is None:
             pythoncom.CoInitialize()
         else:
             pythoncom.CoInitializeEx(COM_MODEL)
-    return wmi.WMI(namespace='wmi')
+
+    yield wmi.WMI(namespace='wmi')
+
+    if com_init:
+        pythoncom.CoUninitialize()
 
 
 def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, None]:
@@ -87,92 +95,92 @@ def get_display_info() -> List[dict]:
             monitor_uids[device.DeviceID.split('#')[2]] = device
 
         # gather list of laptop displays to check against later
-        wmi = _wmi_init()
-        try:
-            laptop_displays = [
-                i.InstanceName
-                for i in wmi.WmiMonitorBrightness()
-            ]
-        except Exception as e:
-            # don't do specific exception classes here because WMI does not play ball with it
-            _logger.warning(
-                f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
-            laptop_displays = []
-
-        extras, desktop, laptop = [], 0, 0
-        uid_keys = list(monitor_uids.keys())
-        for monitor in wmi.WmiMonitorDescriptorMethods():
-            model, serial, manufacturer, man_id, edid = None, None, None, None, None
-            instance_name = monitor.InstanceName.replace(
-                '_0', '', 1).split('\\')[2]
+        with _wmi_init() as wmi:
             try:
-                pydevice = monitor_uids[instance_name]
-            except KeyError:
-                # if laptop display WAS connected but was later put to sleep (#33)
-                if instance_name in laptop_displays:
-                    laptop += 1
-                else:
-                    desktop += 1
-                _logger.warning(
-                    f'display {instance_name!r} is detected but not present in monitor_uids.'
-                    ' Maybe it is asleep?'
-                )
-                continue
-
-            # get the EDID
-            try:
-                edid = ''.join(
-                    f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
-                # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
-                # takes too long
-                parsed = EDID.parse(edid)
-                man_id, manufacturer, model, name, serial = parsed
-                if name is None:
-                    raise EDIDParseError(
-                        'parsed EDID returned invalid display name')
-            except EDIDParseError as e:
-                edid = None
-                _logger.warning(
-                    f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
+                laptop_displays = [
+                    i.InstanceName
+                    for i in wmi.WmiMonitorBrightness()
+                ]
             except Exception as e:
-                edid = None
-                _logger.error(
-                    f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
-            finally:
-                if edid is None:
-                    devid = pydevice.DeviceID.split('#')
-                    serial = devid[2]
-                    man_id = devid[1][:3]
-                    model = devid[1][3:] or 'Generic Monitor'
-                    del devid
-                    if (brand := _monitor_brand_lookup(man_id)):
-                        man_id, manufacturer = brand
+                # don't do specific exception classes here because WMI does not play ball with it
+                _logger.warning(
+                    f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
+                laptop_displays = []
 
-            if (serial, model) != (None, None):
-                data: dict = {
-                    'name': f'{manufacturer} {model}',
-                    'model': model,
-                    'serial': serial,
-                    'manufacturer': manufacturer,
-                    'manufacturer_id': man_id,
-                    'edid': edid,
-                    'uid': uid_match.group(1) if (uid_match := re.search(r"UID(\d+)", instance_name)) else None,
-                }
-                if monitor.InstanceName in laptop_displays:
-                    data['index'] = laptop
-                    data['method'] = WMI
-                    laptop += 1
-                else:
-                    data['method'] = VCP
-                    desktop += 1
+            extras, desktop, laptop = [], 0, 0
+            uid_keys = list(monitor_uids.keys())
+            for monitor in wmi.WmiMonitorDescriptorMethods():
+                model, serial, manufacturer, man_id, edid = None, None, None, None, None
+                instance_name = monitor.InstanceName.replace(
+                    '_0', '', 1).split('\\')[2]
+                try:
+                    pydevice = monitor_uids[instance_name]
+                except KeyError:
+                    # if laptop display WAS connected but was later put to sleep (#33)
+                    if instance_name in laptop_displays:
+                        laptop += 1
+                    else:
+                        desktop += 1
+                    _logger.warning(
+                        f'display {instance_name!r} is detected but not present in monitor_uids.'
+                        ' Maybe it is asleep?'
+                    )
+                    continue
 
-                if instance_name in uid_keys:
-                    # insert the data into the uid_keys list because
-                    # uid_keys has the monitors sorted correctly. This
-                    # means we don't have to re-sort the list later
-                    uid_keys[uid_keys.index(instance_name)] = data
-                else:
-                    extras.append(data)
+                # get the EDID
+                try:
+                    edid = ''.join(
+                        f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
+                    # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
+                    # takes too long
+                    parsed = EDID.parse(edid)
+                    man_id, manufacturer, model, name, serial = parsed
+                    if name is None:
+                        raise EDIDParseError(
+                            'parsed EDID returned invalid display name')
+                except EDIDParseError as e:
+                    edid = None
+                    _logger.warning(
+                        f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
+                except Exception as e:
+                    edid = None
+                    _logger.error(
+                        f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
+                finally:
+                    if edid is None:
+                        devid = pydevice.DeviceID.split('#')
+                        serial = devid[2]
+                        man_id = devid[1][:3]
+                        model = devid[1][3:] or 'Generic Monitor'
+                        del devid
+                        if (brand := _monitor_brand_lookup(man_id)):
+                            man_id, manufacturer = brand
+
+                if (serial, model) != (None, None):
+                    data: dict = {
+                        'name': f'{manufacturer} {model}',
+                        'model': model,
+                        'serial': serial,
+                        'manufacturer': manufacturer,
+                        'manufacturer_id': man_id,
+                        'edid': edid,
+                        'uid': uid_match.group(1) if (uid_match := re.search(r"UID(\d+)", instance_name)) else None,
+                    }
+                    if monitor.InstanceName in laptop_displays:
+                        data['index'] = laptop
+                        data['method'] = WMI
+                        laptop += 1
+                    else:
+                        data['method'] = VCP
+                        desktop += 1
+
+                    if instance_name in uid_keys:
+                        # insert the data into the uid_keys list because
+                        # uid_keys has the monitors sorted correctly. This
+                        # means we don't have to re-sort the list later
+                        uid_keys[uid_keys.index(instance_name)] = data
+                    else:
+                        extras.append(data)
 
         info = uid_keys + extras
         if desktop:
@@ -205,21 +213,23 @@ class WMI(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        brightness_method = _wmi_init().WmiMonitorBrightnessMethods()
-        if display is not None:
-            brightness_method = [brightness_method[display]]
+        with _wmi_init() as wmi:
+            brightness_method = wmi.WmiMonitorBrightnessMethods()
+            if display is not None:
+                brightness_method = [brightness_method[display]]
 
-        for method in brightness_method:
-            method.WmiSetBrightness(value, 0)
+            for method in brightness_method:
+                method.WmiSetBrightness(value, 0)
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        brightness_method = _wmi_init().WmiMonitorBrightness()
-        if display is not None:
-            brightness_method = [brightness_method[display]]
+        with _wmi_init() as wmi:
+            brightness_method = wmi.WmiMonitorBrightness()
+            if display is not None:
+                brightness_method = [brightness_method[display]]
 
-        values = [i.CurrentBrightness for i in brightness_method]
-        return values
+            values = [i.CurrentBrightness for i in brightness_method]
+            return values
 
 
 class VCP(BrightnessMethod):
@@ -250,16 +260,16 @@ class VCP(BrightnessMethod):
         monitor_index = 0
         display_devices = list(enum_display_devices())
 
-        wmi = _wmi_init()
-        try:
-            laptop_displays = [
-                i.InstanceName.replace('_0', '').split('\\')[2]
-                for i in wmi.WmiMonitorBrightness()
-            ]
-        except Exception as e:
-            cls._logger.warning(
-                f'failed to gather list of laptop displays - {format_exc(e)}')
-            laptop_displays = []
+        with _wmi_init() as wmi:
+            try:
+                laptop_displays = [
+                    i.InstanceName.replace('_0', '').split('\\')[2]
+                    for i in wmi.WmiMonitorBrightness()
+                ]
+            except Exception as e:
+                cls._logger.warning(
+                    f'failed to gather list of laptop displays - {format_exc(e)}')
+                laptop_displays = []
 
         for monitor in map(lambda m: m[0].handle, win32api.EnumDisplayMonitors()):
             # Get physical monitor count
