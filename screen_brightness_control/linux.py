@@ -90,15 +90,18 @@ class SysFiles(BrightnessMethod):
                     device['uid'] = device['uid'] or i2c_bus_from_drm_device(drm_paths[pci_path])
 
             if os.path.isfile('%s/device/edid' % device['path']):
-                device['edid'] = EDID.hexdump('%s/device/edid' % device['path'])
+                device['edid'] = EDID.hexdump('%s/device/edid' % device['path']) or None
 
-                for key, value in zip(
-                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                    EDID.parse(device['edid'])
-                ):
-                    if value is None:
-                        continue
-                    device[key] = value
+                if device['edid'] is None:
+                    cls._logger.warning(f'EDID file exists but is empty for display {device["path"]}')
+                else:
+                    for key, value in zip(
+                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
+                        EDID.parse(device['edid'])
+                    ):
+                        if value is None:
+                            continue
+                        device[key] = value
 
             displays_by_edid[device['edid']] = device
             index += 1
