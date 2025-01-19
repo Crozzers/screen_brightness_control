@@ -58,6 +58,14 @@ class TestSysFiles(BrightnessMethodTest):
             display = method.get_display_info()[0]
             assert display['scale'] == max_brightness / 100
 
+        def test_empty_edid(self, mocker: MockerFixture, method: Type[BrightnessMethod]):
+            mocker.patch.object(os.path, 'isfile', Mock(return_value=True), spec=True)
+            mocker.patch.object(sbc.linux.EDID, 'hexdump', Mock(return_value=''), spec=True)
+
+            displays = method.get_display_info()
+
+            assert displays[0]['name'] == 'intel_backlight' and displays[0]['edid'] is None
+
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
