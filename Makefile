@@ -2,7 +2,13 @@ SHELL=/bin/bash
 
 .PHONY: lint
 lint:
-	python -m flake8 screen_brightness_control --max-line-length 119 --ignore W503
+	python -m ruff check screen_brightness_control
+
+.PHONY: format
+format:
+	python -m ruff check --select I --fix screen_brightness_control
+	python -m ruff format screen_brightness_control
+	python -m string_fixer -c . -t screen_brightness_control
 
 .PHONY: testquick
 testquick:

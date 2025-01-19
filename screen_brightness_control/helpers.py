@@ -12,9 +12,9 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from .exceptions import (
+from .exceptions import (  # noqa:F401
     EDIDParseError,
-    MaxRetriesExceededError,  # noqa:F401
+    MaxRetriesExceededError,
     ScreenBrightnessError,
     format_exc,
 )
