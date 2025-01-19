@@ -1,6 +1,7 @@
 '''
 A small helper module to assist with debugging the screen_brightness_control library
 '''
+
 import logging
 import platform
 import traceback
@@ -20,11 +21,7 @@ def info() -> dict:
     # configure logging
     logger = logging.getLogger(__name__).getChild('info')
 
-    debug_info = {
-        'version': sbc.__version__,
-        'platform': platform.system(),
-        'file': sbc.__file__
-    }
+    debug_info = {'version': sbc.__version__, 'platform': platform.system(), 'file': sbc.__file__}
 
     logger.debug('gathering list of all monitors')
 
@@ -71,8 +68,7 @@ def info() -> dict:
 
             try:
                 output = monitor['method'].set_brightness(
-                    brightness[0] if isinstance(brightness, list) else 100,
-                    display=monitor['index']
+                    brightness[0] if isinstance(brightness, list) else 100, display=monitor['index']
                 )
             except Exception:
                 output = traceback.format_exc()
@@ -82,10 +78,7 @@ def info() -> dict:
     debug_info['methods'] = []
     for name, method in sbc.get_methods().items():
         logger.debug(f'getting display info for method: {name}')
-        current = {
-            'name': name,
-            'class': repr(method)
-        }
+        current = {'name': name, 'class': repr(method)}
 
         try:
             displays = method.get_display_info()
@@ -109,14 +102,13 @@ def info() -> dict:
 
     if platform.system() == 'Windows':  # windows specific debug info
         logger.debug('windows specific debug info')
-        debug_info['windows'] = {
-            'wmi_monitor_id_output': sbc._OS_MODULE.wmi.WMI(namespace='wmi').WmiMonitorID()
-        }
+        debug_info['windows'] = {'wmi_monitor_id_output': sbc._OS_MODULE.wmi.WMI(namespace='wmi').WmiMonitorID()}
         try:
             enum_displays = [
                 sbc._OS_MODULE.win32api.EnumDisplayDevices(
                     sbc._OS_MODULE.win32api.GetMonitorInfo(i[0])['Device'], 0, 1
-                ).DeviceID for i in sbc._OS_MODULE.win32api.EnumDisplayMonitors()
+                ).DeviceID
+                for i in sbc._OS_MODULE.win32api.EnumDisplayMonitors()
             ]
         except Exception:
             enum_displays = traceback.format_exc()

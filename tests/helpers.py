@@ -1,9 +1,9 @@
 from abc import ABC
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type, Union
 from unittest.mock import Mock
+
 import pytest
 from pytest import MonkeyPatch
-
 from pytest_mock import MockerFixture
 
 import screen_brightness_control as sbc
@@ -18,10 +18,7 @@ class BrightnessMethodTest(ABC):
 
     @pytest.fixture
     def freeze_display_info(
-        self,
-        mocker: MockerFixture,
-        method: Type[BrightnessMethod],
-        patch_get_display_info
+        self, mocker: MockerFixture, method: Type[BrightnessMethod], patch_get_display_info
     ) -> List[dict]:
         '''
         Calls `get_display_info`, stores the result, and mocks it to return the same
@@ -48,6 +45,7 @@ class BrightnessMethodTest(ABC):
 
     class TestGetDisplayInfo:
         '''Some standard tests for the `get_display_info` method'''
+
         @pytest.fixture(autouse=True)
         def patch(self, patch_get_display_info):
             return
@@ -60,7 +58,9 @@ class BrightnessMethodTest(ABC):
             assert isinstance(display_info, list)
             assert all(isinstance(i, dict) for i in display_info)
 
-        def test_returned_dicts_contain_required_keys(self, method: Type[BrightnessMethod], extras: Optional[Dict[str, Type]]=None):
+        def test_returned_dicts_contain_required_keys(
+            self, method: Type[BrightnessMethod], extras: Optional[Dict[str, Type]] = None
+        ):
             info = method.get_display_info()
             for display in info:
                 # check basics
@@ -70,12 +70,16 @@ class BrightnessMethodTest(ABC):
                 for prop in ('name', 'model', 'serial', 'manufacturer', 'manufacturer_id', 'edid'):
                     assert prop in display, f'key {prop!r} not in returned dict'
                     if display[prop] is not None:
-                        assert isinstance(display[prop], str), f'value at key {prop!r} was of type {type(display[prop])!r}'
+                        assert isinstance(display[prop], str), (
+                            f'value at key {prop!r} was of type {type(display[prop])!r}'
+                        )
                 # check any class specific extras
                 if extras is not None:
                     for prop, prop_type in extras.items():
                         assert prop in display, f'key {prop!r} not in returned dict'
-                        assert isinstance(display[prop], prop_type), f'value at key {prop!r} was of type {type(display[prop])!r}, not {prop_type!r}'
+                        assert isinstance(display[prop], prop_type), (
+                            f'value at key {prop!r} was of type {type(display[prop])!r}, not {prop_type!r}'
+                        )
 
                 # check unsupported displays are filtered out, if applicable
                 assert 'unsupported' not in display, 'unsupported displays should be filtered out'
@@ -155,6 +159,7 @@ BFOpType = Literal['get', 'set', 'fade']
 BFPatchType = Dict[BrightnessMethod, Dict[BFOpType, Mock]]
 '''Brightness function patch type'''
 
+
 class BrightnessFunctionTest(ABC):
     @pytest.fixture(autouse=True)
     def patch_methods(self, mocker: MockerFixture, mock_os_module) -> BFPatchType:
@@ -164,6 +169,7 @@ class BrightnessFunctionTest(ABC):
         Returns:
             dict of methods and their mocks
         '''
+
         def side_effect(display=None):
             return [display]
 
@@ -180,7 +186,7 @@ class BrightnessFunctionTest(ABC):
             method_patches[method] = {
                 'get': mocker.patch.object(method, 'get_brightness', Mock(side_effect=side_effect)),
                 'set': setter_mock,
-                'fade': setter_mock
+                'fade': setter_mock,
             }
         return method_patches
 
@@ -209,28 +215,36 @@ class BrightnessFunctionTest(ABC):
 
         return (func, args, returns_none)
 
-    @pytest.mark.parametrize('set_value,expected_value', [
-        # get_brightness mock is overriden to always return 50
-        (100, 100),
-        (50, 50),
-        (1, 1),
-        # relative values
-        ('+40', 90),
-        ('-40', 10),
-        # out of bounds relative values
-        ('+99', 100),
-        ('+500', 100),
-        ('-99', 0),
-        ('-500', 0),
-        # out of bounds normal values
-        (10000, 100),
-        (-10000, 0),
-        # pushing the limits but still valid
-        (5.5, 5),
-    ])
+    @pytest.mark.parametrize(
+        'set_value,expected_value',
+        [
+            # get_brightness mock is overriden to always return 50
+            (100, 100),
+            (50, 50),
+            (1, 1),
+            # relative values
+            ('+40', 90),
+            ('-40', 10),
+            # out of bounds relative values
+            ('+99', 100),
+            ('+500', 100),
+            ('-99', 0),
+            ('-500', 0),
+            # out of bounds normal values
+            (10000, 100),
+            (-10000, 0),
+            # pushing the limits but still valid
+            (5.5, 5),
+        ],
+    )
     def test_brightness_values(
-        self, operation_type: BFOpType, patch_methods: BFPatchType, operation,
-        monkeypatch: MonkeyPatch, set_value: Union[int, str], expected_value: int
+        self,
+        operation_type: BFOpType,
+        patch_methods: BFPatchType,
+        operation,
+        monkeypatch: MonkeyPatch,
+        set_value: Union[int, str],
+        expected_value: int,
     ):
         '''
         Test that for brightness setters, when we say "set brightness to X", test that this actually
@@ -254,7 +268,9 @@ class BrightnessFunctionTest(ABC):
 
     class TestDisplayKwarg:
         @pytest.mark.parametrize('identifier', ['index', 'name', 'serial', 'edid'])
-        def test_identifiers(self, patch_methods: BFPatchType, operation_type: BFOpType, operation, displays, identifier: str):
+        def test_identifiers(
+            self, patch_methods: BFPatchType, operation_type: BFOpType, operation, displays, identifier: str
+        ):
             '''Test referencing a display by a `DisplayIdentifier` works'''
             for index, display in enumerate(displays):
                 spy = patch_methods[display['method']][operation_type]
@@ -330,9 +346,7 @@ class BrightnessFunctionTest(ABC):
 
 def fake_edid(mfg_id: str, name: Optional[str] = None, serial: Optional[str] = None) -> str:
     def descriptor(string: str) -> str:
-        assert len(string) <= 13, (
-            f'descriptor block contents cannot be >13 bytes long (got {len(string)})'
-        )
+        assert len(string) <= 13, f'descriptor block contents cannot be >13 bytes long (got {len(string)})'
         return string.encode('utf-8').hex() + ('20' * (13 - len(string)))
 
     # TODO: this breaks for lowercase inputs. Should be looked into
@@ -344,14 +358,16 @@ def fake_edid(mfg_id: str, name: Optional[str] = None, serial: Optional[str] = N
         empty_descriptor_block,
         f'000000fc00{descriptor(name)}' if name else empty_descriptor_block,
         f'000000ff00{descriptor(serial)}' if serial else empty_descriptor_block,
-        empty_descriptor_block
+        empty_descriptor_block,
     ]
 
-    return ''.join((
-        '00ffffffffffff00',  # header
-        f'{mfg:04x}',  # 'DEL' mfg id
-        '00' * 44,  # product id -> edid timings
-        *descriptor_blocks,
-        '00'  # extension flag
-        '00'  # checksum - TODO: make this actually work
-    ))
+    return ''.join(
+        (
+            '00ffffffffffff00',  # header
+            f'{mfg:04x}',  # 'DEL' mfg id
+            '00' * 44,  # product id -> edid timings
+            *descriptor_blocks,
+            '00'  # extension flag
+            '00',  # checksum - TODO: make this actually work
+        )
+    )

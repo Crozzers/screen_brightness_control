@@ -1,6 +1,7 @@
 '''
 Helper functions for the library
 '''
+
 from __future__ import annotations
 
 import logging
@@ -11,116 +12,120 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from .exceptions import (EDIDParseError, MaxRetriesExceededError,  # noqa:F401
-                         ScreenBrightnessError, format_exc)
-from .types import DisplayIdentifier, IntPercentage, Percentage, Generator
+from .exceptions import (
+    EDIDParseError,
+    MaxRetriesExceededError,  # noqa:F401
+    ScreenBrightnessError,
+    format_exc,
+)
+from .types import DisplayIdentifier, Generator, IntPercentage, Percentage
 
 _logger = logging.getLogger(__name__)
 
 MONITOR_MANUFACTURER_CODES = {
-    "AAC": "AcerView",
-    "ACI": "Asus (ASUSTeK Computer Inc.)",
-    "ACR": "Acer",
-    "ACT": "Targa",
-    "ADI": "ADI Corporation",
-    "AIC": "AG Neovo",
-    "ALX": "Anrecson",
-    "AMW": "AMW",
-    "AOC": "AOC",
-    "API": "Acer America Corp.",
-    "APP": "Apple Computer",
-    "ART": "ArtMedia",
-    "AST": "AST Research",
-    "AUO": "Asus",
-    "BMM": "BMM",
-    "BNQ": "BenQ",
-    "BOE": "BOE Display Technology",
-    "CMO": "Acer",
-    "CPL": "Compal",
-    "CPQ": "Compaq",
-    "CPT": "Chunghwa Picture Tubes, Ltd.",
-    "CTX": "CTX",
-    "DEC": "DEC",
-    "DEL": "Dell",
-    "DPC": "Delta",
-    "DWE": "Daewoo",
-    "ECS": "ELITEGROUP Computer Systems",
-    "EIZ": "EIZO",
-    "ELS": "ELSA",
-    "ENC": "EIZO",
-    "EPI": "Envision",
-    "FCM": "Funai",
-    "FUJ": "Fujitsu",
-    "FUS": "Fujitsu-Siemens",
-    "GSM": "LG Electronics",
-    "GWY": "Gateway 2000",
-    "GBT": "Gigabyte",
-    "HEI": "Hyundai",
-    "HIQ": "Hyundai ImageQuest",
-    "HIT": "Hyundai",
-    "HPN": "HP",
-    "HSD": "Hannspree Inc",
-    "HSL": "Hansol",
-    "HTC": "Hitachi/Nissei",
-    "HWP": "HP",
-    "IBM": "IBM",
-    "ICL": "Fujitsu ICL",
-    "IFS": "InFocus",
-    "IQT": "Hyundai",
-    "IVM": "Iiyama",
-    "KDS": "Korea Data Systems",
-    "KFC": "KFC Computek",
-    "LEN": "Lenovo",
-    "LGD": "Asus",
-    "LKM": "ADLAS / AZALEA",
-    "LNK": "LINK Technologies, Inc.",
-    "LPL": "Fujitsu",
-    "LTN": "Lite-On",
-    "MAG": "MAG InnoVision",
-    "MAX": "Belinea",
-    "MEI": "Panasonic",
-    "MEL": "Mitsubishi Electronics",
-    "MIR": "miro Computer Products AG",
-    "MSI": "MSI",
-    "MS_": "Panasonic",
-    "MTC": "MITAC",
-    "NAN": "Nanao",
-    "NEC": "NEC",
-    "NOK": "Nokia Data",
-    "NVD": "Fujitsu",
-    "OPT": "Optoma",
-    "OQI": "OPTIQUEST",
-    "PBN": "Packard Bell",
-    "PCK": "Daewoo",
-    "PDC": "Polaroid",
-    "PGS": "Princeton Graphic Systems",
-    "PHL": "Philips",
-    "PRT": "Princeton",
-    "REL": "Relisys",
-    "SAM": "Samsung",
-    "SAN": "Samsung",
-    "SBI": "Smarttech",
-    "SEC": "Hewlett-Packard",
-    "SGI": "SGI",
-    "SMC": "Samtron",
-    "SMI": "Smile",
-    "SNI": "Siemens Nixdorf",
-    "SNY": "Sony",
-    "SPT": "Sceptre",
-    "SRC": "Shamrock",
-    "STN": "Samtron",
-    "STP": "Sceptre",
-    "SUN": "Sun Microsystems",
-    "TAT": "Tatung",
-    "TOS": "Toshiba",
-    "TRL": "Royal Information Company",
-    "TSB": "Toshiba",
-    "UNK": "Unknown",
-    "UNM": "Unisys Corporation",
-    "VSC": "ViewSonic",
-    "WTC": "Wen Technology",
-    "ZCM": "Zenith",
-    "_YV": "Fujitsu"
+    'AAC': 'AcerView',
+    'ACI': 'Asus (ASUSTeK Computer Inc.)',
+    'ACR': 'Acer',
+    'ACT': 'Targa',
+    'ADI': 'ADI Corporation',
+    'AIC': 'AG Neovo',
+    'ALX': 'Anrecson',
+    'AMW': 'AMW',
+    'AOC': 'AOC',
+    'API': 'Acer America Corp.',
+    'APP': 'Apple Computer',
+    'ART': 'ArtMedia',
+    'AST': 'AST Research',
+    'AUO': 'Asus',
+    'BMM': 'BMM',
+    'BNQ': 'BenQ',
+    'BOE': 'BOE Display Technology',
+    'CMO': 'Acer',
+    'CPL': 'Compal',
+    'CPQ': 'Compaq',
+    'CPT': 'Chunghwa Picture Tubes, Ltd.',
+    'CTX': 'CTX',
+    'DEC': 'DEC',
+    'DEL': 'Dell',
+    'DPC': 'Delta',
+    'DWE': 'Daewoo',
+    'ECS': 'ELITEGROUP Computer Systems',
+    'EIZ': 'EIZO',
+    'ELS': 'ELSA',
+    'ENC': 'EIZO',
+    'EPI': 'Envision',
+    'FCM': 'Funai',
+    'FUJ': 'Fujitsu',
+    'FUS': 'Fujitsu-Siemens',
+    'GSM': 'LG Electronics',
+    'GWY': 'Gateway 2000',
+    'GBT': 'Gigabyte',
+    'HEI': 'Hyundai',
+    'HIQ': 'Hyundai ImageQuest',
+    'HIT': 'Hyundai',
+    'HPN': 'HP',
+    'HSD': 'Hannspree Inc',
+    'HSL': 'Hansol',
+    'HTC': 'Hitachi/Nissei',
+    'HWP': 'HP',
+    'IBM': 'IBM',
+    'ICL': 'Fujitsu ICL',
+    'IFS': 'InFocus',
+    'IQT': 'Hyundai',
+    'IVM': 'Iiyama',
+    'KDS': 'Korea Data Systems',
+    'KFC': 'KFC Computek',
+    'LEN': 'Lenovo',
+    'LGD': 'Asus',
+    'LKM': 'ADLAS / AZALEA',
+    'LNK': 'LINK Technologies, Inc.',
+    'LPL': 'Fujitsu',
+    'LTN': 'Lite-On',
+    'MAG': 'MAG InnoVision',
+    'MAX': 'Belinea',
+    'MEI': 'Panasonic',
+    'MEL': 'Mitsubishi Electronics',
+    'MIR': 'miro Computer Products AG',
+    'MSI': 'MSI',
+    'MS_': 'Panasonic',
+    'MTC': 'MITAC',
+    'NAN': 'Nanao',
+    'NEC': 'NEC',
+    'NOK': 'Nokia Data',
+    'NVD': 'Fujitsu',
+    'OPT': 'Optoma',
+    'OQI': 'OPTIQUEST',
+    'PBN': 'Packard Bell',
+    'PCK': 'Daewoo',
+    'PDC': 'Polaroid',
+    'PGS': 'Princeton Graphic Systems',
+    'PHL': 'Philips',
+    'PRT': 'Princeton',
+    'REL': 'Relisys',
+    'SAM': 'Samsung',
+    'SAN': 'Samsung',
+    'SBI': 'Smarttech',
+    'SEC': 'Hewlett-Packard',
+    'SGI': 'SGI',
+    'SMC': 'Samtron',
+    'SMI': 'Smile',
+    'SNI': 'Siemens Nixdorf',
+    'SNY': 'Sony',
+    'SPT': 'Sceptre',
+    'SRC': 'Shamrock',
+    'STN': 'Samtron',
+    'STP': 'Sceptre',
+    'SUN': 'Sun Microsystems',
+    'TAT': 'Tatung',
+    'TOS': 'Toshiba',
+    'TRL': 'Royal Information Company',
+    'TSB': 'Toshiba',
+    'UNK': 'Unknown',
+    'UNM': 'Unisys Corporation',
+    'VSC': 'ViewSonic',
+    'WTC': 'Wen Technology',
+    'ZCM': 'Zenith',
+    '_YV': 'Fujitsu',
 }
 
 
@@ -242,31 +247,32 @@ class EDID:
     '''
     Simple structure and method to extract display serial and name from an EDID string.
     '''
+
     EDID_FORMAT: str = (
-        ">"     # big-endian
-        "8s"    # constant header (8 bytes)
-        "H"     # manufacturer id (2 bytes)
-        "H"     # product id (2 bytes)
-        "I"     # serial number (4 bytes)
-        "B"     # manufactoring week (1 byte)
-        "B"     # manufactoring year (1 byte)
-        "B"     # edid version (1 byte)
-        "B"     # edid revision (1 byte)
-        "B"     # video input type (1 byte)
-        "B"     # horizontal size in cm (1 byte)
-        "B"     # vertical size in cm (1 byte)
-        "B"     # display gamma (1 byte)
-        "B"     # supported features (1 byte)
-        "10s"   # colour characteristics (10 bytes)
-        "H"     # supported timings (2 bytes)
-        "B"     # reserved timing (1 byte)
-        "16s"   # EDID supported timings (16 bytes)
-        "18s"   # timing / display descriptor block 1 (18 bytes)
-        "18s"   # timing / display descriptor block 2 (18 bytes)
-        "18s"   # timing / display descriptor block 3 (18 bytes)
-        "18s"   # timing / display descriptor block 4 (18 bytes)
-        "B"     # extension flag (1 byte)
-        "B"     # checksum (1 byte)
+        '>'  # big-endian
+        '8s'  # constant header (8 bytes)
+        'H'  # manufacturer id (2 bytes)
+        'H'  # product id (2 bytes)
+        'I'  # serial number (4 bytes)
+        'B'  # manufactoring week (1 byte)
+        'B'  # manufactoring year (1 byte)
+        'B'  # edid version (1 byte)
+        'B'  # edid revision (1 byte)
+        'B'  # video input type (1 byte)
+        'B'  # horizontal size in cm (1 byte)
+        'B'  # vertical size in cm (1 byte)
+        'B'  # display gamma (1 byte)
+        'B'  # supported features (1 byte)
+        '10s'  # colour characteristics (10 bytes)
+        'H'  # supported timings (2 bytes)
+        'B'  # reserved timing (1 byte)
+        '16s'  # EDID supported timings (16 bytes)
+        '18s'  # timing / display descriptor block 1 (18 bytes)
+        '18s'  # timing / display descriptor block 2 (18 bytes)
+        '18s'  # timing / display descriptor block 3 (18 bytes)
+        '18s'  # timing / display descriptor block 4 (18 bytes)
+        'B'  # extension flag (1 byte)
+        'B'  # checksum (1 byte)
     )
     '''
     The byte structure for EDID strings, taken from
@@ -322,9 +328,9 @@ class EDID:
 
         # split mfg_id (2 bytes) into 3 letters, 5 bits each (ignoring reserved bit)
         mfg_id_chars = (
-            blocks[1] >> 10,             # First 6 bits (reserved bit at start is always 0)
+            blocks[1] >> 10,  # First 6 bits (reserved bit at start is always 0)
             (blocks[1] >> 5) & 0b11111,  # isolate next 5 bits from first 11 using bitwise AND
-            blocks[1] & 0b11111          # Last five bits
+            blocks[1] & 0b11111,  # Last five bits
         )
         # turn numbers into ascii
         mfg_id = ''.join(chr(i + 64) for i in mfg_id_chars)
@@ -342,13 +348,13 @@ class EDID:
             # decode the serial
             if descriptor_block.startswith(cls.SERIAL_DESCRIPTOR):
                 # strip descriptor bytes and trailing whitespace
-                serial_bytes = descriptor_block[len(cls.SERIAL_DESCRIPTOR):].rstrip()
+                serial_bytes = descriptor_block[len(cls.SERIAL_DESCRIPTOR) :].rstrip()
                 serial = serial_bytes.decode()
 
             # decode the monitor name
             elif descriptor_block.startswith(cls.NAME_DESCRIPTOR):
                 # strip descriptor bytes and trailing whitespace
-                name_bytes = descriptor_block[len(cls.NAME_DESCRIPTOR):].rstrip()
+                name_bytes = descriptor_block[len(cls.NAME_DESCRIPTOR) :].rstrip()
                 name = name_bytes.decode()
 
         # now try to figure out what model the display is
@@ -491,9 +497,7 @@ def _monitor_brand_lookup(search: str) -> Union[Tuple[str, str], None]:
 
 
 def percentage(
-    value: Percentage,
-    current: Optional[Union[int, Callable[[], int]]] = None,
-    lower_bound: int = 0
+    value: Percentage, current: Optional[Union[int, Callable[[], int]]] = None, lower_bound: int = 0
 ) -> IntPercentage:
     '''
     Convenience function to convert a brightness value into a percentage. Can handle

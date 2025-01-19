@@ -10,21 +10,25 @@ class ScreenBrightnessError(Exception):
     '''
     Generic error class designed to make catching errors under one umbrella easy.
     '''
+
     ...
 
 
 class EDIDParseError(ScreenBrightnessError):
     '''Unparsable/invalid EDID'''
+
     ...
 
 
 class NoValidDisplayError(ScreenBrightnessError, LookupError):
     '''Could not find a valid display'''
+
     ...
 
 
 class I2CValidationError(ScreenBrightnessError):
     '''I2C data validation failed'''
+
     ...
 
 
@@ -40,6 +44,7 @@ class MaxRetriesExceededError(ScreenBrightnessError, subprocess.CalledProcessErr
             raise MaxRetriesExceededError('failed after 1 try', e)
         ```
     '''
+
     def __init__(self, message: str, exc: subprocess.CalledProcessError):
         self.message: str = message
         ScreenBrightnessError.__init__(self, message)

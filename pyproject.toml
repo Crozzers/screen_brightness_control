@@ -40,7 +40,9 @@ dev = [
     "types-pywin32 ; platform_system=='Windows'",
     "pytest",
     "pytest-mock",
-    "pytest-subtests"
+    "pytest-subtests",
+    "ruff",
+    "string-fixer>=0.5.0"
 ]
 docs = [
     "jsmin",
@@ -66,3 +68,19 @@ check_untyped_defs = true
 testpaths = [
     "tests"
 ]
+
+[tool.ruff]
+line-length = 119
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "single"
+skip-magic-trailing-comma = true
+line-ending = "lf"
+
+[tool.string-fixer]
+target = "screen_brightness_control"
+include = [
+    "tests/**"
+]
+target_version = "3.11"

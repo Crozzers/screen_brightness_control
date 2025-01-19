@@ -10,12 +10,7 @@ import screen_brightness_control as sbc
 from screen_brightness_control.helpers import BrightnessMethod
 
 from .helpers import BrightnessMethodTest
-from .mocks.windows_mock import (
-    FakeWinDLL,
-    mock_enum_display_devices,
-    mock_enum_display_monitors,
-    mock_wmi_init,
-)
+from .mocks.windows_mock import FakeWinDLL, mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init
 
 
 @pytest.fixture
@@ -61,9 +56,7 @@ class TestWMI(BrightnessMethodTest):
             def test_with(self, mocker: MockerFixture, freeze_display_info, method, subtests):
                 with sbc.windows._wmi_init() as wmi:
                     mocker.patch.object(
-                        sbc.windows,
-                        '_wmi_init',
-                        Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
+                        sbc.windows, '_wmi_init', Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
                     )
                     brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
                     mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
@@ -77,9 +70,7 @@ class TestWMI(BrightnessMethodTest):
             def test_without(self, mocker: MockerFixture, freeze_display_info, method):
                 with sbc.windows._wmi_init() as wmi:
                     mocker.patch.object(
-                        sbc.windows,
-                        '_wmi_init',
-                        Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
+                        sbc.windows, '_wmi_init', Mock(side_effect=contextmanager(lambda *_: (yield wmi)))
                     )
                     brightness_method = wmi.WmiMonitorBrightnessMethods()[0]
                     mocker.patch.object(wmi, 'WmiMonitorBrightnessMethods', lambda: [brightness_method] * 3)
@@ -130,8 +121,7 @@ class TestVCP(BrightnessMethodTest):
         @pytest.mark.parametrize('tries', [0, 1, 2, 3, 50, 100])
         def test_max_tries(self, mocker: MockerFixture, method, tries):
             mock = mocker.patch.object(
-                sbc.windows.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply',
-                Mock(return_value=0, spec=True)
+                sbc.windows.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply', Mock(return_value=0, spec=True)
             )
             # patch sleep func so tests aren't slowed down
             mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
@@ -175,10 +165,7 @@ class TestVCP(BrightnessMethodTest):
         # 0 is included here to make sure loop variables aren't referenced before assignment
         @pytest.mark.parametrize('tries', [0, 1, 2, 3, 50, 100])
         def test_max_tries(self, mocker: MockerFixture, method, tries):
-            mock = mocker.patch.object(
-                sbc.windows.windll.dxva2, 'SetVCPFeature',
-                Mock(return_value=0, spec=True)
-            )
+            mock = mocker.patch.object(sbc.windows.windll.dxva2, 'SetVCPFeature', Mock(return_value=0, spec=True))
             # patch sleep func so tests aren't slowed down
             mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
             method.set_brightness(100, display=0, max_tries=tries)

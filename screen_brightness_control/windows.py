@@ -67,11 +67,11 @@ def enum_display_devices() -> Generator[win32api.PyDISPLAY_DEVICEType, None, Non
         for adaptor_index in range(5):
             try:
                 # EDD_GET_DEVICE_INTERFACE_NAME flag to populate DeviceID field
-                device = win32api.EnumDisplayDevices(
-                    monitor_info['Device'], adaptor_index, 1)
+                device = win32api.EnumDisplayDevices(monitor_info['Device'], adaptor_index, 1)
             except pywintypes.error:
                 _logger.debug(
-                    f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}')
+                    f'failed to get display device {monitor_info["Device"]} on adaptor index {adaptor_index}'
+                )
             else:
                 yield device
                 break
@@ -101,22 +101,17 @@ def get_display_info() -> List[dict]:
         # gather list of laptop displays to check against later
         with _wmi_init() as wmi:
             try:
-                laptop_displays = [
-                    i.InstanceName
-                    for i in wmi.WmiMonitorBrightness()
-                ]
+                laptop_displays = [i.InstanceName for i in wmi.WmiMonitorBrightness()]
             except Exception as e:
                 # don't do specific exception classes here because WMI does not play ball with it
-                _logger.warning(
-                    f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
+                _logger.warning(f'get_display_info: failed to gather list of laptop displays - {format_exc(e)}')
                 laptop_displays = []
 
             extras, desktop, laptop = [], 0, 0
             uid_keys = list(monitor_uids.keys())
             for monitor in wmi.WmiMonitorDescriptorMethods():
                 model, serial, manufacturer, man_id, edid = None, None, None, None, None
-                instance_name = monitor.InstanceName.replace(
-                    '_0', '', 1).split('\\')[2]
+                instance_name = monitor.InstanceName.replace('_0', '', 1).split('\\')[2]
                 try:
                     pydevice = monitor_uids[instance_name]
                 except KeyError:
@@ -126,30 +121,25 @@ def get_display_info() -> List[dict]:
                     else:
                         desktop += 1
                     _logger.warning(
-                        f'display {instance_name!r} is detected but not present in monitor_uids.'
-                        ' Maybe it is asleep?'
+                        f'display {instance_name!r} is detected but not present in monitor_uids. Maybe it is asleep?'
                     )
                     continue
 
                 # get the EDID
                 try:
-                    edid = ''.join(
-                        f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
+                    edid = ''.join(f'{char:02x}' for char in monitor.WmiGetMonitorRawEEdidV1Block(0)[0])
                     # we do the EDID parsing ourselves because calling wmi.WmiMonitorID
                     # takes too long
                     parsed = EDID.parse(edid)
                     man_id, manufacturer, model, name, serial = parsed
                     if name is None:
-                        raise EDIDParseError(
-                            'parsed EDID returned invalid display name')
+                        raise EDIDParseError('parsed EDID returned invalid display name')
                 except EDIDParseError as e:
                     edid = None
-                    _logger.warning(
-                        f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
+                    _logger.warning(f'exception parsing edid str for {monitor.InstanceName} - {format_exc(e)}')
                 except Exception as e:
                     edid = None
-                    _logger.error(
-                        f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
+                    _logger.error(f'failed to get EDID string for {monitor.InstanceName} - {format_exc(e)}')
                 finally:
                     if edid is None:
                         devid = pydevice.DeviceID.split('#')
@@ -157,7 +147,7 @@ def get_display_info() -> List[dict]:
                         man_id = devid[1][:3]
                         model = devid[1][3:] or 'Generic Monitor'
                         del devid
-                        if (brand := _monitor_brand_lookup(man_id)):
+                        if brand := _monitor_brand_lookup(man_id):
                             man_id, manufacturer = brand
 
                 if (serial, model) != (None, None):
@@ -168,7 +158,7 @@ def get_display_info() -> List[dict]:
                         'manufacturer': manufacturer,
                         'manufacturer_id': man_id,
                         'edid': edid,
-                        'uid': uid_match.group(1) if (uid_match := re.search(r"UID(\d+)", instance_name)) else None,
+                        'uid': uid_match.group(1) if (uid_match := re.search(r'UID(\d+)', instance_name)) else None,
                     }
                     if monitor.InstanceName in laptop_displays:
                         data['index'] = laptop
@@ -208,6 +198,7 @@ class WMI(BrightnessMethod):
     A collection of screen brightness related methods using the WMI API.
     This class primarily works with laptop displays.
     '''
+
     @classmethod
     def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         info = [i for i in get_display_info() if i['method'] == cls]
@@ -238,12 +229,13 @@ class WMI(BrightnessMethod):
 
 class VCP(BrightnessMethod):
     '''Collection of screen brightness related methods using the DDC/CI commands'''
+
     _logger = _logger.getChild('VCP')
 
     class _PHYSICAL_MONITOR(Structure):
         '''internal class, do not call'''
-        _fields_ = [('handle', HANDLE),
-                    ('description', WCHAR * 128)]
+
+        _fields_ = [('handle', HANDLE), ('description', WCHAR * 128)]
 
     @classmethod
     def iter_physical_monitors(cls, start: int = 0) -> Generator[HANDLE, None, None]:
@@ -266,13 +258,9 @@ class VCP(BrightnessMethod):
 
         with _wmi_init() as wmi:
             try:
-                laptop_displays = [
-                    i.InstanceName.replace('_0', '').split('\\')[2]
-                    for i in wmi.WmiMonitorBrightness()
-                ]
+                laptop_displays = [i.InstanceName.replace('_0', '').split('\\')[2] for i in wmi.WmiMonitorBrightness()]
             except Exception as e:
-                cls._logger.warning(
-                    f'failed to gather list of laptop displays - {format_exc(e)}')
+                cls._logger.warning(f'failed to gather list of laptop displays - {format_exc(e)}')
                 laptop_displays = []
 
         for monitor in map(lambda m: m[0].handle, win32api.EnumDisplayMonitors()):
@@ -334,12 +322,10 @@ class VCP(BrightnessMethod):
                     current = None
                     time.sleep(0.02 if attempt < 20 else 0.1)
                 else:
-                    cls._logger.error(
-                        f'failed to get VCP feature reply for display:{index} after {attempt} tries')
+                    cls._logger.error(f'failed to get VCP feature reply for display:{index} after {attempt} tries')
 
             if current is not None:
-                __cache__.store(
-                    f'vcp_brightness_{index}', current, expires=0.1)
+                __cache__.store(f'vcp_brightness_{index}', current, expires=0.1)
                 values.append(current)
 
             if display == index:
@@ -370,8 +356,7 @@ class VCP(BrightnessMethod):
                     break
                 time.sleep(0.02 if attempt < 20 else 0.1)
             else:
-                cls._logger.error(
-                    f'failed to set display:{index}->{value} after {attempt} tries')
+                cls._logger.error(f'failed to set display:{index}->{value} after {attempt} tries')
 
             if display == index:
                 # we have the display we wanted, exit and cleanup

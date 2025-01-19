@@ -1,13 +1,15 @@
 import itertools
 import subprocess
-from unittest.mock import Mock, call, mock_open
-import pytest
 import time
+from unittest.mock import Mock, call, mock_open
 
+import pytest
 from pytest_mock import MockerFixture
-from .helpers import fake_edid
+
 import screen_brightness_control as sbc
-from screen_brightness_control.helpers import EDID, percentage, _monitor_brand_lookup
+from screen_brightness_control.helpers import EDID, _monitor_brand_lookup, percentage
+
+from .helpers import fake_edid
 
 
 class TestCache:
@@ -18,16 +20,13 @@ class TestCache:
 
     def test_get(self, cache):
         c_time = time.time()
-        cache._store.update({
-            'a': (123, c_time + 1),
-            'b': (456, c_time - 1)
-        })
+        cache._store.update({'a': (123, c_time + 1), 'b': (456, c_time - 1)})
 
         assert cache.get('a') == 123
         assert 'a' in cache._store
         assert cache.get('b') is None
         # key should have been deleted as expired
-        assert 'b' not in  cache._store
+        assert 'b' not in cache._store
 
     @pytest.mark.parametrize('expires', [1, 3, 5, -1])
     def test_store(self, cache, expires: int):
@@ -39,12 +38,7 @@ class TestCache:
         assert (c_time + expires) - item[1] < 0.1
 
     def test_expire(self, cache):
-        cache._store.update({
-            'a': (123, 0),
-            'b': (123, 0),
-            'bc': (123, 0),
-            'def': (123, 0)
-        })
+        cache._store.update({'a': (123, 0), 'b': (123, 0), 'bc': (123, 0), 'def': (123, 0)})
         cache.expire('a')
         assert 'a' not in cache._store
         cache.expire(startswith='b')
@@ -56,11 +50,13 @@ class TestCache:
 
 class TestEDID:
     class TestParse:
-        @pytest.fixture(params=[
-            ('DEL', 'Dell U2211H', 'DELL12345'),
-            ('BNQ', 'BenQ GL2450H', 'benqserialnum'),
-            ('MSI', 'MSI G32CQ4', 'abc123MSI')
-        ])
+        @pytest.fixture(
+            params=[
+                ('DEL', 'Dell U2211H', 'DELL12345'),
+                ('BNQ', 'BenQ GL2450H', 'benqserialnum'),
+                ('MSI', 'MSI G32CQ4', 'abc123MSI'),
+            ]
+        )
         def edid_with_params(self, request: pytest.FixtureRequest):
             return fake_edid(*request.param), *request.param
 
@@ -78,13 +74,11 @@ class TestEDID:
             assert isinstance(result, tuple) and len(result) == 5
 
             mfg_id, manufacturer, model, name, serial = result
-            assert  mfg_id == mfg_id_in
+            assert mfg_id == mfg_id_in
             assert manufacturer == sbc.helpers.MONITOR_MANUFACTURER_CODES[mfg_id_in], (
                 'manufacturer should be looked up correctly'
             )
-            assert f'{manufacturer} {model}' == name == name_in, (
-                'manufacturer and model should match the name'
-            )
+            assert f'{manufacturer} {model}' == name == name_in, 'manufacturer and model should match the name'
             assert serial == serial_in
 
         def test_accepts_str_and_bytes(self, edid: str):
@@ -116,10 +110,7 @@ class TestEDID:
 
         @pytest.mark.parametrize('descriptor_block', ['name', 'serial'])
         def test_descriptor_blocks_are_optional(self, descriptor_block):
-            info = {
-                'name': 'Dell Sample1',
-                'serial': 'ABCD1234'
-            }
+            info = {'name': 'Dell Sample1', 'serial': 'ABCD1234'}
             del info[descriptor_block]
             *_, name, serial = EDID.parse(fake_edid('DEL', **info))
             assert name == info.get('name', None)
@@ -142,9 +133,7 @@ class TestEDID:
                 # highly unlikely scenario given name has max len of 13 chars including
                 # the manufacturer name
                 model = EDID.parse(fake_edid('ABC', 'Nokia Data M1'))[2]
-                assert model == 'M1', (
-                    'model should be taken from last word in display name'
-                )
+                assert model == 'M1', 'model should be taken from last word in display name'
 
             def test_generic_model_name_assigned_when_name_malformed(self):
                 '''
@@ -159,9 +148,7 @@ class TestEDID:
     def test_hex_dump(self, mocker: MockerFixture):
         edid = fake_edid('DEL', 'Dell U2211H', 'ABCD1234')
         edid_bytes = bytes.fromhex(edid)
-        mock_file = mocker.patch.object(
-            sbc.helpers, 'open', mocker.mock_open(read_data=edid_bytes), spec=True
-        )
+        mock_file = mocker.patch.object(sbc.helpers, 'open', mocker.mock_open(read_data=edid_bytes), spec=True)
         result = EDID.hexdump('edid_file')
         mock_file.assert_called_once_with('edid_file', 'rb')
         assert result == edid
@@ -169,21 +156,16 @@ class TestEDID:
 
 class TestCheckOutput:
     def test_runs_command(self, mocker: MockerFixture):
-        mock = mocker.patch.object(
-            subprocess, 'check_output',
-            Mock(return_value=b'test output')
-        )
+        mock = mocker.patch.object(subprocess, 'check_output', Mock(return_value=b'test output'))
         command = ['do', 'nothing']
         assert sbc.helpers.check_output(command) == b'test output'
         assert mock.mock_calls[0].args[0] == command
-
 
     def test_retries(self, mocker: MockerFixture):
         command = ['do', 'nothing']
 
         mock = mocker.patch.object(
-            subprocess, 'check_output',
-            Mock(side_effect=subprocess.CalledProcessError(1, command))
+            subprocess, 'check_output', Mock(side_effect=subprocess.CalledProcessError(1, command))
         )
 
         with pytest.raises(sbc.exceptions.MaxRetriesExceededError):
@@ -195,10 +177,9 @@ class TestCheckOutput:
 
 
 class TestLogarithmicRange:
-    @pytest.fixture(params=[
-        (0, 100), (0, 10), (29, 77), (99, 100), (0, 50),
-        (50, 100), (0, 25), (25, 50), (50, 75), (75, 100)
-    ])
+    @pytest.fixture(
+        params=[(0, 100), (0, 10), (29, 77), (99, 100), (0, 50), (50, 100), (0, 25), (25, 50), (50, 75), (75, 100)]
+    )
     def bounds(self, request: pytest.FixtureRequest):
         return request.param
 
@@ -268,11 +249,7 @@ class TestMonitorBrandLookup:
         return [k for k, v in sbc.helpers.MONITOR_MANUFACTURER_CODES.items() if v.lower() == manufacturer.lower()]
 
     def test_returns_tuple_of_mfg_id_and_name(self):
-        assert (
-            _monitor_brand_lookup('DEL')
-            == _monitor_brand_lookup('Dell')
-            == ('DEL', 'Dell')
-        )
+        assert _monitor_brand_lookup('DEL') == _monitor_brand_lookup('Dell') == ('DEL', 'Dell')
 
     def test_bidirectional_lookups(self, subtests):
         for mfg_id, manufacturer in sbc.helpers.MONITOR_MANUFACTURER_CODES.items():
@@ -287,7 +264,7 @@ class TestMonitorBrandLookup:
 
                 name_lookup = _monitor_brand_lookup(manufacturer)
                 assert name_lookup is not None, 'name lookup should be successful'
-                assert name_lookup[1] == manufacturer and name_lookup[0] in all_ids,(
+                assert name_lookup[1] == manufacturer and name_lookup[0] in all_ids, (
                     'name lookup should return valid ID and manufacturer name'
                 )
 
@@ -297,7 +274,7 @@ class TestMonitorBrandLookup:
                 manufacturer,
                 manufacturer.upper(),
                 manufacturer.lower(),
-                manufacturer.lower().capitalize()
+                manufacturer.lower().capitalize(),
             ]:
                 with subtests.test(manufacturer=manufacturer, variation=variation):
                     all_ids = self.get_all_ids(variation)
@@ -347,6 +324,6 @@ class TestPercentage:
 
     def test_invalid_types(self):
         with pytest.raises(ValueError):
-            percentage([123]) # type: ignore
+            percentage([123])  # type: ignore
         with pytest.raises(ValueError):
-            percentage('123{') # type: ignore
+            percentage('123{')  # type: ignore

@@ -39,10 +39,9 @@ class TestSetBrightness(BrightnessFunctionTest):
     def test_no_return_kwarg(self):
         result = sbc.set_brightness(100, no_return=False)
         assert result is not None
-        assert (
-            isinstance(result, list)
-            and all(i is None or (isinstance(i, int) and 0 <= i <= 100) for i in result)
-        ), 'result should be a list of int|None and any ints should be between 0 and 100'
+        assert isinstance(result, list) and all(i is None or (isinstance(i, int) and 0 <= i <= 100) for i in result), (
+            'result should be a list of int|None and any ints should be between 0 and 100'
+        )
 
     @pytest.mark.parametrize('os_name', ['Windows', 'Linux'])
     class TestLowerBound:
@@ -141,15 +140,14 @@ class TestFadeBrightness(BrightnessFunctionTest):
         This test just checks that we pass all the correct config to the display class, and then the
         `Display` unit tests will check that all the right things happen
         '''
+
         def stub(*a, **k):
             pass
 
         spy = mocker.patch.object(sbc.Display, 'fade_brightness', Mock(side_effect=stub))
         args = (100,)
         # all the kwargs that get passed to `Display`
-        kwargs: Dict[str, Any] = dict(
-            start=0, interval=0, increment=10, force=False, logarithmic=False
-        )
+        kwargs: Dict[str, Any] = dict(start=0, interval=0, increment=10, force=False, logarithmic=False)
         sbc.fade_brightness(*args, **kwargs)
         for index, mock_call in enumerate(spy.mock_calls):
             with subtests.test(index=index, mock_call=mock_call):
@@ -161,11 +159,7 @@ def test_list_monitors_info(mock_os_module, mocker: MockerFixture):
     `list_monitors_info` is just a shell for the OS specific variant
     '''
     mock = mocker.patch.object(sbc._OS_MODULE, 'list_monitors_info', Mock(return_value=12345, spec=True))
-    supported_kw = {
-        'method': 123,
-        'allow_duplicates': 456,
-        'unsupported': 789
-    }
+    supported_kw = {'method': 123, 'allow_duplicates': 456, 'unsupported': 789}
     result = sbc.list_monitors_info(**supported_kw)  # type: ignore
     # check that kwargs passed along and result passed back
     mock.assert_called_once_with(**supported_kw)
@@ -177,14 +171,8 @@ def test_list_monitors(mock_os_module, mocker: MockerFixture):
     `list_monitors` is just a shell for `list_monitors_info`
     '''
     mock_return = [{'name': '123'}, {'name': '456'}]
-    mock = mocker.patch.object(
-        sbc, 'list_monitors_info',
-        Mock(return_value=mock_return, spec=True)
-    )
-    supported_kw = {
-        'method': 123,
-        'allow_duplicates': 456
-    }
+    mock = mocker.patch.object(sbc, 'list_monitors_info', Mock(return_value=mock_return, spec=True))
+    supported_kw = {'method': 123, 'allow_duplicates': 456}
     result = sbc.list_monitors(**supported_kw)  # type:ignore
     # check that kwargs passed along and result passed back
     mock.assert_called_once_with(**supported_kw)
@@ -246,9 +234,8 @@ class TestDisplay:
             assert spy.mock_calls[0].args[0] == value
 
         def test_interval_kwarg(self, display: sbc.Display):
-            assert (
-                timeit(lambda: display.fade_brightness(100, start=95, interval=0), number=1)
-                < timeit(lambda: display.fade_brightness(100, start=95, interval=0.05), number=1)
+            assert timeit(lambda: display.fade_brightness(100, start=95, interval=0), number=1) < timeit(
+                lambda: display.fade_brightness(100, start=95, interval=0.05), number=1
             ), 'longer interval should take more time'
 
         @pytest.mark.parametrize('increment', [1, 5, 10, 15])
@@ -306,10 +293,7 @@ class TestDisplay:
             # patch the range function so that it never returns the target brightness
             range_values = list(sbc.logarithmic_range(0, 100))[:-10]
             assert target not in range_values, 'setup has gone wrong!'
-            mocker.patch.object(
-                sbc, 'logarithmic_range',
-                Mock(return_value=range_values, spec=True)
-            )
+            mocker.patch.object(sbc, 'logarithmic_range', Mock(return_value=range_values, spec=True))
 
             display.fade_brightness(target, start=0, interval=0)
             # at this point, fade_brightness should have manually set the final brightness
@@ -319,27 +303,35 @@ class TestDisplay:
 
         def test_stoppable_kwarg(self, display: sbc.Display, mocker: MockerFixture):
             start = 1
-            finish = 20             # smaller value could introduce errors; greater value will extend the test.
-            interval = 0.05         # same as above
-            steps = int((finish - start) / 2)   # half the steps to ensure the thread is still active when checking.
-            duration = interval * (steps - 1)   # -1 because the first step is immediate.
+            finish = 20  # smaller value could introduce errors; greater value will extend the test.
+            interval = 0.05  # same as above
+            steps = int((finish - start) / 2)  # half the steps to ensure the thread is still active when checking.
+            duration = interval * (steps - 1)  # -1 because the first step is immediate.
 
             mocker.patch.object(display, 'get_brightness', Mock(return_value=start))
             setter = mocker.patch.object(display, 'set_brightness', autospec=True)
 
             def fade_brightness_thread(stoppable: bool):
                 '''mainly for Mypy to stop complaining about the return type of `display.fade_brightness`'''
-                return cast(threading.Thread,
-                            display.fade_brightness(finish=finish, start=start, interval=interval,
-                                                    logarithmic=False, blocking=False, stoppable=stoppable))
+                return cast(
+                    threading.Thread,
+                    display.fade_brightness(
+                        finish=finish,
+                        start=start,
+                        interval=interval,
+                        logarithmic=False,
+                        blocking=False,
+                        stoppable=stoppable,
+                    ),
+                )
 
             thread_0 = fade_brightness_thread(stoppable=True)
             thread_1 = fade_brightness_thread(stoppable=True)
-            time.sleep(duration)    # block the main thread to allow non-blocking fades to occur.
+            time.sleep(duration)  # block the main thread to allow non-blocking fades to occur.
             # The second fade should have stopped the first one.
             assert not thread_0.is_alive() and thread_1.is_alive()
             call_count = len(setter.mock_calls)
-            assert round(call_count / steps) == 1   # 1 stands for the expected number of running threads
+            assert round(call_count / steps) == 1  # 1 stands for the expected number of running threads
 
             # The fades below can't be stopped but they will halt the two above, which is essential for call count.
             thread_2 = fade_brightness_thread(stoppable=False)
@@ -348,7 +340,7 @@ class TestDisplay:
             # Both two new threads should run without stopping.
             assert thread_2.is_alive() and thread_3.is_alive()
             call_count = len(setter.mock_calls) - call_count
-            assert round(call_count / steps) == 2   # 2 stands for the expected number of running threads
+            assert round(call_count / steps) == 2  # 2 stands for the expected number of running threads
 
             # Ensure all threads complete to prevent interference with subsequent tests.
             while threading.active_count() > 1:
@@ -468,26 +460,16 @@ class TestFilterMonitors:
         def setup(self, mocker: MockerFixture):
             methods = tuple(sbc.get_methods().values())
             self.sample_monitors = [
-                {
-                    'index': 0,
-                    'method': methods[0],
-                    'name': 'Dell Sample 1',
-                    'serial': '1234',
-                    'edid': '00ffwhatever'
-                },
+                {'index': 0, 'method': methods[0], 'name': 'Dell Sample 1', 'serial': '1234', 'edid': '00ffwhatever'},
                 {
                     'index': 1,
                     'method': methods[0],
                     # duplicate of sample 1
                     'name': 'Dell Sample 1',
                     'serial': '1234',
-                    'edid': '00ffwhatever'
+                    'edid': '00ffwhatever',
                 },
-                {
-                    'index': 0,
-                    'method': methods[1],
-                    'name': 'Dell Sample 2'
-                }
+                {'index': 0, 'method': methods[1], 'name': 'Dell Sample 2'},
             ]
             mocker.patch.object(sbc, 'list_monitors_info', Mock(spec=True, return_value=self.sample_monitors))
             return self.sample_monitors
@@ -516,12 +498,15 @@ class TestFilterMonitors:
 
         class TestDuplicateFilteringAndIncludeKwarg:
             default_identifiers = ['edid', 'serial', 'name']
+
             @pytest.fixture(scope='function')
             def sample_monitors(self, setup):
                 return deepcopy(setup[:2])
 
             @pytest.mark.parametrize('field', default_identifiers)
-            def test_filters_duplicates_by_first_not_none_identifier(self, sample_monitors: List[dict], field: str, include=None):
+            def test_filters_duplicates_by_first_not_none_identifier(
+                self, sample_monitors: List[dict], field: str, include=None
+            ):
                 '''
                 There are 3 properties of a display we can use to identify it: edid, serial and name.
                 EDID contains the serial and is the most unique. Two monitors with the same edid are
@@ -542,31 +527,23 @@ class TestFilterMonitors:
                             break
                         del item[f]
 
-                assert sbc.filter_monitors(
-                    haystack=sample_monitors, include=include
-                ) == [sample_monitors[0]], (
+                assert sbc.filter_monitors(haystack=sample_monitors, include=include) == [sample_monitors[0]], (
                     f'both displays have same {field!r}, second should be filtered out'
                 )
 
                 sample_monitors[0][field] = str(reversed(sample_monitors[1][field]))
-                assert sbc.filter_monitors(
-                    haystack=sample_monitors, include=include
-                    ) == sample_monitors, (
+                assert sbc.filter_monitors(haystack=sample_monitors, include=include) == sample_monitors, (
                     f'both displays have different {field!r}s, neither should be filtered out'
                 )
 
                 del sample_monitors[0][field]
                 if field == identifier_fields[-1]:
                     # special case for 'name' because this is the last valid identifier
-                    assert sbc.filter_monitors(
-                        haystack=sample_monitors, include=include
-                        ) == [sample_monitors[1]], (
+                    assert sbc.filter_monitors(haystack=sample_monitors, include=include) == [sample_monitors[1]], (
                         'first display has no valid identifiers and should be removed'
                     )
                 else:
-                    assert sbc.filter_monitors(
-                        haystack=sample_monitors, include=include
-                    ) == sample_monitors, (
+                    assert sbc.filter_monitors(haystack=sample_monitors, include=include) == sample_monitors, (
                         f'one display is missing {field!r}, neither should be filtered'
                     )
 
@@ -574,18 +551,16 @@ class TestFilterMonitors:
                 if field == identifier_fields[-1]:
                     with pytest.raises(sbc.NoValidDisplayError):
                         # neither display has any valid identifiers. Both should be removed
-                        sbc.filter_monitors(
-                            haystack=sample_monitors, include=include
-                        )
+                        sbc.filter_monitors(haystack=sample_monitors, include=include)
                 else:
-                    assert sbc.filter_monitors(
-                        haystack=sample_monitors, include=include
-                    ) == [sample_monitors[0]], (
+                    assert sbc.filter_monitors(haystack=sample_monitors, include=include) == [sample_monitors[0]], (
                         f'neither display has {field!r}, second should be filtered out'
                     )
 
             @pytest.mark.parametrize('field', [default_identifiers[-1], 'extra'])
-            def test_include_kwarg_acts_as_identifier_when_filtering_duplicates(self, sample_monitors: List[dict], field: str):
+            def test_include_kwarg_acts_as_identifier_when_filtering_duplicates(
+                self, sample_monitors: List[dict], field: str
+            ):
                 for item in sample_monitors:
                     item['extra'] = '12345'
 
@@ -601,7 +576,9 @@ class TestFilterMonitors:
                     # it shouldn't work without the include
                     sbc.filter_monitors(display='extra_info', haystack=sample_monitors)
 
-                assert sbc.filter_monitors(display='extra_info', include=['extra'], haystack=sample_monitors) == [sample_monitors[0]]
+                assert sbc.filter_monitors(display='extra_info', include=['extra'], haystack=sample_monitors) == [
+                    sample_monitors[0]
+                ]
 
             def test_identifiers_that_do_not_match_display_kwarg_are_not_used(self):
                 '''
@@ -615,9 +592,9 @@ class TestFilterMonitors:
                 assert sbc.filter_monitors(haystack=displays) == [displays[0]], (
                     'no display kwarg, duplciates are filtered on edid'
                 )
-                assert sbc.filter_monitors(
-                    haystack=displays, display=displays[-1]['name']
-                ) == [displays[-1]], 'display kwarg present, displays are filtered by whaever identifier matches'
+                assert sbc.filter_monitors(haystack=displays, display=displays[-1]['name']) == [displays[-1]], (
+                    'display kwarg present, displays are filtered by whaever identifier matches'
+                )
 
     class TestHaystackAndMethodKwargs:
         class TestWithHaystack:

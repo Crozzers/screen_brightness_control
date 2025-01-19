@@ -8,8 +8,9 @@ of the library.
 This file is also useful for wrangling types based on the current Python
 version.
 '''
-from typing import Union
+
 import sys
+from typing import Union
 
 # a bunch of typing classes were deprecated in Python 3.9
 # in favour of collections.abc (https://www.python.org/dev/peps/pep-0585/)

@@ -1,5 +1,6 @@
-import pytest
 import platform
+
+import pytest
 
 import screen_brightness_control as sbc
 
@@ -13,6 +14,7 @@ elif platform.system() == 'Linux':
     collect_ignore.append('test_windows.py')
 
 _OS_MODULE = sbc._OS_MODULE
+
 
 @pytest.fixture(autouse=True)
 def mock_os_module(monkeypatch: pytest.MonkeyPatch):

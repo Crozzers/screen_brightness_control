@@ -4,14 +4,13 @@ import threading
 import time
 import traceback
 from dataclasses import dataclass, field
-from typing import Callable, Any, Dict, List, Optional, Tuple, Type, Union, FrozenSet, ClassVar
+from typing import Any, Callable, ClassVar, Dict, FrozenSet, List, Optional, Tuple, Type, Union
+
+from . import config
 from ._version import __author__, __version__  # noqa: F401
 from .exceptions import NoValidDisplayError, format_exc
-from .helpers import (BrightnessMethod, ScreenBrightnessError,
-                      logarithmic_range, percentage)
+from .helpers import BrightnessMethod, ScreenBrightnessError, logarithmic_range, percentage
 from .types import DisplayIdentifier, IntPercentage, Percentage
-from . import config
-
 
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
@@ -22,7 +21,7 @@ def get_brightness(
     display: Optional[DisplayIdentifier] = None,
     method: Optional[str] = None,
     allow_duplicates: Optional[bool] = None,
-    verbose_error: bool = False
+    verbose_error: bool = False,
 ) -> List[Union[IntPercentage, None]]:
     '''
     Returns the current brightness of one or more displays
@@ -57,7 +56,7 @@ def get_brightness(
         method=method,
         meta_method='get',
         allow_duplicates=allow_duplicates,
-        verbose_error=verbose_error
+        verbose_error=verbose_error,
     )
     # __brightness can return None depending on the `no_return` kwarg. That obviously would never happen here
     # but the type checker doesn't see it that way.
@@ -72,7 +71,7 @@ def set_brightness(
     force: bool = False,
     allow_duplicates: Optional[bool] = None,
     verbose_error: bool = False,
-    no_return: bool = True
+    no_return: bool = True,
 ) -> Optional[List[Union[IntPercentage, None]]]:
     '''
     Sets the brightness level of one or more displays to a given value.
@@ -132,10 +131,13 @@ def set_brightness(
     value = percentage(value, lower_bound=lower_bound)
 
     return __brightness(
-        value, display=display, method=method,
-        meta_method='set', no_return=no_return,
+        value,
+        display=display,
+        method=method,
+        meta_method='set',
+        no_return=no_return,
         allow_duplicates=allow_duplicates,
-        verbose_error=verbose_error
+        verbose_error=verbose_error,
     )
 
 
@@ -149,7 +151,7 @@ def fade_brightness(
     force: bool = False,
     logarithmic: bool = True,
     stoppable: bool = True,
-    **kwargs
+    **kwargs,
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
     Gradually change the brightness of one or more displays
@@ -199,23 +201,25 @@ def fade_brightness(
     '''
     # make sure only compatible kwargs are passed to filter_monitors
     available_monitors = filter_monitors(
-        **{k: v for k, v in kwargs.items() if k in (
-            'display', 'haystack', 'method', 'include', 'allow_duplicates'
-        )}
+        **{k: v for k, v in kwargs.items() if k in ('display', 'haystack', 'method', 'include', 'allow_duplicates')}
     )
 
     threads = []
     for i in available_monitors:
         display = Display.from_dict(i)
 
-        thread = threading.Thread(target=display._fade_brightness, args=(finish,), kwargs={
-            'start': start,
-            'interval': interval,
-            'increment': increment,
-            'force': force,
-            'logarithmic': logarithmic,
-            'stoppable': stoppable
-        })
+        thread = threading.Thread(
+            target=display._fade_brightness,
+            args=(finish,),
+            kwargs={
+                'start': start,
+                'interval': interval,
+                'increment': increment,
+                'force': force,
+                'logarithmic': logarithmic,
+                'stoppable': stoppable,
+            },
+        )
         thread.start()
         threads.append(thread)
 
@@ -269,9 +273,7 @@ def list_monitors_info(
             print('UID:', display['uid'])
         ```
     '''
-    return _OS_MODULE.list_monitors_info(
-        method=method, allow_duplicates=allow_duplicates, unsupported=unsupported
-    )
+    return _OS_MODULE.list_monitors_info(method=method, allow_duplicates=allow_duplicates, unsupported=unsupported)
 
 
 @config.default_params
@@ -329,15 +331,15 @@ def get_methods(name: Optional[str] = None) -> Dict[str, Type[BrightnessMethod]]
         return {name: methods[name]}
 
     _logger.debug(f'requested method {name!r} invalid')
-    raise ValueError(
-        f'invalid method {name!r}, must be one of: {list(methods)}')
+    raise ValueError(f'invalid method {name!r}, must be one of: {list(methods)}')
 
 
 @dataclass
-class Display():
+class Display:
     '''
     Represents a single connected display.
     '''
+
     index: int
     '''The index of the display relative to the method it uses.
     So if the index is 0 and the method is `windows.VCP`, then this is the 1st
@@ -366,8 +368,7 @@ class Display():
     '''A dictionary mapping display identifiers to latest fade threads for stopping fades.'''
 
     def __post_init__(self):
-        self._logger = _logger.getChild(self.__class__.__name__).getChild(
-            str(self.get_identifier()[1])[:20])
+        self._logger = _logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier()[1])[:20])
 
     def fade_brightness(
         self,
@@ -378,7 +379,7 @@ class Display():
         force: bool = False,
         logarithmic: bool = True,
         blocking: bool = True,
-        stoppable: bool = True
+        stoppable: bool = True,
     ) -> Optional[threading.Thread]:
         '''
         Gradually change the brightness of this display to a set value.
@@ -405,14 +406,18 @@ class Display():
             thread in which the fade operation is running.
             Otherwise, it returns None.
         '''
-        thread = threading.Thread(target=self._fade_brightness, args=(finish,), kwargs={
-            'start': start,
-            'interval': interval,
-            'increment': increment,
-            'force': force,
-            'logarithmic': logarithmic,
-            'stoppable': stoppable
-        })
+        thread = threading.Thread(
+            target=self._fade_brightness,
+            args=(finish,),
+            kwargs={
+                'start': start,
+                'interval': interval,
+                'increment': increment,
+                'force': force,
+                'logarithmic': logarithmic,
+                'stoppable': stoppable,
+            },
+        )
         thread.start()
 
         if not blocking:
@@ -429,7 +434,7 @@ class Display():
         increment: int = 1,
         force: bool = False,
         logarithmic: bool = True,
-        stoppable: bool = True
+        stoppable: bool = True,
     ) -> None:
         # Record the latest thread for this display so that other stoppable threads can be stopped
         display_key = frozenset((self.method, self.index))
@@ -443,8 +448,7 @@ class Display():
         current = self.get_brightness()
 
         finish = percentage(finish, current, lower_bound)
-        start = percentage(
-            current if start is None else start, current, lower_bound)
+        start = percentage(current if start is None else start, current, lower_bound)
 
         # mypy says "object is not callable" but range is. Ignore this
         range_func: Callable = logarithmic_range if logarithmic else range  # type: ignore[assignment]
@@ -452,8 +456,7 @@ class Display():
         if start > finish:
             increment = -increment
 
-        self._logger.debug(
-            f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
+        self._logger.debug(f'fade {start}->{finish}:{increment}:logarithmic={logarithmic}')
 
         # Record the time when the next brightness change should start
         next_change_start_time = time.time()
@@ -491,7 +494,7 @@ class Display():
             model=display['model'],
             name=display['name'],
             serial=display['serial'],
-            uid=display.get('uid')
+            uid=display.get('uid'),
         )
 
     def get_brightness(self) -> IntPercentage:
@@ -530,8 +533,7 @@ class Display():
             return True
         except Exception as e:
             self._logger.error(
-                f'Display.is_active: {self.get_identifier()} failed get_brightness call'
-                f' - {format_exc(e)}'
+                f'Display.is_active: {self.get_identifier()} failed get_brightness call - {format_exc(e)}'
             )
             return False
 
@@ -550,11 +552,7 @@ class Display():
         else:
             lower_bound = 0
 
-        value = percentage(
-            value,
-            current=self.get_brightness,
-            lower_bound=lower_bound
-        )
+        value = percentage(value, current=self.get_brightness, lower_bound=lower_bound)
 
         self.method.set_brightness(value, display=self.index)
 
@@ -565,7 +563,7 @@ def filter_monitors(
     haystack: Optional[List[dict]] = None,
     method: Optional[str] = None,
     include: List[str] = [],
-    allow_duplicates: Optional[bool] = None
+    allow_duplicates: Optional[bool] = None,
 ) -> List[dict]:
     '''
     Searches through the information for all detected displays
@@ -596,8 +594,7 @@ def filter_monitors(
         ```
     '''
     if display is not None and type(display) not in (str, int):
-        raise TypeError(
-            f'display kwarg must be int or str, not "{type(display).__name__}"')
+        raise TypeError(f'display kwarg must be int or str, not \"{type(display).__name__}\"')
 
     def get_monitor_list():
         # if we have been provided with a list of monitors to sift through then use that
@@ -606,11 +603,9 @@ def filter_monitors(
             monitors_with_duplicates = haystack
             if method is not None:
                 method_class = next(iter(get_methods(method).values()))
-                monitors_with_duplicates = [
-                    i for i in haystack if i['method'] == method_class]
+                monitors_with_duplicates = [i for i in haystack if i['method'] == method_class]
         else:
-            monitors_with_duplicates = list_monitors_info(
-                method=method, allow_duplicates=True)
+            monitors_with_duplicates = list_monitors_info(method=method, allow_duplicates=True)
 
         return monitors_with_duplicates
 
@@ -627,7 +622,7 @@ def filter_monitors(
             elif isinstance(display, int):
                 # 'display' variable should be the index of the monitor
                 # return a list with the monitor at the index or an empty list if the index is out of range
-                return to_filter[display:display + 1]
+                return to_filter[display : display + 1]
             elif isinstance(display, str):
                 # 'display' variable should be an identifier of the monitor
                 # multiple monitors with the same identifier are allowed here, so return all of them
@@ -700,11 +695,10 @@ def __brightness(
     no_return: bool = False,
     allow_duplicates: bool = False,
     verbose_error: bool = False,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Optional[List[Union[IntPercentage, None]]]:
     '''Internal function used to get/set brightness'''
-    _logger.debug(
-        f"brightness {meta_method} request display {display} with method {method}")
+    _logger.debug(f'brightness {meta_method} request display {display} with method {method}')
 
     output: List[Union[int, None]] = []
     errors = []
@@ -712,20 +706,15 @@ def __brightness(
     for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
         try:
             if meta_method == 'set':
-                monitor['method'].set_brightness(
-                    *args, display=monitor['index'], **kwargs)
+                monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
                 if no_return:
                     output.append(None)
                     continue
 
-            output += monitor['method'].get_brightness(
-                display=monitor['index'], **kwargs)
+            output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
         except Exception as e:
             output.append(None)
-            errors.append((
-                monitor, e.__class__.__name__,
-                traceback.format_exc() if verbose_error else e
-            ))
+            errors.append((monitor, e.__class__.__name__, traceback.format_exc() if verbose_error else e))
 
     if output:
         output_is_none = set(output) == {None}
@@ -735,8 +724,7 @@ def __brightness(
             or (
                 # if we are setting the brightness then we CAN have a None output
                 # but only if no_return is True.
-                meta_method == 'set'
-                and ((no_return and output_is_none) or not output_is_none)
+                meta_method == 'set' and ((no_return and output_is_none) or not output_is_none)
             )
         ):
             return None if no_return else output
@@ -759,10 +747,11 @@ def __brightness(
 
 if platform.system() == 'Windows':
     from . import windows
+
     _OS_MODULE = windows
 elif platform.system() == 'Linux':
     from . import linux
+
     _OS_MODULE = linux
 else:
-    _logger.warning(
-        f'package imported on unsupported platform ({platform.system()})')
+    _logger.warning(f'package imported on unsupported platform ({platform.system()})')

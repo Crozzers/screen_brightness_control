@@ -6,7 +6,6 @@ from unittest.mock import Mock, call
 
 import pytest
 from pytest import MonkeyPatch
-from .mocks.linux_mock import MockI2C, mock_check_output
 from pytest_mock import MockerFixture
 
 import screen_brightness_control as sbc
@@ -14,12 +13,14 @@ from screen_brightness_control import linux
 from screen_brightness_control.helpers import BrightnessMethod
 
 from .helpers import BrightnessMethodTest
+from .mocks.linux_mock import MockI2C, mock_check_output
 
 
 class TestSysFiles(BrightnessMethodTest):
     @pytest.fixture
     def patch_get_display_info(self, mocker: MockerFixture):
         '''Mock everything needed to get `SysFiles.get_display_info` to run'''
+
         def listdir(dir: str):
             if 'subsystem' in dir:
                 return ['intel_backlight', 'acpi_video0']
@@ -85,7 +86,9 @@ class TestSysFiles(BrightnessMethodTest):
 
         @pytest.mark.parametrize('brightness', (100, 0, 50, 99))
         @pytest.mark.parametrize('scale', (1, 2, 0.5, 8))
-        def test_brightness_is_scaled(self, mocker: MockerFixture, method: Type[BrightnessMethod], brightness: int, scale: float):
+        def test_brightness_is_scaled(
+            self, mocker: MockerFixture, method: Type[BrightnessMethod], brightness: int, scale: float
+        ):
             display = method.get_display_info()[0]
             display['scale'] = scale
             mocker.patch.object(method, 'get_display_info', Mock(return_value=[display]), spec=True)
@@ -104,7 +107,9 @@ class TestSysFiles(BrightnessMethodTest):
                         mock().write.assert_called_once_with('100')
                         mock.reset_mock()
 
-            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
+            def test_without(
+                self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests
+            ):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(), spec=True)
                 method.set_brightness(100)
                 write = mock().write
@@ -214,11 +219,7 @@ class TestXRandr(BrightnessMethodTest):
             assert all('brightness' not in display for display in method.get_display_info())
             with_brightness = method.get_display_info(brightness=True)
             assert all('brightness' in display for display in with_brightness)
-            assert all(
-                isinstance(d['brightness'], int)
-                and 0 <= d['brightness'] <= 100
-                for d in with_brightness
-            )
+            assert all(isinstance(d['brightness'], int) and 0 <= d['brightness'] <= 100 for d in with_brightness)
 
         def test_wayland(self, method: Type[linux.XRandr], monkeypatch: MonkeyPatch):
             monkeypatch.setitem(os.environ, 'WAYLAND_DISPLAY', 'wayland-0')
@@ -250,7 +251,9 @@ class TestXRandr(BrightnessMethodTest):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 method.set_brightness(100)
                 interfaces = [i['interface'] for i in freeze_display_info]
-                called_interfaces = [cmd[cmd.index('--output') + 1] for cmd in map(lambda x: x[0][0], spy.call_args_list)]
+                called_interfaces = [
+                    cmd[cmd.index('--output') + 1] for cmd in map(lambda x: x[0][0], spy.call_args_list)
+                ]
                 assert sorted(interfaces) == sorted(called_interfaces)
 
 
@@ -275,9 +278,7 @@ class TestDDCUtil(BrightnessMethodTest):
 
     class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
-            return super().test_display_filtering(
-                mocker, original_os_module, method, extras={'include': ['i2c_bus']}
-            )
+            return super().test_display_filtering(mocker, original_os_module, method, extras={'include': ['i2c_bus']})
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         # TODO: tests for brightness scaling

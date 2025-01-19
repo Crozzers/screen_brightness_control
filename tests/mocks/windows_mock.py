@@ -1,6 +1,6 @@
-from contextlib import contextmanager
 import re
 from collections import namedtuple
+from contextlib import contextmanager
 from ctypes.wintypes import HMONITOR
 
 import win32con
@@ -13,6 +13,7 @@ FAKE_DISPLAYS = [
     {'name': 'DEL8910', 'uid': '30000', 'longname': 'Dell 8910', 'laptop': False},
     {'name': 'SEC544B', 'uid': '40000', 'longname': 'Hewlett-Packard 544B', 'laptop': True},
 ]
+
 
 def instance_name(fake: dict, wmi_style=False):
     name, uid, laptop = fake['name'], fake['uid'], fake['laptop']
@@ -100,7 +101,7 @@ class FakeWinDLL:
 
         @staticmethod
         def GetVCPFeatureAndVCPFeatureReply(
-                handle, code, code_type_out=None, current_value_out=None, max_value_out=None
+            handle, code, code_type_out=None, current_value_out=None, max_value_out=None
         ):
             assert current_value_out is not None
             current_value_out._obj.value = 100
@@ -126,9 +127,5 @@ def mock_enum_display_monitors(*args):
     for fake in FAKE_DISPLAYS:
         if fake['laptop']:
             continue
-        ret.append(
-            (
-                namedtuple('pyhandle', ['handle'])(int(fake['uid'].strip('0'))),
-            )
-        )
+        ret.append((namedtuple('pyhandle', ['handle'])(int(fake['uid'].strip('0'))),))
     return ret

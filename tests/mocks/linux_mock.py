@@ -3,15 +3,13 @@ import textwrap
 from typing import Dict, List, Tuple
 
 from screen_brightness_control.linux import I2C
+
 from ..helpers import fake_edid
 
 
 class MockI2C:
     class MockI2CDevice:
-        _fake_devices = (
-            ('DEL', 'Dell ABC123', 'serial123'),
-            ('BNQ', 'BenQ DEF456', 'serial456')
-        )
+        _fake_devices = (('DEL', 'Dell ABC123', 'serial123'), ('BNQ', 'BenQ DEF456', 'serial456'))
 
         def __init__(self, path: str, addr: int):
             match = re.match(r'/dev/i2c-(\d+)', path)
@@ -53,7 +51,7 @@ class MockI2C:
             return self._vcp_state.get(vcp_code, 100), 100
 
 
-def mock_xrandr_verbose_output(mfg_id: str, name: str, serial: str, index = 1):
+def mock_xrandr_verbose_output(mfg_id: str, name: str, serial: str, index=1):
     '''
     Mocks the output of `xrandr --verbose` for a display, including a fake edid
     '''
@@ -74,7 +72,7 @@ def mock_xrandr_verbose_output(mfg_id: str, name: str, serial: str, index = 1):
     ''')
 
 
-def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index = 1):
+def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1):
     '''
     Mocks the output of `ddcutil detect` for a display, including a fake edid
     '''

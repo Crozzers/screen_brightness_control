@@ -10,8 +10,7 @@ from typing import List, Optional, Tuple
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
-from .helpers import (EDID, BrightnessMethod, BrightnessMethodAdv, __Cache,
-                      _monitor_brand_lookup, check_output)
+from .helpers import EDID, BrightnessMethod, BrightnessMethodAdv, __Cache, _monitor_brand_lookup, check_output
 from .types import DisplayIdentifier, IntPercentage
 
 __cache__ = __Cache()
@@ -30,6 +29,7 @@ class SysFiles(BrightnessMethod):
     `/sys/class/backlight/*/brightness` or you will need to run the program
     as root.
     '''
+
     _logger = _logger.getChild('SysFiles')
 
     @classmethod
@@ -48,7 +48,6 @@ class SysFiles(BrightnessMethod):
             drm_paths[os.path.realpath(folder)] = folder
 
         for subsystem in subsystems:
-
             device: dict = {
                 'name': subsystem[0],
                 'path': f'/sys/class/backlight/{subsystem[0]}',
@@ -60,7 +59,7 @@ class SysFiles(BrightnessMethod):
                 'manufacturer_id': None,
                 'edid': None,
                 'scale': None,
-                'uid': None
+                'uid': None,
             }
 
             for folder in subsystem:
@@ -77,10 +76,7 @@ class SysFiles(BrightnessMethod):
                         device['path'] = f'/sys/class/backlight/{folder}'
                         device['scale'] = scale
                 except (FileNotFoundError, TypeError) as e:
-                    cls._logger.error(
-                        f'error getting highest resolution scale for {folder}'
-                        f' - {format_exc(e)}'
-                    )
+                    cls._logger.error(f'error getting highest resolution scale for {folder} - {format_exc(e)}')
                     continue
 
                 # check if backlight subsystem device matches any of the PCI devices discovered earlier
@@ -96,8 +92,7 @@ class SysFiles(BrightnessMethod):
                     cls._logger.warning(f'EDID file exists but is empty for display {device["path"]}')
                 else:
                     for key, value in zip(
-                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                        EDID.parse(device['edid'])
+                        ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'), EDID.parse(device['edid'])
                     ):
                         if value is None:
                             continue
@@ -108,8 +103,7 @@ class SysFiles(BrightnessMethod):
 
         all_displays = list(displays_by_edid.values())
         if display is not None:
-            all_displays = filter_monitors(
-                display=display, haystack=all_displays, include=['path'])
+            all_displays = filter_monitors(display=display, haystack=all_displays, include=['path'])
         return all_displays
 
     @classmethod
@@ -156,6 +150,7 @@ class I2C(BrightnessMethod):
         * [ddcci.py](https://github.com/siemer/ddcci)
         * [DDCCI Spec](https://milek7.pl/ddcbacklight/ddcci.pdf)
     '''
+
     _logger = _logger.getChild('I2C')
 
     # vcp commands
@@ -173,7 +168,7 @@ class I2C(BrightnessMethod):
     '''Packet source address (the computer) when reading data'''
     HOST_ADDR_W = 0x51
     '''Packet source address (the computer) when writing data'''
-    DESTINATION_ADDR_W = 0x6e
+    DESTINATION_ADDR_W = 0x6E
     '''Packet destination address (the monitor) when writing data'''
     I2C_SLAVE = 0x0703
     '''The I2C slave address'''
@@ -184,7 +179,7 @@ class I2C(BrightnessMethod):
 
     _max_brightness_cache: dict = {}
 
-    class I2CDevice():
+    class I2CDevice:
         '''
         Class to read and write data to an I2C bus,
         based on the `I2CDev` class from [ddcci.py](https://github.com/siemer/ddcci)
@@ -237,8 +232,7 @@ class I2C(BrightnessMethod):
             Args:
                 i2c_path: the path to the I2C device, eg: `/dev/i2c-2`
             '''
-            self.logger = _logger.getChild(
-                self.__class__.__name__).getChild(i2c_path)
+            self.logger = _logger.getChild(self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
 
         def write(self, *args) -> int:
@@ -261,8 +255,7 @@ class I2C(BrightnessMethod):
             ba = bytearray(args)
             ba.insert(0, len(ba) | self.PROTOCOL_FLAG)  # add length info
             ba.insert(0, I2C.HOST_ADDR_W)  # insert source address
-            ba.append(functools.reduce(operator.xor, ba,
-                      I2C.DESTINATION_ADDR_W))  # checksum
+            ba.append(functools.reduce(operator.xor, ba, I2C.DESTINATION_ADDR_W))  # checksum
 
             return super().write(ba)
 
@@ -300,12 +293,11 @@ class I2C(BrightnessMethod):
             checks = {
                 'source address': ba[0] == I2C.DESTINATION_ADDR_W,
                 'checksum': functools.reduce(operator.xor, ba) == I2C.HOST_ADDR_R,
-                'length': len(ba) >= (ba[1] & ~self.PROTOCOL_FLAG) + 3
+                'length': len(ba) >= (ba[1] & ~self.PROTOCOL_FLAG) + 3,
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise I2CValidationError(
-                    'i2c read check failed: ' + repr(checks))
+                raise I2CValidationError('i2c read check failed: ' + repr(checks))
 
             return ba[2:-1]
 
@@ -328,12 +320,11 @@ class I2C(BrightnessMethod):
             checks = {
                 'is feature reply': ba[0] == I2C.GET_VCP_REPLY,
                 'supported VCP opcode': ba[1] == 0,
-                'answer matches request': ba[2] == vcp_code
+                'answer matches request': ba[2] == vcp_code,
             }
             if False in checks.values():
                 self.logger.error('i2c read check failed: ' + repr(checks))
-                raise I2CValidationError(
-                    'i2c read check failed: ' + repr(checks))
+                raise I2CValidationError('i2c read check failed: ' + repr(checks))
 
             # current and max values
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
@@ -355,8 +346,7 @@ class I2C(BrightnessMethod):
                     # read some 512 bytes from the device
                     data = device.read(512)
                 except IOError as e:
-                    cls._logger.error(
-                        f'IOError reading from device {i2c_path}: {e}')
+                    cls._logger.error(f'IOError reading from device {i2c_path}: {e}')
                     continue
 
                 # search for the EDID header within our 512 read bytes
@@ -365,15 +355,9 @@ class I2C(BrightnessMethod):
                     continue
 
                 # grab 128 bytes of the edid
-                edid = data[start: start + 128]
+                edid = data[start : start + 128]
                 # parse the EDID
-                (
-                    manufacturer_id,
-                    manufacturer,
-                    model,
-                    name,
-                    serial
-                ) = EDID.parse(edid)
+                manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
 
                 all_displays.append(
                     {
@@ -387,7 +371,7 @@ class I2C(BrightnessMethod):
                         # convert edid to hex string
                         'edid': ''.join(f'{i:02x}' for i in edid),
                         'i2c_bus': i2c_path,
-                        'uid': i2c_path.split('-')[-1]
+                        'uid': i2c_path.split('-')[-1],
                     }
                 )
                 index += 1
@@ -411,12 +395,10 @@ class I2C(BrightnessMethod):
             value, max_value = interface.getvcp(0x10)
 
             # make sure display's max brighness is cached
-            cache_ident = '%s-%s-%s' % (device['name'],
-                                        device['model'], device['serial'])
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
-                cls._logger.info(
-                    f'{cache_ident} max brightness:{max_value} (current: {value})')
+                cls._logger.info(f'{cache_ident} max brightness:{max_value} (current: {value})')
 
             if max_value != 100:
                 # if max value is not 100 then we have to adjust the scale to be
@@ -435,8 +417,7 @@ class I2C(BrightnessMethod):
 
         for device in all_displays:
             # make sure display brightness max value is cached
-            cache_ident = '%s-%s-%s' % (device['name'],
-                                        device['model'], device['serial'])
+            cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls.get_brightness(display=device['index'])
 
@@ -495,8 +476,7 @@ class XRandr(BrightnessMethodAdv):
 
         Gets all displays reported by XRandr even if they're not supported
         '''
-        xrandr_output = check_output(
-            [cls.executable, '--verbose']).decode().split('\n')
+        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
 
         display_count = 0
         tmp_display: dict = {}
@@ -520,28 +500,26 @@ class XRandr(BrightnessMethodAdv):
                     'manufacturer_id': None,
                     'edid': None,
                     'unsupported': line.startswith('XWAYLAND') or 'WAYLAND_DISPLAY' in os.environ,
-                    'uid': cls._get_uid(line.split(' ')[0])
+                    'uid': cls._get_uid(line.split(' ')[0]),
                 }
                 display_count += 1
 
             elif 'EDID:' in line:
                 # extract the edid from the chunk of the output that will contain the edid
                 edid = ''.join(
-                    i.replace('\t', '').replace(' ', '') for i in xrandr_output[line_index + 1: line_index + 9]
+                    i.replace('\t', '').replace(' ', '') for i in xrandr_output[line_index + 1 : line_index + 9]
                 )
                 tmp_display['edid'] = edid
 
                 for key, value in zip(
-                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'),
-                    EDID.parse(tmp_display['edid'])
+                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'), EDID.parse(tmp_display['edid'])
                 ):
                     if value is None:
                         continue
                     tmp_display[key] = value
 
             elif 'Brightness:' in line:
-                tmp_display['brightness'] = int(
-                    float(line.replace('Brightness:', '')) * 100)
+                tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
 
         if tmp_display:
             yield tmp_display
@@ -566,8 +544,7 @@ class XRandr(BrightnessMethodAdv):
             del item['unsupported']
             valid_displays.append(item)
         if display is not None:
-            valid_displays = filter_monitors(
-                display=display, haystack=valid_displays, include=['interface'])
+            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['interface'])
         return valid_displays
 
     @classmethod
@@ -587,12 +564,12 @@ class XRandr(BrightnessMethodAdv):
             info = [info[display]]
 
         for i in info:
-            check_output([cls.executable, '--output',
-                         i['interface'], '--brightness', value_as_str])
+            check_output([cls.executable, '--output', i['interface'], '--brightness', value_as_str])
 
 
 class DDCUtil(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the ddcutil executable'''
+
     _logger = _logger.getChild('DDCUtil')
 
     executable: str = 'ddcutil'
@@ -623,10 +600,10 @@ class DDCUtil(BrightnessMethodAdv):
         '''
         raw_ddcutil_output = str(
             check_output(
-                [
-                    cls.executable, 'detect', '-v',
-                    f'--sleep-multiplier={cls.sleep_multiplier}'
-                ] + ['--async'] if cls.enable_async else [], max_tries=cls.cmd_max_tries
+                [cls.executable, 'detect', '-v', f'--sleep-multiplier={cls.sleep_multiplier}'] + ['--async']
+                if cls.enable_async
+                else [],
+                max_tries=cls.cmd_max_tries,
             )
         )[2:-1].split('\\n')
         # Use -v to get EDID string but this means output cannot be decoded.
@@ -635,8 +612,7 @@ class DDCUtil(BrightnessMethodAdv):
 
         # include "Invalid display" sections because they tell us where one displays metadata ends
         # and another begins. We filter out invalid displays later on
-        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(
-            ('Invalid display', 'Display', '\t', ' '))]
+        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
         tmp_display: dict = {}
         display_count = 0
 
@@ -655,14 +631,13 @@ class DDCUtil(BrightnessMethodAdv):
                     'manufacturer_id': None,
                     'edid': None,
                     'unsupported': 'invalid display' in line.lower(),
-                    'uid': None
+                    'uid': None,
                 }
                 display_count += 1
 
             elif 'I2C bus' in line:
-                tmp_display['i2c_bus'] = line[line.index('/'):]
-                tmp_display['bus_number'] = int(
-                    tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
+                tmp_display['i2c_bus'] = line[line.index('/') :]
+                tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
                 tmp_display['uid'] = tmp_display['i2c_bus'].split('-')[-1]
 
             elif 'Mfg id' in line:
@@ -674,7 +649,7 @@ class DDCUtil(BrightnessMethodAdv):
                         # all mfg ids are 3 chars long
                         continue
 
-                    if (brand := _monitor_brand_lookup(code)):
+                    if brand := _monitor_brand_lookup(code):
                         tmp_display['manufacturer_id'], tmp_display['manufacturer'] = brand
                         break
 
@@ -688,8 +663,7 @@ class DDCUtil(BrightnessMethodAdv):
                 tmp_display['name'] = ' '.join(name)
 
             elif 'Serial number' in line:
-                tmp_display['serial'] = line.replace(
-                    'Serial number:', '').replace(' ', '') or None
+                tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
 
             elif 'Binary serial number:' in line:
                 tmp_display['bin_serial'] = line.split(' ')[-1][3:-1]
@@ -697,7 +671,7 @@ class DDCUtil(BrightnessMethodAdv):
             elif 'EDID hex dump:' in line:
                 try:
                     tmp_display['edid'] = ''.join(
-                        ''.join(i.split()[1:17]) for i in ddcutil_output[line_index + 2: line_index + 10]
+                        ''.join(i.split()[1:17]) for i in ddcutil_output[line_index + 2 : line_index + 10]
                     )
                 except Exception:
                     pass
@@ -720,8 +694,7 @@ class DDCUtil(BrightnessMethodAdv):
                 __cache__.store('ddcutil_monitors_info', valid_displays)
 
         if display is not None:
-            valid_displays = filter_monitors(
-                display=display, haystack=valid_displays, include=['i2c_bus'])
+            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['i2c_bus'])
         return valid_displays
 
     @classmethod
@@ -734,14 +707,22 @@ class DDCUtil(BrightnessMethodAdv):
         for monitor in monitors:
             value = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
             if value is None:
-                cmd_out = check_output(
-                    [
-                        cls.executable,
-                        'getvcp', '10', '-t',
-                        '-b', str(monitor['bus_number']),
-                        f'--sleep-multiplier={cls.sleep_multiplier}'
-                    ], max_tries=cls.cmd_max_tries
-                ).decode().split(' ')
+                cmd_out = (
+                    check_output(
+                        [
+                            cls.executable,
+                            'getvcp',
+                            '10',
+                            '-t',
+                            '-b',
+                            str(monitor['bus_number']),
+                            f'--sleep-multiplier={cls.sleep_multiplier}',
+                        ],
+                        max_tries=cls.cmd_max_tries,
+                    )
+                    .decode()
+                    .split(' ')
+                )
 
                 value = int(cmd_out[-2])
                 max_value = int(cmd_out[-1])
@@ -751,15 +732,12 @@ class DDCUtil(BrightnessMethodAdv):
                     value = int((value / max_value) * 100)
 
                 # now make sure max brightness is recorded so set_brightness can use it
-                cache_ident = '%s-%s-%s' % (monitor['name'],
-                                            monitor['serial'], monitor['bin_serial'])
+                cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
                 if cache_ident not in cls._max_brightness_cache:
                     cls._max_brightness_cache[cache_ident] = max_value
-                    cls._logger.debug(
-                        f'{cache_ident} max brightness:{max_value} (current: {value})')
+                    cls._logger.debug(f'{cache_ident} max brightness:{max_value} (current: {value})')
 
-                __cache__.store(
-                    f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
+                __cache__.store(f'ddcutil_brightness_{monitor["index"]}', value, expires=0.5)
             res.append(value)
         return res
 
@@ -772,8 +750,7 @@ class DDCUtil(BrightnessMethodAdv):
         __cache__.expire(startswith='ddcutil_brightness_')
         for monitor in monitors:
             # check if monitor has a max brightness that requires us to scale this value
-            cache_ident = '%s-%s-%s' % (monitor['name'],
-                                        monitor['serial'], monitor['bin_serial'])
+            cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls.get_brightness(display=monitor['index'])
 
@@ -782,10 +759,15 @@ class DDCUtil(BrightnessMethodAdv):
 
             check_output(
                 [
-                    cls.executable, 'setvcp', '10', str(value),
-                    '-b', str(monitor['bus_number']),
-                    f'--sleep-multiplier={cls.sleep_multiplier}'
-                ], max_tries=cls.cmd_max_tries
+                    cls.executable,
+                    'setvcp',
+                    '10',
+                    str(value),
+                    '-b',
+                    str(monitor['bus_number']),
+                    f'--sleep-multiplier={cls.sleep_multiplier}',
+                ],
+                max_tries=cls.cmd_max_tries,
             )
 
 
@@ -842,8 +824,7 @@ def list_monitors_info(
             else:
                 haystack += method_class.get_display_info()
         except Exception as e:
-            _logger.warning(
-                f'error grabbing display info from {method_class} - {format_exc(e)}')
+            _logger.warning(f'error grabbing display info from {method_class} - {format_exc(e)}')
             pass
 
     if allow_duplicates:
