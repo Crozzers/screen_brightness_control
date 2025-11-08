@@ -60,7 +60,8 @@ xrandr [2]    | Yes                      | Yes                        | Yes     
 [1] While both DDCUtil and the 1st party `linux.I2C` class do similar things over the same interface (I2C),
 DDCUtil also supports communicating with monitors that implement the [Monitor Control Command Set over USB](https://www.ddcutil.com/usb)
 
-[2] Xrandr has two key limitations. It doesn't support Wayland and it doesn't actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
+[2] The use of Xrandr by this library is deprecated and will be removed in a future release.
+Xrandr doesn't support Wayland and it doesn't actually change the backlight of the display, it just changes the brightness by applying a filter to the pixels to make them look dimmer/brighter.
 
 
 ## Install Instructions

@@ -7,6 +7,7 @@ import os
 import re
 import time
 from typing import List, Optional, Tuple
+import warnings
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
@@ -431,7 +432,15 @@ class I2C(BrightnessMethod):
 
 
 class XRandr(BrightnessMethodAdv):
-    '''collection of screen brightness related methods using the xrandr executable'''
+    '''
+    .. warning:: Deprecated
+       The XRandr brightness method has been deprecated and will be removed in a future release.
+       XRandr only works on X11, which is starting to be dropped by most distributions.
+       Furthermore, the xrandr executable doesn't change backlight brightness like the other methods here,
+       but changes the gamma instead, making the behaviour inconsistent with the rest of the library.
+
+    Collection of screen brightness related methods using the xrandr executable
+    '''
 
     executable: str = 'xrandr'
     '''the xrandr executable to be called'''
@@ -549,6 +558,7 @@ class XRandr(BrightnessMethodAdv):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
+        warnings.warn('The xrandr method is deprecated. Please use another brightness method', DeprecationWarning)
         monitors = cls.get_display_info(brightness=True)
         if display is not None:
             monitors = [monitors[display]]
@@ -558,6 +568,7 @@ class XRandr(BrightnessMethodAdv):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
+        warnings.warn('The xrandr method is deprecated. Please use another brightness method', DeprecationWarning)
         value_as_str = str(float(value) / 100)
         info = cls.get_display_info()
         if display is not None:
