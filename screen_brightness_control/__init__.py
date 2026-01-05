@@ -502,6 +502,9 @@ class Display:
         Returns:
             The brightness value of the display, as a percentage.
             See `.types.IntPercentage`
+
+        Raises:
+            ScreenBrightnessError: if brightness cannot be retrieved by any method
         '''
         errs = []
         try:
@@ -567,6 +570,9 @@ class Display:
             value (.types.Percentage): the brightness percentage to set the display to
             force: allow the brightness to be set to 0 on Linux. This is disabled by default
                 because setting the brightness of 0 will often turn off the backlight
+
+        Raises:
+            ScreenBrightnessError: if brightness cannot be retrieved by any method
         '''
         # convert brightness value to percentage
         if platform.system() == 'Linux' and not force:
