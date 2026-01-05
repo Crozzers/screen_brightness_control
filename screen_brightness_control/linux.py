@@ -7,7 +7,6 @@ import os
 import re
 import time
 from typing import List, Optional, Tuple
-import warnings
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
@@ -431,153 +430,6 @@ class I2C(BrightnessMethod):
             interface.setvcp(0x10, value)
 
 
-class XRandr(BrightnessMethodAdv):
-    '''
-    .. warning:: Deprecated
-       The XRandr brightness method has been deprecated and will be removed in a future release.
-       XRandr only works on X11, which is starting to be dropped by most distributions.
-       Furthermore, the xrandr executable doesn't change backlight brightness like the other methods here,
-       but changes the gamma instead, making the behaviour inconsistent with the rest of the library.
-
-    Collection of screen brightness related methods using the xrandr executable
-    '''
-
-    executable: str = 'xrandr'
-    '''the xrandr executable to be called'''
-
-    @staticmethod
-    def _get_uid(interface: str) -> Optional[str]:
-        '''
-        Attempts to find a UID (I2C bus path) for a given display interface.
-
-        This works by parsing the interface name and matching it up to the entries in `/sys/class/drm`.
-        `i2c_bus_from_drm_device` is then used to extract the bus number
-
-        Args:
-            interface: the interface in question. EG: `eDP-1`, `eDP1`, `HDMI-1`...
-
-        Returns:
-            The bus number as a string if found. Otherwise, none.
-        '''
-        if not os.path.isdir('/sys/class/drm'):
-            return None
-
-        # use regex because sometimes it can be `eDP-1` and sometimes it's `eDP1`
-        if interface_match := re.match(r'([a-z]+)-?(\d+)', interface, re.I):
-            interface, count = interface_match.groups()
-        else:
-            return None
-
-        for dir in os.listdir('/sys/class/drm/'):
-            # use regex here for case insensitivity on the interface
-            if not re.match(r'card\d+-%s(?:-[A-Z])?-%s' % (interface, count), dir, re.I):
-                continue
-            dir = f'/sys/class/drm/{dir}'
-            if bus := i2c_bus_from_drm_device(dir):
-                return bus
-
-    @classmethod
-    def _gdi(cls):
-        '''
-        .. warning:: Don't use this
-           This function isn't final and I will probably make breaking changes to it.
-           You have been warned
-
-        Gets all displays reported by XRandr even if they're not supported
-        '''
-        xrandr_output = check_output([cls.executable, '--verbose']).decode().split('\n')
-
-        display_count = 0
-        tmp_display: dict = {}
-
-        for line_index, line in enumerate(xrandr_output):
-            if line == '':
-                continue
-
-            if not line.startswith((' ', '\t')) and 'connected' in line and 'disconnected' not in line:
-                if tmp_display:
-                    yield tmp_display
-
-                tmp_display = {
-                    'name': line.split(' ')[0],
-                    'interface': line.split(' ')[0],
-                    'method': cls,
-                    'index': display_count,
-                    'model': None,
-                    'serial': None,
-                    'manufacturer': None,
-                    'manufacturer_id': None,
-                    'edid': None,
-                    'unsupported': line.startswith('XWAYLAND') or 'WAYLAND_DISPLAY' in os.environ,
-                    'uid': cls._get_uid(line.split(' ')[0]),
-                }
-                display_count += 1
-
-            elif 'EDID:' in line:
-                # extract the edid from the chunk of the output that will contain the edid
-                edid = ''.join(
-                    i.replace('\t', '').replace(' ', '') for i in xrandr_output[line_index + 1 : line_index + 9]
-                )
-                tmp_display['edid'] = edid
-
-                for key, value in zip(
-                    ('manufacturer_id', 'manufacturer', 'model', 'name', 'serial'), EDID.parse(tmp_display['edid'])
-                ):
-                    if value is None:
-                        continue
-                    tmp_display[key] = value
-
-            elif 'Brightness:' in line:
-                tmp_display['brightness'] = int(float(line.replace('Brightness:', '')) * 100)
-
-        if tmp_display:
-            yield tmp_display
-
-    @classmethod
-    def get_display_info(cls, display: Optional[DisplayIdentifier] = None, brightness: bool = False) -> List[dict]:
-        '''
-        Implements `BrightnessMethod.get_display_info`.
-
-        Args:
-            display: the index of the specific display to query.
-                If unspecified, all detected displays are queried
-            brightness: whether to include the current brightness
-                in the returned info
-        '''
-        valid_displays = []
-        for item in cls._gdi():
-            if item['unsupported']:
-                continue
-            if not brightness:
-                del item['brightness']
-            del item['unsupported']
-            valid_displays.append(item)
-        if display is not None:
-            valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['interface'])
-        return valid_displays
-
-    @classmethod
-    def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        warnings.warn('The xrandr method is deprecated. Please use another brightness method', DeprecationWarning)
-        monitors = cls.get_display_info(brightness=True)
-        if display is not None:
-            monitors = [monitors[display]]
-        brightness = [i['brightness'] for i in monitors]
-
-        return brightness
-
-    @classmethod
-    def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        warnings.warn('The xrandr method is deprecated. Please use another brightness method', DeprecationWarning)
-        value_as_str = str(float(value) / 100)
-        info = cls.get_display_info()
-        if display is not None:
-            info = [info[display]]
-
-        for i in info:
-            check_output([cls.executable, '--output', i['interface'], '--brightness', value_as_str])
-
-
 class DDCUtil(BrightnessMethodAdv):
     '''collection of screen brightness related methods using the ddcutil executable'''
 
@@ -848,4 +700,4 @@ def list_monitors_info(
         return []
 
 
-METHODS = (SysFiles, I2C, XRandr, DDCUtil)
+METHODS = (SysFiles, I2C, DDCUtil)
