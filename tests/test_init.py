@@ -58,15 +58,26 @@ class TestSetBrightness(BrightnessFunctionTest):
 
         def test_lower_bound_applied(self):
             sbc.set_brightness(0)
-            self.percentage_spy.assert_called_once_with(0, lower_bound=self.lower_bound)
+            # assert that the percentage func is called with the right ags, but it may be called
+            # multiple times depending on the number of displays
+            assert all(
+                call.args == (0,) and call.kwargs['lower_bound'] == self.lower_bound
+                for call in self.percentage_spy.mock_calls
+            )
 
         def test_force_kwarg(self):
             sbc.set_brightness(0)
-            self.percentage_spy.assert_called_once_with(0, lower_bound=self.lower_bound)
+            assert all(
+                call.args == (0,) and call.kwargs['lower_bound'] == self.lower_bound
+                for call in self.percentage_spy.mock_calls
+            )
             self.percentage_spy.reset_mock()
 
             sbc.set_brightness(0, force=True)
-            self.percentage_spy.assert_called_once_with(0, lower_bound=0)
+            assert all(
+                call.args == (0,) and call.kwargs['lower_bound'] == 0
+                for call in self.percentage_spy.mock_calls
+            )
 
     class TestRelativeValues:
         setter_spy: Mock

@@ -123,13 +123,6 @@ def set_brightness(
 
         return None if no_return else output
 
-    if platform.system() == 'Linux' and not force:
-        lower_bound = 1
-    else:
-        lower_bound = 0
-
-    value = percentage(value, lower_bound=lower_bound)
-
     return __brightness(
         value,
         display=display,
@@ -138,6 +131,7 @@ def set_brightness(
         no_return=no_return,
         allow_duplicates=allow_duplicates,
         verbose_error=verbose_error,
+        force=force
     )
 
 
@@ -363,6 +357,9 @@ class Display:
     serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
+    _methods: Optional[List[Type[BrightnessMethod]]] = None
+    '''List of alternative brightness methods that can address this display'''
+
     _logger: logging.Logger = field(init=False, repr=False)
     _fade_thread_dict: ClassVar[Dict[FrozenSet[Any], threading.Thread]] = {}
     '''A dictionary mapping display identifiers to latest fade threads for stopping fades.'''
@@ -495,6 +492,7 @@ class Display:
             name=display['name'],
             serial=display['serial'],
             uid=display.get('uid'),
+            _methods=display.get('_methods'),
         )
 
     def get_brightness(self) -> IntPercentage:
@@ -505,7 +503,31 @@ class Display:
             The brightness value of the display, as a percentage.
             See `.types.IntPercentage`
         '''
-        return self.method.get_brightness(display=self.index)[0]
+        errs = []
+        try:
+            return self.method.get_brightness(display=self.index)[0]
+        except Exception as e:
+            if not self._methods:
+                raise e
+            self._logger.error(f"failed to get brightness with method {self.method} - {e}")
+            errs.append(e)
+
+        for alt_method in self._methods:
+            if alt_method == self.method:
+                continue
+
+            try:
+                brightness = alt_method.get_brightness(display=self.index)[0]
+            except Exception as e:
+                self._logger.error(f"failed to get brightness with method {self.method} - {e}")
+                errs.append(e)
+                continue
+            else:
+                self._logger.error(f"retreived brightness with {alt_method} and set as new default")
+                self.method = alt_method
+                return brightness
+
+        raise ScreenBrightnessError(errs)
 
     def get_identifier(self) -> Tuple[str, DisplayIdentifier]:
         '''
@@ -554,7 +576,31 @@ class Display:
 
         value = percentage(value, current=self.get_brightness, lower_bound=lower_bound)
 
-        self.method.set_brightness(value, display=self.index)
+        errs = []
+        try:
+            return self.method.set_brightness(value, display=self.index)
+        except Exception as e:
+            if not self._methods:
+                raise e
+            self._logger.error(f"failed to set brightness with method {self.method} - {e}")
+            errs.append(e)
+
+        for alt_method in self._methods:
+            if alt_method == self.method:
+                continue
+
+            try:
+                brightness = alt_method.set_brightness(value, display=self.index)
+            except Exception as e:
+                self._logger.error(f"failed to set brightness with method {self.method} - {e}")
+                errs.append(e)
+                continue
+            else:
+                self._logger.error(f"set brightness with {alt_method} and set as new default")
+                self.method = alt_method
+                return brightness
+
+        raise ScreenBrightnessError(errs)
 
 
 @config.default_params
@@ -614,53 +660,41 @@ def filter_monitors(
         # 1. Filters out duplicate monitors
         # 2. Matches the display kwarg (if applicable)
 
-        # When duplicates are allowed, the logic is straightforward:
-        if allow_duplicates:
-            if display is None:
-                # no monitor should be filtered out
-                return to_filter
-            elif isinstance(display, int):
-                # 'display' variable should be the index of the monitor
-                # return a list with the monitor at the index or an empty list if the index is out of range
-                return to_filter[display : display + 1]
-            elif isinstance(display, str):
-                # 'display' variable should be an identifier of the monitor
-                # multiple monitors with the same identifier are allowed here, so return all of them
-                monitors = []
-                for monitor in to_filter:
-                    for identifier in ['uid', 'edid', 'serial', 'name'] + include:
-                        if display == monitor.get(identifier, None):
-                            monitors.append(monitor)
-                            break
-                return monitors
-
         filtered_displays = {}
+        duplicates = []
         for monitor in to_filter:
             # find a valid identifier for a monitor, excluding any which are equal to None
-            added = False
             for identifier in ['uid', 'edid', 'serial', 'name'] + include:
-                if monitor.get(identifier, None) is None:
+                m_id = monitor.get(identifier, None)
+                # this ID is not valid? Go to next one
+                if m_id is None:
                     continue
 
-                m_id = monitor[identifier]
-                if m_id in filtered_displays:
+                # if duplicates disallowed and ID has already been added, break and go to the next monitor
+                if not allow_duplicates and m_id in filtered_displays:
+                    # if duplicates disallowed but monitor can be addressed by multiple methods
+                    # then make a note of this. Enables failover in getters/setters
+                    filtered_displays[m_id].setdefault('_methods', [filtered_displays[m_id]['method']])
+                    if monitor['method'] not in filtered_displays[m_id]['_methods']:
+                        filtered_displays[m_id]['_methods'].append(monitor['method'])
                     break
 
+                # check if int display kwarg matches. This can return instantly
+                if isinstance(display, int) and len(filtered_displays) == display:
+                    return [monitor]
+
+                # if filtering by string then don't add anything that doesn't match
                 if isinstance(display, str) and m_id != display:
                     continue
 
-                # check we haven't already added the monitor
-                if not added:
+                # add display and break to move onto next monitor
+                if allow_duplicates and m_id in filtered_displays:
+                    duplicates.append(monitor)
+                else:
                     filtered_displays[m_id] = monitor
-                    added = True
+                break
 
-                # if the display kwarg is an integer and we are currently at that index
-                if isinstance(display, int) and len(filtered_displays) - 1 == display:
-                    return [monitor]
-
-                if added:
-                    break
-        return list(filtered_displays.values())
+        return list(filtered_displays.values()) + duplicates
 
     duplicates = []
     for _ in range(3):
@@ -705,13 +739,14 @@ def __brightness(
 
     for monitor in filter_monitors(display=display, method=method, allow_duplicates=allow_duplicates):
         try:
+            display_instance = Display.from_dict(monitor)
             if meta_method == 'set':
-                monitor['method'].set_brightness(*args, display=monitor['index'], **kwargs)
+                display_instance.set_brightness(*args, **kwargs)
                 if no_return:
                     output.append(None)
                     continue
 
-            output += monitor['method'].get_brightness(display=monitor['index'], **kwargs)
+            output.append(display_instance.get_brightness())
         except Exception as e:
             output.append(None)
             errors.append((monitor, e.__class__.__name__, traceback.format_exc() if verbose_error else e))
