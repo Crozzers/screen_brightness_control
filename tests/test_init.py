@@ -226,7 +226,7 @@ class TestDisplay:
         '''Returns a `Display` instance with the brightness set to 50'''
         display = sbc.Display.from_dict(sbc.list_monitors_info()[0])
         # add alternative method for that relevant testing
-        display._methods = [display.method, os_module_mock.Method2]
+        display._methods = {display.method: display.index, os_module_mock.Method2: 1}
         display.set_brightness(50)
         return display
 
@@ -389,15 +389,15 @@ class TestDisplay:
 
             mocker.patch.object(display.method, 'get_brightness', Mock(side_effect=Exception("some failure")))
             method_spy = mocker.spy(display.method, 'get_brightness')
-            alt_method_spy = mocker.spy(display._methods[1], 'get_brightness')
+            alt_method_spy = mocker.spy(os_module_mock.Method2, 'get_brightness')
 
-            assert display.method == display._methods[0]
+            assert display.method, display.index == tuple(display._methods.items())[0]
 
             display.get_brightness()
 
-            method_spy.assert_called_once()
-            alt_method_spy.assert_called_once()
-            assert display.method == display._methods[1]
+            method_spy.assert_called_once_with(display=tuple(display._methods.values())[0])
+            alt_method_spy.assert_called_once_with(display=tuple(display._methods.values())[1])
+            assert display.method, display.index == tuple(display._methods.items())[1]
 
             # now test that on subsequent runs we don't re-call the failed method
             method_spy.reset_mock()
@@ -406,7 +406,7 @@ class TestDisplay:
             display.get_brightness()
 
             method_spy.assert_not_called()
-            alt_method_spy.assert_called_once()
+            alt_method_spy.assert_called_once_with(display=tuple(display._methods.values())[1])
 
     class TestGetIdentifier:
         def test_returns_tuple(self, display: sbc.Display):
@@ -482,15 +482,15 @@ class TestDisplay:
 
             mocker.patch.object(display.method, 'set_brightness', Mock(side_effect=Exception("some failure")))
             method_spy = mocker.spy(display.method, 'set_brightness')
-            alt_method_spy = mocker.spy(display._methods[1], 'set_brightness')
+            alt_method_spy = mocker.spy(os_module_mock.Method2, 'set_brightness')
 
-            assert display.method == display._methods[0]
+            assert display.method, display.index == tuple(display._methods.items())[0]
 
             display.set_brightness(100)
 
-            method_spy.assert_called_once_with(100, display=display.index)
-            alt_method_spy.assert_called_once_with(100, display=display.index)
-            assert display.method == display._methods[1]
+            method_spy.assert_called_once_with(100, display=tuple(display._methods.values())[0])
+            alt_method_spy.assert_called_once_with(100, display=tuple(display._methods.values())[1])
+            assert display.method, display.index == tuple(display._methods.items())[1]
 
             # now test that on subsequent runs we don't re-call the failed method
             method_spy.reset_mock()
@@ -499,7 +499,7 @@ class TestDisplay:
             display.set_brightness(100)
 
             method_spy.assert_not_called()
-            alt_method_spy.assert_called_once_with(100, display=display.index)
+            alt_method_spy.assert_called_once_with(100, display=tuple(display._methods.values())[1])
 
 
 class TestFilterMonitors:

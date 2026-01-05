@@ -357,8 +357,11 @@ class Display:
     serial: Optional[str] = None
     '''The serial number of the display or (if serial is not available) an ID assigned by the OS'''
 
-    _methods: Optional[List[Type[BrightnessMethod]]] = None
-    '''List of alternative brightness methods that can address this display'''
+    _methods: Optional[Dict[Type[BrightnessMethod], int]] = None
+    '''
+    Mapping of alternative brightness methods that can address this display to the index
+    of the display within that method
+    '''
 
     _logger: logging.Logger = field(init=False, repr=False)
     _fade_thread_dict: ClassVar[Dict[FrozenSet[Any], threading.Thread]] = {}
@@ -515,19 +518,20 @@ class Display:
             self._logger.error(f"failed to get brightness with method {self.method} - {e}")
             errs.append(e)
 
-        for alt_method in self._methods:
+        for alt_method, index in self._methods.items():
             if alt_method == self.method:
                 continue
 
             try:
-                brightness = alt_method.get_brightness(display=self.index)[0]
+                brightness = alt_method.get_brightness(display=index)[0]
             except Exception as e:
-                self._logger.error(f"failed to get brightness with method {self.method} - {e}")
+                self._logger.error(f"failed to get brightness with method {alt_method}:{index} - {e}")
                 errs.append(e)
                 continue
             else:
-                self._logger.error(f"retreived brightness with {alt_method} and set as new default")
+                self._logger.info(f"retreived brightness with {alt_method}:{index} and set as new default")
                 self.method = alt_method
+                self.index = index
                 return brightness
 
         raise ScreenBrightnessError(errs)
@@ -591,19 +595,20 @@ class Display:
             self._logger.error(f"failed to set brightness with method {self.method} - {e}")
             errs.append(e)
 
-        for alt_method in self._methods:
+        for alt_method, index in self._methods.items():
             if alt_method == self.method:
                 continue
 
             try:
-                brightness = alt_method.set_brightness(value, display=self.index)
+                brightness = alt_method.set_brightness(value, display=index)
             except Exception as e:
-                self._logger.error(f"failed to set brightness with method {self.method} - {e}")
+                self._logger.error(f"failed to set brightness with method {alt_method}:{index} - {e}")
                 errs.append(e)
                 continue
             else:
-                self._logger.error(f"set brightness with {alt_method} and set as new default")
+                self._logger.info(f"set brightness with {alt_method}:{index} and set as new default")
                 self.method = alt_method
+                self.index = index
                 return brightness
 
         raise ScreenBrightnessError(errs)
@@ -680,9 +685,11 @@ def filter_monitors(
                 if not allow_duplicates and m_id in filtered_displays:
                     # if duplicates disallowed but monitor can be addressed by multiple methods
                     # then make a note of this. Enables failover in getters/setters
-                    filtered_displays[m_id].setdefault('_methods', [filtered_displays[m_id]['method']])
+                    filtered_displays[m_id].setdefault('_methods', {
+                        filtered_displays[m_id]['method']: filtered_displays[m_id]['index']
+                    })
                     if monitor['method'] not in filtered_displays[m_id]['_methods']:
-                        filtered_displays[m_id]['_methods'].append(monitor['method'])
+                        filtered_displays[m_id]['_methods'][monitor['method']] = monitor['index']
                     break
 
                 # check if int display kwarg matches. This can return instantly
