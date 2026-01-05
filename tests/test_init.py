@@ -225,6 +225,8 @@ class TestDisplay:
     def display(self) -> sbc.Display:
         '''Returns a `Display` instance with the brightness set to 50'''
         display = sbc.Display.from_dict(sbc.list_monitors_info()[0])
+        # add alternative method for that relevant testing
+        display._methods = [display.method, os_module_mock.Method2]
         display.set_brightness(50)
         return display
 
@@ -374,12 +376,37 @@ class TestDisplay:
             with pytest.raises(AttributeError):
                 getattr(display, 'extra')
 
-    def test_get_brightness(self, display: sbc.Display, mocker: MockerFixture):
-        spy = mocker.spy(display.method, 'get_brightness')
-        result = display.get_brightness()
-        spy.assert_called_once_with(display=display.index)
-        # method returns list[int]. display should return int
-        assert isinstance(result, int) and result == spy.spy_return[0]
+    class TestGetBrightness:
+        def test_normal(self, display: sbc.Display, mocker: MockerFixture):
+            spy = mocker.spy(display.method, 'get_brightness')
+            result = display.get_brightness()
+            spy.assert_called_once_with(display=display.index)
+            # method returns list[int]. display should return int
+            assert isinstance(result, int) and result == spy.spy_return[0]
+
+        def test_method_failover(self, display: sbc.Display, mocker: MockerFixture):
+            assert display._methods is not None, 'alternative brightness methods required for this test'
+
+            mocker.patch.object(display.method, 'get_brightness', Mock(side_effect=Exception("some failure")))
+            method_spy = mocker.spy(display.method, 'get_brightness')
+            alt_method_spy = mocker.spy(display._methods[1], 'get_brightness')
+
+            assert display.method == display._methods[0]
+
+            display.get_brightness()
+
+            method_spy.assert_called_once()
+            alt_method_spy.assert_called_once()
+            assert display.method == display._methods[1]
+
+            # now test that on subsequent runs we don't re-call the failed method
+            method_spy.reset_mock()
+            alt_method_spy.reset_mock()
+
+            display.get_brightness()
+
+            method_spy.assert_not_called()
+            alt_method_spy.assert_called_once()
 
     class TestGetIdentifier:
         def test_returns_tuple(self, display: sbc.Display):
@@ -449,6 +476,30 @@ class TestDisplay:
 
             display.set_brightness(0, force=True)
             assert spy.mock_calls[0].args[0] == 0
+
+        def test_method_failover(self, display: sbc.Display, mocker: MockerFixture):
+            assert display._methods is not None, 'alternative brightness methods required for this test'
+
+            mocker.patch.object(display.method, 'set_brightness', Mock(side_effect=Exception("some failure")))
+            method_spy = mocker.spy(display.method, 'set_brightness')
+            alt_method_spy = mocker.spy(display._methods[1], 'set_brightness')
+
+            assert display.method == display._methods[0]
+
+            display.set_brightness(100)
+
+            method_spy.assert_called_once_with(100, display=display.index)
+            alt_method_spy.assert_called_once_with(100, display=display.index)
+            assert display.method == display._methods[1]
+
+            # now test that on subsequent runs we don't re-call the failed method
+            method_spy.reset_mock()
+            alt_method_spy.reset_mock()
+
+            display.set_brightness(100)
+
+            method_spy.assert_not_called()
+            alt_method_spy.assert_called_once_with(100, display=display.index)
 
 
 class TestFilterMonitors:
