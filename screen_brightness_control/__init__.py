@@ -447,6 +447,14 @@ class Display:
 
         current = self.get_brightness()
 
+        # there's a chance in get_brightness the display_key will have changed due to method failover,
+        # so we need to update the fade thread dict
+        if frozenset((self.method, self.index)) != display_key:
+            self._fade_thread_dict[frozenset((self.method, self.index))] = self._fade_thread_dict.pop(
+                display_key, threading.current_thread()
+            )
+            display_key = frozenset((self.method, self.index))
+
         finish = percentage(finish, current, lower_bound)
         start = percentage(current if start is None else start, current, lower_bound)
 
