@@ -370,6 +370,18 @@ class Display:
     def __post_init__(self):
         self._logger = _logger.getChild(self.__class__.__name__).getChild(str(self.get_identifier()[1])[:20])
 
+    def cancel_fade_thread(self):
+        '''Request that any `Display.fade_brightness` thread for this display is stopped'''
+        display_key = frozenset((self.method, self.index))
+        if display_key in self._fade_thread_dict:
+            self._fade_thread_dict[display_key] = threading.current_thread()
+
+    @classmethod
+    def cancel_all_fade_threads(cls):
+        '''Request that all `Display.fade_brightness` threads (for any display) are stopped'''
+        for key in cls._fade_thread_dict:
+            cls._fade_thread_dict[key] = threading.current_thread()
+
     def fade_brightness(
         self,
         finish: Percentage,
