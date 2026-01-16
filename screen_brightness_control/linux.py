@@ -108,12 +108,12 @@ class SysFiles(BrightnessMethod):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        info = cls.get_display_info()
+        all_displays = cls.get_display_info()
         if display is not None:
-            info = [info[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
         results = []
-        for device in info:
+        for device in all_displays:
             with open(os.path.join(device['path'], 'brightness'), 'r') as f:
                 brightness = int(f.read().rstrip('\n'))
             results.append(int(brightness / device['scale']))
@@ -122,11 +122,11 @@ class SysFiles(BrightnessMethod):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        info = cls.get_display_info()
+        all_displays = cls.get_display_info()
         if display is not None:
-            info = [info[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
-        for device in info:
+        for device in all_displays:
             with open(os.path.join(device['path'], 'brightness'), 'w') as f:
                 f.write(str(int(value * device['scale'])))
 
@@ -387,7 +387,7 @@ class I2C(BrightnessMethod):
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
         all_displays = cls.get_display_info()
         if display is not None:
-            all_displays = [all_displays[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
         results = []
         for device in all_displays:
@@ -413,7 +413,7 @@ class I2C(BrightnessMethod):
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         all_displays = cls.get_display_info()
         if display is not None:
-            all_displays = [all_displays[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
         for device in all_displays:
             # make sure display brightness max value is cached
@@ -562,12 +562,12 @@ class DDCUtil(BrightnessMethodAdv):
 
     @classmethod
     def get_brightness(cls, display: Optional[int] = None) -> List[IntPercentage]:
-        monitors = cls.get_display_info()
+        all_displays = cls.get_display_info()
         if display is not None:
-            monitors = [monitors[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
         res = []
-        for monitor in monitors:
+        for monitor in all_displays:
             value = __cache__.get(f'ddcutil_brightness_{monitor["index"]}')
             if value is None:
                 cmd_out = (
@@ -606,12 +606,12 @@ class DDCUtil(BrightnessMethodAdv):
 
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
-        monitors = cls.get_display_info()
+        all_displays = cls.get_display_info()
         if display is not None:
-            monitors = [monitors[display]]
+            all_displays = [d for d in all_displays if d['index'] == display]
 
         __cache__.expire(startswith='ddcutil_brightness_')
-        for monitor in monitors:
+        for monitor in all_displays:
             # check if monitor has a max brightness that requires us to scale this value
             cache_ident = '%s-%s-%s' % (monitor['name'], monitor['serial'], monitor['bin_serial'])
             if cache_ident not in cls._max_brightness_cache:
