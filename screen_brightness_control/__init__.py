@@ -148,7 +148,12 @@ def fade_brightness(
     **kwargs,
 ) -> Union[List[threading.Thread], List[Union[IntPercentage, None]]]:
     '''
-    Gradually change the brightness of one or more displays
+    Gradually change the brightness of one or more displays.
+
+    Can execute in the current thread, blocking until completion,
+    or in a separate thread, allowing concurrent operations.
+    When set as non-blocking and stoppable, a new fade can halt the this operation.
+    Threads can also be cancelled by calling `Display.cancel_fade_thread`.
 
     Args:
         finish (.types.Percentage): fade to this brightness level
@@ -395,9 +400,11 @@ class Display:
     ) -> Optional[threading.Thread]:
         '''
         Gradually change the brightness of this display to a set value.
+
         Can execute in the current thread, blocking until completion,
         or in a separate thread, allowing concurrent operations.
         When set as non-blocking and stoppable, a new fade can halt the this operation.
+        Threads can also be cancelled by calling `Display.cancel_fade_thread`.
 
         Args:
             finish (.types.Percentage): the brightness level to end up on
