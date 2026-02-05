@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 import fcntl
 import functools
 import glob
@@ -6,9 +5,9 @@ import logging
 import operator
 import os
 import re
-import asyncio
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Tuple
 
 from . import filter_monitors, get_methods
@@ -344,14 +343,15 @@ class I2C(BrightnessMethod):
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
         def sleep(self):
+            '''
+            Ensure that `I2C.WAIT_TIME` has passed since the last I2C bus interaction without over-sleeping
+            '''
             last_write = self._i2c_bus_sleep_times.get(self.i2c_path)
             if last_write is None:
-                print('saved', I2C.WAIT_TIME)
                 self._i2c_bus_sleep_times[self.i2c_path] = time.time()
                 return
 
             diff = time.time() - last_write
-            print('saved', I2C.WAIT_TIME - (I2C.WAIT_TIME - diff))
             if diff < I2C.WAIT_TIME:
                 time.sleep(I2C.WAIT_TIME - diff)
             self._i2c_bus_sleep_times[self.i2c_path] = time.time()
