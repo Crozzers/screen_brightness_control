@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 import fcntl
 import functools
 import glob
@@ -5,8 +6,10 @@ import logging
 import operator
 import os
 import re
+import asyncio
+import threading
 import time
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from . import filter_monitors, get_methods
 from .exceptions import I2CValidationError, NoValidDisplayError, format_exc
@@ -177,6 +180,9 @@ class I2C(BrightnessMethod):
     WAIT_TIME = 0.05
     '''How long to wait between I2C commands'''
 
+    MAX_THREADS = 4
+    '''Number of I2C buses that can be queried at once'''
+
     _max_brightness_cache: dict = {}
 
     class I2CDevice:
@@ -227,6 +233,9 @@ class I2C(BrightnessMethod):
 
         PROTOCOL_FLAG = 0x80
 
+        _i2c_bus_locks: Dict[str, threading.Lock] = {}
+        _i2c_bus_sleep_times: Dict[str, float] = {}
+
         def __init__(self, i2c_path: str):
             '''
             Args:
@@ -234,6 +243,9 @@ class I2C(BrightnessMethod):
             '''
             self.logger = _logger.getChild(self.__class__.__name__).getChild(i2c_path)
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
+            self.i2c_path = i2c_path
+            if i2c_path not in self._i2c_bus_locks:
+                self._i2c_bus_locks[i2c_path] = threading.Lock()
 
         def write(self, *args) -> int:
             '''
@@ -250,14 +262,15 @@ class I2C(BrightnessMethod):
             Returns:
                 The number of bytes that were written
             '''
-            time.sleep(I2C.WAIT_TIME)
+            self.sleep()
 
             ba = bytearray(args)
             ba.insert(0, len(ba) | self.PROTOCOL_FLAG)  # add length info
             ba.insert(0, I2C.HOST_ADDR_W)  # insert source address
             ba.append(functools.reduce(operator.xor, ba, I2C.DESTINATION_ADDR_W))  # checksum
 
-            return super().write(ba)
+            with self._i2c_bus_locks[self.i2c_path]:
+                return super().write(ba)
 
         def setvcp(self, vcp_code: int, value: int) -> int:
             '''
@@ -285,9 +298,10 @@ class I2C(BrightnessMethod):
             Raises:
                 ValueError: if the read data is deemed invalid
             '''
-            time.sleep(I2C.WAIT_TIME)
+            self.sleep()
 
-            ba = super().read(amount + 3)
+            with self._i2c_bus_locks[self.i2c_path]:
+                ba = super().read(amount + 3)
 
             # check the bytes read
             checks = {
@@ -329,51 +343,72 @@ class I2C(BrightnessMethod):
             # current and max values
             return int.from_bytes(ba[6:8], 'big'), int.from_bytes(ba[4:6], 'big')
 
+        def sleep(self):
+            last_write = self._i2c_bus_sleep_times.get(self.i2c_path)
+            if last_write is None:
+                print('saved', I2C.WAIT_TIME)
+                self._i2c_bus_sleep_times[self.i2c_path] = time.time()
+                return
+
+            diff = time.time() - last_write
+            print('saved', I2C.WAIT_TIME - (I2C.WAIT_TIME - diff))
+            if diff < I2C.WAIT_TIME:
+                time.sleep(I2C.WAIT_TIME - diff)
+            self._i2c_bus_sleep_times[self.i2c_path] = time.time()
+
+    @classmethod
+    def _query_i2c_path(cls, i2c_path):
+        try:
+            # open the I2C device using the host read address
+            device = cls.I2CDevice(i2c_path, cls.HOST_ADDR_R)
+            # read some 512 bytes from the device
+            data = device.read(512)
+        except IOError as e:
+            cls._logger.error(f'IOError reading from device {i2c_path}: {e}')
+            return
+
+        # search for the EDID header within our 512 read bytes
+        start = data.find(bytes.fromhex('00 FF FF FF FF FF FF 00'))
+        if start < 0:
+            return
+
+        # grab 128 bytes of the edid
+        edid = data[start : start + 128]
+        # parse the EDID
+        manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
+        return {
+            'name': name,
+            'model': model,
+            'manufacturer': manufacturer,
+            'manufacturer_id': manufacturer_id,
+            'serial': serial,
+            'method': cls,
+            # convert edid to hex string
+            'edid': ''.join(f'{i:02x}' for i in edid),
+            'i2c_bus': i2c_path,
+            'uid': i2c_path.split('-')[-1],
+        }
+
     @classmethod
     def get_display_info(cls, display: Optional[DisplayIdentifier] = None) -> List[dict]:
         all_displays = __cache__.get('i2c_display_info')
         if all_displays is None:
             all_displays = []
+
+            i2c_paths = [i for i in glob.glob('/dev/i2c-*') if os.path.exists(i)]
+
+            with ThreadPoolExecutor(cls.MAX_THREADS) as executor:
+                futures = [executor.submit(cls._query_i2c_path, path) for path in i2c_paths]
+
+                for future in as_completed(futures):
+                    info = future.result()
+                    if info is not None:
+                        all_displays.append(info)
+
+            all_displays.sort(key=lambda x: i2c_paths.index(x['i2c_bus']))
             index = 0
-
-            for i2c_path in glob.glob('/dev/i2c-*'):
-                if not os.path.exists(i2c_path):
-                    continue
-
-                try:
-                    # open the I2C device using the host read address
-                    device = cls.I2CDevice(i2c_path, cls.HOST_ADDR_R)
-                    # read some 512 bytes from the device
-                    data = device.read(512)
-                except IOError as e:
-                    cls._logger.error(f'IOError reading from device {i2c_path}: {e}')
-                    continue
-
-                # search for the EDID header within our 512 read bytes
-                start = data.find(bytes.fromhex('00 FF FF FF FF FF FF 00'))
-                if start < 0:
-                    continue
-
-                # grab 128 bytes of the edid
-                edid = data[start : start + 128]
-                # parse the EDID
-                manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
-
-                all_displays.append(
-                    {
-                        'name': name,
-                        'model': model,
-                        'manufacturer': manufacturer,
-                        'manufacturer_id': manufacturer_id,
-                        'serial': serial,
-                        'method': cls,
-                        'index': index,
-                        # convert edid to hex string
-                        'edid': ''.join(f'{i:02x}' for i in edid),
-                        'i2c_bus': i2c_path,
-                        'uid': i2c_path.split('-')[-1],
-                    }
-                )
+            for item in all_displays:
+                item['index'] = index
                 index += 1
 
             if all_displays:
