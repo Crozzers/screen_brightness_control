@@ -458,11 +458,12 @@ class I2C(BrightnessMethod):
 
             # scale the brightness value according to the max brightness
             max_value = cls._max_brightness_cache[cache_ident]
+            scaled_value = value
             if max_value != 100:
-                value = int((value / 100) * max_value)
+                scaled_value = int((value / 100) * max_value)
 
             interface = cls.DDCInterface(device['i2c_bus'])
-            interface.setvcp(0x10, value)
+            interface.setvcp(0x10, scaled_value)
 
 
 class DDCUtil(BrightnessMethodAdv):
