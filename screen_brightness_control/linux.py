@@ -539,6 +539,9 @@ class DDCUtil(BrightnessMethodAdv):
         display_count = 0
 
         for line_index, line in enumerate(ddcutil_output):
+            if not line.strip():
+                continue
+
             if not line.startswith(('\t', ' ', '+')):
                 if tmp_display:
                     yield tmp_display

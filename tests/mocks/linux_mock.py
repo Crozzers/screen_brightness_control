@@ -82,7 +82,9 @@ def mock_check_output(command: List[str], max_tries: int = 1) -> bytes:
     Mocks the output of `check_output`
     '''
     if command[0] == 'ddcutil':
-        if command[1] == 'detect':
+        if command[1] == '--version':
+            return b'ddcutil 2.1.0'
+        elif command[1] == 'detect':
             # list displays
             return (
                 mock_ddcutil_detect_output('DEL', 'Dell ABC123', 'abc123', 1)
