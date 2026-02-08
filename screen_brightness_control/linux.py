@@ -443,14 +443,31 @@ class DDCUtil(BrightnessMethodAdv):
     See [the ddcutil docs](https://www.ddcutil.com/performance_options/#option-sleep-multiplier).
     '''
     cmd_max_tries: int = 10
-    '''Max number of retries when calling the ddcutil'''
+    '''Max number of retries when calling ddcutil'''
     enable_async = True
     '''
+    .. warning:: Deprecated
+       The `--async` flag was deprecated in ddcutil v2.1.0 and no longer has any effect
+
     Use the `--async` flag when calling ddcutil.
     See [ddcutil docs](https://www.ddcutil.com/performance_options/#option-async)
     '''
     _max_brightness_cache: dict = {}
     '''Cache for displays and their maximum brightness values'''
+
+    @classmethod
+    def _version(cls) -> Optional[Tuple[int, int]]:
+        version = __cache__.get('ddcutil_version')
+        if version is None:
+            version_match = re.match(
+                r'ddcutil (\d+)\.(\d+)\.\d+.*',
+                check_output([cls.executable, '--version']).decode()
+            )
+            if version_match is not None:
+                version = (int(version_match.group(1)), int(version_match.group(2)))
+
+        __cache__.store('ddcutil_version', version, expires=60)
+        return version
 
     @classmethod
     def _gdi(cls):
@@ -461,11 +478,20 @@ class DDCUtil(BrightnessMethodAdv):
 
         Gets all displays reported by DDCUtil even if they're not supported
         '''
-        raw_ddcutil_output = str(
+        ddcutil_version = cls._version()
+
+        if (
+            cls.enable_async and
+            ddcutil_version is not None
+            and (0, 8) < ddcutil_version < (2, 1)
+        ):
+            async_flag = ['--async']
+        else:
+            async_flag = []
+
+        ddcutil_output = str(
             check_output(
-                [cls.executable, 'detect', '-v', f'--sleep-multiplier={cls.sleep_multiplier}'] + ['--async']
-                if cls.enable_async
-                else [],
+                [cls.executable, 'detect', '-v', f'--sleep-multiplier={cls.sleep_multiplier}'] + async_flag,
                 max_tries=cls.cmd_max_tries,
             )
         )[2:-1].split('\\n')
@@ -473,14 +499,11 @@ class DDCUtil(BrightnessMethodAdv):
         # Or maybe it can. I don't know the encoding though, so let's assume it cannot be decoded.
         # Use str()[2:-1] workaround
 
-        # include "Invalid display" sections because they tell us where one displays metadata ends
-        # and another begins. We filter out invalid displays later on
-        ddcutil_output = [i for i in raw_ddcutil_output if i.startswith(('Invalid display', 'Display', '\t', ' '))]
         tmp_display: dict = {}
         display_count = 0
 
         for line_index, line in enumerate(ddcutil_output):
-            if not line.startswith(('\t', ' ')):
+            if not line.startswith(('\t', ' ', '+')):
                 if tmp_display:
                     yield tmp_display
 
@@ -498,12 +521,12 @@ class DDCUtil(BrightnessMethodAdv):
                 }
                 display_count += 1
 
-            elif 'I2C bus' in line:
+            elif 'I2C bus:' in line:
                 tmp_display['i2c_bus'] = line[line.index('/') :]
                 tmp_display['bus_number'] = int(tmp_display['i2c_bus'].replace('/dev/i2c-', ''))
                 tmp_display['uid'] = tmp_display['i2c_bus'].split('-')[-1]
 
-            elif 'Mfg id' in line:
+            elif 'Mfg id:' in line:
                 # Recently ddcutil has started reporting manufacturer IDs like
                 # 'BNQ - UNK' or 'MSI - Microstep' so we have to split the line
                 # into chunks of alpha chars and check for a valid mfg id
@@ -516,7 +539,7 @@ class DDCUtil(BrightnessMethodAdv):
                         tmp_display['manufacturer_id'], tmp_display['manufacturer'] = brand
                         break
 
-            elif 'Model' in line:
+            elif 'Model:' in line:
                 # the split() removes extra spaces
                 name = line.replace('Model:', '').split()
                 try:
@@ -525,7 +548,7 @@ class DDCUtil(BrightnessMethodAdv):
                     pass
                 tmp_display['name'] = ' '.join(name)
 
-            elif 'Serial number' in line:
+            elif 'Serial number:' in line:
                 tmp_display['serial'] = line.replace('Serial number:', '').replace(' ', '') or None
 
             elif 'Binary serial number:' in line:
