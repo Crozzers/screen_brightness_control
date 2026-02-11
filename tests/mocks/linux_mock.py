@@ -30,8 +30,12 @@ class MockI2C:
             return len(data)
 
     class MockDDCInterface(MockI2CDevice):
+        _instances = {}
+
         def __init__(self, i2c_path: str):
             super().__init__(i2c_path, I2C.DDCCI_ADDR)
+
+            self._instances[i2c_path] = self
 
             self._vcp_state: Dict[int, int] = {}
 

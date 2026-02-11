@@ -429,7 +429,7 @@ class I2C(BrightnessMethod):
             interface = cls.DDCInterface(device['i2c_bus'])
             value, max_value = interface.getvcp(0x10)
 
-            # make sure display's max brighness is cached
+            # make sure display's max brighness is cached because it's used in set_brightness
             cache_ident = '%s-%s-%s' % (device['name'], device['model'], device['serial'])
             if cache_ident not in cls._max_brightness_cache:
                 cls._max_brightness_cache[cache_ident] = max_value
@@ -458,9 +458,10 @@ class I2C(BrightnessMethod):
 
             # scale the brightness value according to the max brightness
             max_value = cls._max_brightness_cache[cache_ident]
-            scaled_value = value
             if max_value != 100:
                 scaled_value = int((value / 100) * max_value)
+            else:
+                scaled_value = value
 
             interface = cls.DDCInterface(device['i2c_bus'])
             interface.setvcp(0x10, scaled_value)
@@ -616,7 +617,7 @@ class DDCUtil(BrightnessMethodAdv):
                 valid_displays.append(item)
 
             if valid_displays:
-                __cache__.store('ddcutil_monitors_info', valid_displays)
+                __cache__.store('ddcutil_monitors_info', valid_displays, expires=2)
 
         if display is not None:
             valid_displays = filter_monitors(display=display, haystack=valid_displays, include=['i2c_bus'])
@@ -680,14 +681,16 @@ class DDCUtil(BrightnessMethodAdv):
                 cls.get_brightness(display=monitor['index'])
 
             if cls._max_brightness_cache[cache_ident] != 100:
-                value = int((value / 100) * cls._max_brightness_cache[cache_ident])
+                scaled_value = int((value / 100) * cls._max_brightness_cache[cache_ident])
+            else:
+                scaled_value = value
 
             check_output(
                 [
                     cls.executable,
                     'setvcp',
                     '10',
-                    str(value),
+                    str(scaled_value),
                     '-b',
                     str(monitor['bus_number']),
                     f'--sleep-multiplier={cls.sleep_multiplier}',

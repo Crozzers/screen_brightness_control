@@ -7,6 +7,7 @@ from typing import Type
 from unittest.mock import Mock, call
 
 import pytest
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
 import screen_brightness_control as sbc
@@ -227,6 +228,25 @@ class TestI2C(LinuxBrightnessMethodTest):
                 # one call for populating max brightness cache, another for setting brightness, for each display
                 assert sorted(called_devices) == sorted(paths * 2)
 
+        def test_multi_monitor_scaling(self, monkeypatch: MonkeyPatch, method):
+            # populate max_brightness cache
+            method.get_brightness()
+
+            monkeypatch.setitem(
+                method._max_brightness_cache,
+                tuple(method._max_brightness_cache.keys())[0],
+                10000000
+            )
+
+            method.set_brightness(100)
+
+            # only one display had the scaling messed with, so only one should have a ridiculous value set
+            over_100 = 0
+            for instance in MockI2C.MockDDCInterface._instances.values():
+                if instance._vcp_state[0x10] > 100:
+                    over_100 += 1
+            assert over_100 == 1
+
 
 class TestDDCUtil(LinuxBrightnessMethodTest):
     @pytest.fixture
@@ -309,3 +329,20 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
                 buses = [str(d['bus_number']) for d in freeze_display_info]
                 called_buses = [i[i.index('-b') + 1] for i in map(lambda x: x[0][0], spy.call_args_list)]
                 assert buses == called_buses
+
+        def test_multi_monitor_scaling(self, mocker: MockerFixture, monkeypatch: MonkeyPatch, method):
+            # see same test on I2C tests
+            method.get_brightness()
+
+            monkeypatch.setitem(
+                method._max_brightness_cache,
+                tuple(method._max_brightness_cache.keys())[0],
+                10000000
+            )
+
+            spy = mocker.spy(sbc.linux, 'check_output')
+
+            method.set_brightness(100)
+
+            assert int(spy.mock_calls[0].args[0][3]) > 100
+            assert int(spy.mock_calls[1].args[0][3]) == 100
