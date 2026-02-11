@@ -51,10 +51,14 @@ class MockI2C:
             return self._vcp_state.get(vcp_code, 100), 100
 
 
-def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1):
+_default_ddcutil_version = (2, 1)
+
+
+def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1, version=None):
     '''
     Mocks the output of `ddcutil detect` for a display, including a fake edid
     '''
+    version = version or _default_ddcutil_version
     edid = fake_edid(mfg_id, name, serial)
     block = ''
     for chunk in textwrap.wrap(edid, 32):
@@ -62,7 +66,11 @@ def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1):
         block += '+0000   '  # block number
         block += ' '.join(textwrap.wrap(chunk, 2))  # the edid line
         block += '   ...the_line_decoded...'
-    block = textwrap.indent(block, '    ' * 5)
+        block += '\n'
+    if version <= (2, 1):
+        block = textwrap.indent(block, '    ' * 5)
+    else:
+        block = textwrap.dedent(block)
     return textwrap.dedent(f'''
         Display {index}
             I2C bus: /dev/i2c-{index}
@@ -77,18 +85,19 @@ def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1):
     ''')
 
 
-def mock_check_output(command: List[str], max_tries: int = 1) -> bytes:
+def mock_check_output(command: List[str], max_tries: int = 1, version=None) -> bytes:
     '''
     Mocks the output of `check_output`
     '''
+    version = version or _default_ddcutil_version
     if command[0] == 'ddcutil':
         if command[1] == '--version':
-            return b'ddcutil 2.1.0'
+            return b'ddcutil ' + f'{version[0]}.{version[1]}.0'.encode()
         elif command[1] == 'detect':
             # list displays
             return (
-                mock_ddcutil_detect_output('DEL', 'Dell ABC123', 'abc123', 1)
-                + mock_ddcutil_detect_output('BNQ', 'BenQ DEF456', 'def456', 2)
+                mock_ddcutil_detect_output('DEL', 'Dell ABC123', 'abc123', 1, version=version)
+                + mock_ddcutil_detect_output('BNQ', 'BenQ DEF456', 'def456', 2, version=version)
             ).encode()
         elif command[1] == 'getvcp':
             return b'100 100'

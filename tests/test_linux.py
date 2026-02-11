@@ -251,6 +251,18 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
             return super().test_display_filtering(mocker, original_os_module, method, extras={'include': ['i2c_bus']})
 
+        @pytest.mark.parametrize('version', [(2, 1), (2, 2)])
+        def test_handles_different_ddcutil_versions(self, mocker: MockerFixture, method, version):
+            displays_original = method.get_display_info()
+
+            # tweak the CLI mock to pass different ddcutil versions
+            curried = lambda *a, **kw: mock_check_output(*a, version=version, **kw)  # noqa: E731
+            mock = Mock(side_effect=curried, spec=True)
+            mocker.patch.object(sbc.helpers, 'check_output', mock)
+            mocker.patch.object(sbc.linux, 'check_output', mock)
+
+            assert method.get_display_info() == displays_original
+
     class TestGetBrightness(LinuxBrightnessMethodTest.TestGetBrightness):
         # TODO: tests for brightness scaling
         @pytest.fixture(autouse=True, scope='function')
