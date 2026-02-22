@@ -212,6 +212,29 @@ class I2C(BrightnessMethod):
             '''
             return os.read(self.device, length)
 
+        def find_and_read(self, sub: bytes, length: int, max_search: int):
+            '''
+            Find the first occurence of `sub` and read a message of `length` bytes from the device
+
+            Args:
+                sub: the initial bytes to search for in the stream
+                length: the length of the message to read, including the length of `sub`
+                max_search: the maximum number of bytes to read when searching
+
+            Returns:
+                bytes if successful, None if not found
+            '''
+            buf = b''
+            while len(buf) < max_search:
+                buf += self.read(128)
+                if sub in buf:
+                    buf = buf[buf.index(sub):]
+                    remaining = length - len(buf)
+                    if remaining > 0:
+                        buf += self.read(remaining)
+                    buf = buf[:length]
+                    return buf
+
         def write(self, data: bytes) -> int:
             '''
             Writes data to the I2C bus
@@ -361,19 +384,14 @@ class I2C(BrightnessMethod):
         try:
             # open the I2C device using the host read address
             device = cls.I2CDevice(i2c_path, cls.HOST_ADDR_R)
-            # read some 512 bytes from the device
-            data = device.read(512)
+            # search for the EDID header within our 512 read bytes
+            edid = device.find_and_read(bytes.fromhex('00 FF FF FF FF FF FF 00'), 128, 512)
         except IOError as e:
             cls._logger.error(f'IOError reading from device {i2c_path}: {e}')
             return
 
-        # search for the EDID header within our 512 read bytes
-        start = data.find(bytes.fromhex('00 FF FF FF FF FF FF 00'))
-        if start < 0:
+        if edid is None:
             return
-
-        # grab 128 bytes of the edid
-        edid = data[start : start + 128]
         # parse the EDID
         manufacturer_id, manufacturer, model, name, serial = EDID.parse(edid)
         return {
