@@ -24,19 +24,22 @@ Please see the [installing on Linux](https://crozzers.github.io/screen_brightnes
 ```python
 import screen_brightness_control as sbc
 
-# get the brightness
+# get the brightness for all displays
 brightness = sbc.get_brightness()
-# get the brightness for the primary monitor
+# get the brightness for the primary display only
 primary = sbc.get_brightness(display=0)
 
-# set the brightness to 100%
+# set the brightness to 100% for all displays
 sbc.set_brightness(100)
-# set the brightness to 100% for the primary monitor
-sbc.get_brightness(100, display=0)
+# set the brightness to 100% for the primary display only
+sbc.set_brightness(100, display=0)
 
-# show the current brightness for each detected monitor
-for monitor in sbc.list_monitors():
-    print(monitor, ':', sbc.get_brightness(display=monitor), '%')
+# fade the brightness down to 70% for all displays
+sbc.fade_brightness(70)
+
+# show the current brightness for each detected display
+for display in sbc.list_monitors():
+    print(display, ':', sbc.get_brightness(display=display), '%')
 ```
 
 Check out the [quick start guide](https://crozzers.github.io/screen_brightness_control/extras/Quick%20Start%20Guide.html) for more details on each of these functions.
