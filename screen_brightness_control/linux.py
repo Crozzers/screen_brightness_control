@@ -179,8 +179,14 @@ class I2C(BrightnessMethod):
     WAIT_TIME = 0.05
     '''How long to wait between I2C commands'''
 
+    # misc
     MAX_THREADS = 4
     '''Number of I2C buses that can be queried at once'''
+    I2C_READ_CHUNK_SIZE = 128
+    '''
+    When reading EDID this controls the max number of bytes read from an
+    I2C bus at once
+    '''
 
     _max_brightness_cache: dict = {}
 
@@ -226,7 +232,7 @@ class I2C(BrightnessMethod):
             '''
             buf = b''
             while len(buf) < max_search:
-                buf += self.read(128)
+                buf += self.read(I2C.I2C_READ_CHUNK_SIZE)
                 if sub in buf:
                     buf = buf[buf.index(sub):]
                     remaining = length - len(buf)
