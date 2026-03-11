@@ -181,7 +181,12 @@ class I2C(BrightnessMethod):
 
     # misc
     MAX_THREADS = 4
-    '''Number of I2C buses that can be queried at once'''
+    '''
+    Number of I2C buses that can be queried at once.
+
+    Higher values may speed up querying displays but risks overloading the I2C buses, causing instability.
+    Lower values tend to be slower and more stable.
+    '''
     I2C_READ_CHUNK_SIZE = 128
     '''
     When reading EDID this controls the max number of bytes read from an

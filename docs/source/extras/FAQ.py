@@ -46,6 +46,37 @@ print(monitor.Level)
 
 
 ## Linux FAQ
+### Library causing system to lock up
+This was reported in [issue 51](https://github.com/Crozzers/screen_brightness_control/issues/51) and is
+due to a bug in the AMD drivers especially (may affect other vendors).
+
+It seems like performing more I2C reads at once triggers a "pageflip" from which the driver fails to recover.
+This bug has been reported on [AMD forums](https://gitlab.freedesktop.org/drm/amd/-/issues/2950).
+
+Since this is an AMD issue, there's not much that can be done to fix this on our side, but you can try
+reducing the number of parallel I2C operations to reduce the chance of triggering it.
+
+```python
+import screen_brightness_control as sbc
+sbc.linux.I2C.MAX_THREADS = 2  # default is 4
+```
+
+You can also use the `DDCUtil` method over `I2C`, since that seems to handle it better.
+
+```python
+import screen_brightness_control as sbc
+
+# use the ddcutil method
+sbc.list_monitors(method='ddcutil')
+sbc.get_brightness(method='ddcutil')
+sbc.set_brightness(100, method='ddcutil')
+sbc.fade_brightness(100, method='ddcutil')
+
+# since v0.23.0 you can set the default value for the method param
+sbc.config.METHOD = 'ddcutil'
+sbc.get_brightness()
+```
+
 ### Why do I always get `ScreenBrightnessError`?
 Linux often requires a bit of tweaking to get working out of the box. This either means installing a 3rd party program or
 granting extra permissions to the user.

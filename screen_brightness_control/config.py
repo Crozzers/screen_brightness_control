@@ -1,5 +1,7 @@
 '''
 Contains globally applicable configuration variables.
+
+Since v0.23.0
 '''
 
 from functools import wraps
@@ -23,6 +25,8 @@ def default_params(func: Callable):
 ALLOW_DUPLICATES: bool = False
 '''
 Default value for the `allow_duplicates` parameter in top-level functions.
+
+Since `v0.23.0`
 '''
 
 METHOD: Optional[str] = None
@@ -30,4 +34,6 @@ METHOD: Optional[str] = None
 Default value for the `method` parameter in top-level functions.
 
 For available values, see `.get_methods`
+
+Since `v0.23.0`
 '''
