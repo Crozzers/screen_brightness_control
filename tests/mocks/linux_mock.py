@@ -26,6 +26,9 @@ class MockI2C:
                 return bytes.fromhex(('00' * 128) + edid + ('00' * 128))
             raise NotImplementedError()
 
+        def find_and_read(self, sub, length, max_search):
+            return self.read(length)[128: 256]
+
         def write(self, data: bytes) -> int:
             return len(data)
 
