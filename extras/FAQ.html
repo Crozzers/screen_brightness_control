@@ -60,7 +60,7 @@ var css_url=new URL("version_navigator.css",get_version_navigation_base_url());v
     <h2>
         <a href="https://github.com/Crozzers/screen_brightness_control/blob/main/LICENSE">License</a>
     </h2>
-                <footer>screen_brightness_control v0.27.0</footer>
+                <footer>screen_brightness_control v0.27.1</footer>
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -131,6 +131,40 @@ You can find out your brightness 'levels' by running the following python code:<
 </div>
 
 <h2 id="linux-faq">Linux FAQ</h2>
+
+<h3 id="library-causing-system-to-lock-up">Library causing system to lock up</h3>
+
+<p>This was reported in <a href="https://github.com/Crozzers/screen_brightness_control/issues/51">issue 51</a> and is
+due to a bug in the AMD drivers especially (may affect other vendors).</p>
+
+<p>It seems like performing more I2C reads at once triggers a "pageflip" from which the driver fails to recover.
+This bug has been reported on <a href="https://gitlab.freedesktop.org/drm/amd/-/issues/2950">AMD forums</a>.</p>
+
+<p>Since this is an AMD issue, there's not much that can be done to fix this on our side, but you can try
+reducing the number of parallel I2C operations to reduce the chance of triggering it.</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">screen_brightness_control</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sbc</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">linux</span><span class="o">.</span><span class="n">I2C</span><span class="o">.</span><span class="n">MAX_THREADS</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># default is 4</span>
+</code></pre>
+</div>
+
+<p>You can also use the <code>DDCUtil</code> method over <code>I2C</code>, since that seems to handle it better.</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">screen_brightness_control</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sbc</span>
+
+<span class="c1"># use the ddcutil method</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">list_monitors</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;ddcutil&#39;</span><span class="p">)</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;ddcutil&#39;</span><span class="p">)</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">set_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;ddcutil&#39;</span><span class="p">)</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">fade_brightness</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;ddcutil&#39;</span><span class="p">)</span>
+
+<span class="c1"># since v0.23.0 you can set the default value for the method param</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">METHOD</span> <span class="o">=</span> <span class="s1">&#39;ddcutil&#39;</span>
+<span class="n">sbc</span><span class="o">.</span><span class="n">get_brightness</span><span class="p">()</span>
+</code></pre>
+</div>
 
 <h3 id="why-do-i-always-get-screenbrightnesserror">Why do I always get <code>ScreenBrightnessError</code>?</h3>
 
