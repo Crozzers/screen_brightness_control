@@ -12,7 +12,7 @@ format:
 
 .PHONY: testquick
 testquick:
-	python -m pytest --verbose
+	python -m pytest
 
 .PHONY: test
 test: lint
