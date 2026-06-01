@@ -65,6 +65,7 @@ Thanks to these people for contributing to this project
 * [BingoWon](https://github.com/BingoWon)
 * [Daniel Wong](https://github.com/drojf)
 * [Deepak Kumar](https://github.com/patwadeepak)
+* [Kemal Özvarol](https://github.com/DevKemal)
 * [lcharles](https://github.com/lcharles)
 * [Mathias Johansson](https://github.com/Mathias9807)
 * [Melek REBAI](https://github.com/shadoWalker89)
