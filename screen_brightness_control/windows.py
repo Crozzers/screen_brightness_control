@@ -181,6 +181,9 @@ def get_display_info() -> List[dict]:
             # now make sure desktop monitors have the correct index
             count = 0
             for item in info:
+                # workaround for virtual monitors (like Spacedesk)
+                if not isinstance(item, dict):
+                    continue
                 if item['method'] == VCP:
                     item['index'] = count
                     count += 1
