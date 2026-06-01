@@ -76,8 +76,6 @@ def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1, ver
         block += '\n'
     if version <= (2, 1):
         block = textwrap.indent(block, '    ' * 5)
-    else:
-        block = textwrap.dedent(block)
     return textwrap.dedent(f'''
         Display {index}
             I2C bus: /dev/i2c-{index}
@@ -88,7 +86,7 @@ def mock_ddcutil_detect_output(mfg_id: str, name: str, serial: str, index=1, ver
                 Binary serial number: 123 (0x000000)
                 EDID hex dump:
                         +0      +4      +8...
-                    {block}
+{block}
     ''')
 
 

@@ -1,3 +1,4 @@
+import os
 import platform
 
 import pytest
@@ -14,6 +15,8 @@ elif platform.system() == 'Linux':
     collect_ignore.append('test_windows.py')
 
 _OS_MODULE = sbc._OS_MODULE
+if os.environ.get('NOCACHE'):
+    _OS_MODULE.__cache__.enabled = False
 
 
 @pytest.fixture(autouse=True)
@@ -31,3 +34,8 @@ def original_os_module():
 @pytest.fixture
 def displays(mock_os_module):
     return mock_os_module.list_monitors_info()
+
+
+@pytest.fixture(autouse=True, scope='function')
+def clear_cache():
+    _OS_MODULE.__cache__._store = {}

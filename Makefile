@@ -14,6 +14,10 @@ format:
 testquick:
 	python -m pytest
 
+.PHONY: testnocache
+testnocache:
+	NOCACHE=1 python -m pytest
+
 .PHONY: test
 test: lint
 	make testquick

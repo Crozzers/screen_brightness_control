@@ -10,7 +10,7 @@ import screen_brightness_control as sbc
 from screen_brightness_control.helpers import BrightnessMethod
 
 from .helpers import BrightnessMethodTest
-from .mocks.windows_mock import FakeWinDLL, mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init
+from .mocks.windows_mock import FAKE_DISPLAYS, FakeMSMonitor, FakeWMI, FakeWinDLL, mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init
 
 
 @pytest.fixture
@@ -19,6 +19,21 @@ def patch_global_get_display_info(mocker: MockerFixture):
     mocker.patch.object(sbc.windows, 'enum_display_devices', mock_enum_display_devices)
     mocker.patch.object(sbc.windows, '_wmi_init', mock_wmi_init)
     mocker.patch.object(sbc.windows.win32api, 'EnumDisplayMonitors', mock_enum_display_monitors)
+
+
+def test_get_display_info_virtual_monitor_issue53(patch_global_get_display_info, mocker: MockerFixture):
+    class FakeWMIMissingDisplays(FakeWMI):
+        def WmiMonitorDescriptorMethods(self):
+            for fake in FAKE_DISPLAYS[:-1]:
+                yield FakeMSMonitor(fake)
+
+    @contextmanager
+    def fake_wmi_init():
+        yield FakeWMIMissingDisplays()
+
+    mocker.patch.object(sbc.windows, '_wmi_init', fake_wmi_init)
+
+    sbc.windows.get_display_info()  # should not throw type error
 
 
 class TestWMI(BrightnessMethodTest):

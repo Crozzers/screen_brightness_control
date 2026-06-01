@@ -344,5 +344,8 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
 
             method.set_brightness(100)
 
-            assert int(spy.mock_calls[0].args[0][3]) > 100
-            assert int(spy.mock_calls[1].args[0][3]) == 100
+            # filter out any `ddcutil --detect` or misc calls
+            calls = [i for i in spy.mock_calls if 'setvcp' in i.args[0]]
+
+            assert int(calls[0].args[0][3]) > 100
+            assert int(calls[1].args[0][3]) == 100
