@@ -95,6 +95,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: packages
+          path: packages
       - name: Set up Python 3.11
         uses: actions/setup-python@v6
         with:
@@ -104,20 +105,20 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          packages-dir: ./
+          packages-dir: packages
           repository-url: https://test.pypi.org/legacy/
       - name: Publish to PyPI
         if: ${{ inputs.pypi == true || github.event_name == 'push' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: ./
+          packages-dir: packages
       - name: Draft release
         if: ${{ inputs.github == true || github.event_name == 'push' }}
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: "./screen_brightness_control*"
+          files: "./packages/screen_brightness_control*"
           name: "${{ needs.getversion.outputs.version }}"
           tag_name: ${{ needs.getversion.outputs.version }}
   docs:
