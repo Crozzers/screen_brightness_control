@@ -44,7 +44,7 @@ class DisplayServices(BrightnessMethod):
     def _gdi(cls) -> Generator[dict]:
         for index, display in enumerate(NSScreen.screens()):
             display_id = display.CGDirectDisplayID()
-            name = display.localizedName()
+            name = str(display.localizedName())  # returns objc.pyobjc_unicode type
 
             if name.lower().startswith('built-in'):
                 mfg_lookup = _monitor_brand_lookup('APP')
