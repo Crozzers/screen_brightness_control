@@ -101,7 +101,7 @@ class DisplayServices(BrightnessMethod):
             )
             if ret:
                 cls._logger.warning(f'DisplayServicesGetBrightness returned code {ret} for display {screen["uid"]}')
-            result.append(brightness.value)
+            result.append(int(round(brightness.value * 100, 2)))
 
         return result
 
@@ -115,6 +115,11 @@ class DisplayServices(BrightnessMethod):
         displays = cls.get_display_info()
         if display is not None:
             displays = [displays[display]]
+
+        try:
+            value /= 100
+        except ZeroDivisionError:
+            value = 0
 
         for screen in displays:
             ret = DisplayServicesDLL.DisplayServicesSetBrightness(
