@@ -2,7 +2,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from .mocks import mac_mock
-from .helpers import BrightnessMethodTest, TestGetBrightnessWithUnsupportedDisplays, TestSetBrightnessWithUnsupportedDisplays
+from .helpers import BrightnessMethodTest
 from screen_brightness_control import mac
 
 
@@ -22,8 +22,8 @@ class TestDisplayServices(BrightnessMethodTest):
     class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         pass
 
-    class TestGetBrightness(TestGetBrightnessWithUnsupportedDisplays):
+    class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         pass
 
-    class TestSetBrightnesss(TestSetBrightnessWithUnsupportedDisplays):
+    class TestSetBrightnesss(BrightnessMethodTest.TestGetBrightness):
         pass
