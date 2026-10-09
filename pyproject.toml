@@ -43,7 +43,7 @@ dev = [
     "pytest-mock",
     "pytest-subtests",
     "ruff",
-    "string-fixer>=0.5.0"
+    "string-fixer>=0.5.0 ; implementation_name=='cpython'"
 ]
 docs = [
     "jsmin",
