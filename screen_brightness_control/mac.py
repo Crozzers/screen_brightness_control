@@ -41,7 +41,7 @@ class DisplayServices(BrightnessMethod):
     _logger = _logger.getChild('DisplayServices')
 
     @classmethod
-    def _gdi(cls) -> Generator[dict]:
+    def _gdi(cls) -> Generator[dict, None, None]:
         for index, display in enumerate(NSScreen.screens()):
             display_id = display.CGDirectDisplayID()
             name = str(display.localizedName())  # returns objc.pyobjc_unicode type

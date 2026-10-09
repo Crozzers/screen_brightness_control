@@ -18,7 +18,8 @@ elif platform.system() == 'Darwin':
 
 _OS_MODULE = sbc._OS_MODULE
 if os.environ.get('NOCACHE'):
-    _OS_MODULE.__cache__.enabled = False
+    if hasattr(_OS_MODULE, '__cache__'):
+        _OS_MODULE.__cache__.enabled = False
 
 
 @pytest.fixture(autouse=True)
@@ -40,4 +41,5 @@ def displays(mock_os_module):
 
 @pytest.fixture(autouse=True, scope='function')
 def clear_cache():
-    _OS_MODULE.__cache__._store = {}
+    if hasattr(_OS_MODULE, '__cache__'):
+        _OS_MODULE.__cache__._store = {}

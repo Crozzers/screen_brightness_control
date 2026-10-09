@@ -1,3 +1,6 @@
+import ctypes
+
+
 class MockCoreGraphicsDLL:
     def CGDisplayIsBuiltin(*_):
         return True
@@ -5,7 +8,7 @@ class MockCoreGraphicsDLL:
 
 class MockDisplayServicesDLL:
     def DisplayServicesGetBrightness(_, brightness):
-        brightness.value = 1.0
+        ctypes.cast(brightness, ctypes.POINTER(ctypes.c_float)).contents.value = 1.0
         return 0
 
     def DisplayServicesSetBrightness(*_):
