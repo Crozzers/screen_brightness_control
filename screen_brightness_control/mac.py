@@ -21,7 +21,7 @@ CoreGraphicsDLL.CGDisplayIsBuiltin.restype = ctypes.c_bool
 
 
 # DisplayServices DLL works on Apple Sillicon macs
-DisplayServicesDLL = CDLL('/System/Library/Frameworks/DisplayServices.framework/Versions/A/DisplayServices')
+DisplayServicesDLL = CDLL('/System/Library/PrivateFrameworks/DisplayServices.framework/Versions/A/DisplayServices')
 DisplayServicesDLL.DisplayServicesGetBrightness.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float)]
 DisplayServicesDLL.DisplayServicesGetBrightness.restype = ctypes.c_int
 DisplayServicesDLL.DisplayServicesSetBrightness.argtypes = [ctypes.c_int, ctypes.c_float]
