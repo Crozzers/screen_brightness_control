@@ -14,48 +14,11 @@ import screen_brightness_control as sbc
 from screen_brightness_control import linux
 from screen_brightness_control.helpers import BrightnessMethod
 
-from .helpers import BrightnessMethodTest
+from .helpers import BrightnessMethodTest, TestGetBrightnessWithUnsupportedDisplays, TestSetBrightnessWithUnsupportedDisplays
 from .mocks.linux_mock import MockI2C, mock_check_output
 
 
-class LinuxBrightnessMethodTest(BrightnessMethodTest, ABC):
-    class TestGetBrightness(BrightnessMethodTest.TestGetBrightness, ABC):
-        def test_unsupported_displays_index_mismatch(
-            self,
-            mocker: MockerFixture,
-            method: Type[BrightnessMethod]
-        ):
-            '''
-            See https://github.com/Crozzers/screen_brightness_control/issues/48
-            '''
-            # simulate the display info getting fetched but unsupported displays are excluded
-            # meaning the index prop doesn't match the list position
-            display = method.get_display_info()[0]
-            # make displays list short but set index high to force index error
-            mocker.patch.object(method, 'get_display_info', Mock(return_value=[
-                {**deepcopy(display), 'index': 5}
-            ]))
-
-            # should not raise
-            method.get_brightness(display=5)
-
-    class TestSetBrightness(BrightnessMethodTest.TestSetBrightness, ABC):
-        def test_unsupported_displays_index_mismatch(
-            self,
-            mocker: MockerFixture,
-            method: Type[BrightnessMethod]
-        ):
-            '''
-            Same as `LinuxBrightnessMethodTest.TestGetBrightness.test_unsupported_displays_index_mismatch`
-            '''
-            display = method.get_display_info()[0]
-            mocker.patch.object(method, 'get_display_info', Mock(return_value=[
-                {**deepcopy(display), 'index': 5}
-            ]))
-            method.set_brightness(100, display=5)
-
-
-class TestSysFiles(LinuxBrightnessMethodTest):
+class TestSysFiles(BrightnessMethodTest):
     @pytest.fixture
     def patch_get_display_info(self, mocker: MockerFixture):
         '''Mock everything needed to get `SysFiles.get_display_info` to run'''
@@ -85,7 +48,7 @@ class TestSysFiles(LinuxBrightnessMethodTest):
     def method(self) -> Type[BrightnessMethod]:
         return sbc.linux.SysFiles
 
-    class TestGetDisplayInfo(LinuxBrightnessMethodTest.TestGetDisplayInfo):
+    class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         def test_returned_dicts_contain_required_keys(self, method):
             super().test_returned_dicts_contain_required_keys(method, extras={'scale': float, 'path': str})
 
@@ -106,8 +69,8 @@ class TestSysFiles(LinuxBrightnessMethodTest):
 
             assert displays[0]['name'] == 'intel_backlight' and displays[0]['edid'] is None
 
-    class TestGetBrightness(LinuxBrightnessMethodTest.TestGetBrightness):
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+    class TestGetBrightness(TestGetBrightnessWithUnsupportedDisplays):
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(read_data='100'), spec=True)
                 for index, display in enumerate(freeze_display_info):
@@ -135,8 +98,8 @@ class TestSysFiles(LinuxBrightnessMethodTest):
 
             assert method.get_brightness()[0] == brightness // scale
 
-    class TestSetBrightness(LinuxBrightnessMethodTest.TestSetBrightness):
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+    class TestSetBrightness(TestSetBrightnessWithUnsupportedDisplays):
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 mock = mocker.patch.object(sbc.linux, 'open', mocker.mock_open(), spec=True)
                 for index, display in enumerate(freeze_display_info):
@@ -159,7 +122,7 @@ class TestSysFiles(LinuxBrightnessMethodTest):
                         assert write.call_args_list[index][0][0] == '100'
 
 
-class TestI2C(LinuxBrightnessMethodTest):
+class TestI2C(BrightnessMethodTest):
     @pytest.fixture(scope='function', autouse=True)
     def cleanup(self, method: linux.I2C):
         method._max_brightness_cache = {}
@@ -185,15 +148,15 @@ class TestI2C(LinuxBrightnessMethodTest):
     def method(self):
         return linux.I2C
 
-    class TestGetDisplayInfo(LinuxBrightnessMethodTest.TestGetDisplayInfo):
+    class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         def test_returned_dicts_contain_required_keys(self, method: Type[BrightnessMethod]):
             return super().test_returned_dicts_contain_required_keys(method, {'i2c_bus': str})
 
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
             return super().test_display_filtering(mocker, original_os_module, method, {'include': ['i2c_bus']})
 
-    class TestGetBrightness(LinuxBrightnessMethodTest.TestGetBrightness):
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+    class TestGetBrightness(TestGetBrightnessWithUnsupportedDisplays):
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(method, 'DDCInterface')
                 for index, display in enumerate(freeze_display_info):
@@ -209,8 +172,8 @@ class TestI2C(LinuxBrightnessMethodTest):
                 called_devices = [i[0][0] for i in spy.call_args_list]
                 assert paths == called_devices
 
-    class TestSetBrightness(LinuxBrightnessMethodTest.TestSetBrightness):
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+    class TestSetBrightness(TestSetBrightnessWithUnsupportedDisplays):
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(method, 'DDCInterface')
                 for index, display in enumerate(freeze_display_info):
@@ -248,7 +211,7 @@ class TestI2C(LinuxBrightnessMethodTest):
             assert over_100 == 1
 
 
-class TestDDCUtil(LinuxBrightnessMethodTest):
+class TestDDCUtil(BrightnessMethodTest):
     @pytest.fixture
     def patch_get_display_info(self, mocker: MockerFixture):
         mock = Mock(side_effect=mock_check_output, spec=True)
@@ -267,7 +230,7 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
     def method(self):
         return linux.DDCUtil
 
-    class TestGetDisplayInfo(LinuxBrightnessMethodTest.TestGetDisplayInfo):
+    class TestGetDisplayInfo(BrightnessMethodTest.TestGetDisplayInfo):
         def test_display_filtering(self, mocker: MockerFixture, original_os_module, method):
             return super().test_display_filtering(mocker, original_os_module, method, extras={'include': ['i2c_bus']})
 
@@ -283,13 +246,13 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
 
             assert method.get_display_info() == displays_original
 
-    class TestGetBrightness(LinuxBrightnessMethodTest.TestGetBrightness):
+    class TestGetBrightness(TestGetBrightnessWithUnsupportedDisplays):
         # TODO: tests for brightness scaling
         @pytest.fixture(autouse=True, scope='function')
         def patch(self, patch_get_brightness):
             sbc.linux.__cache__._store = {}
 
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 for index, display in enumerate(freeze_display_info):
@@ -307,12 +270,12 @@ class TestDDCUtil(LinuxBrightnessMethodTest):
                 called_buses = [i[i.index('-b') + 1] for i in map(lambda x: x[0][0], spy.call_args_list)]
                 assert buses == called_buses
 
-    class TestSetBrightness(LinuxBrightnessMethodTest.TestSetBrightness):
+    class TestSetBrightness(TestSetBrightnessWithUnsupportedDisplays):
         @pytest.fixture(autouse=True, scope='function')
         def patch(self, patch_set_brightness):
             sbc.linux.__cache__._store = {}
 
-        class TestDisplayKwarg(LinuxBrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
             def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(sbc.linux, 'check_output')
                 for index, display in enumerate(freeze_display_info):

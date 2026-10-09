@@ -10,9 +10,11 @@ from .mocks import os_module_mock
 # define tests to skip
 collect_ignore = []
 if platform.system() == 'Windows':
-    collect_ignore.append('test_linux.py')
+    collect_ignore.extend(['test_linux.py', 'test_mac.py'])
 elif platform.system() == 'Linux':
-    collect_ignore.append('test_windows.py')
+    collect_ignore.extend(['test_windows.py', 'test_mac.py'])
+elif platform.system() == 'Darwin':
+    collect_ignore.extend(['test_linux.py', 'test_windows.py'])
 
 _OS_MODULE = sbc._OS_MODULE
 if os.environ.get('NOCACHE'):

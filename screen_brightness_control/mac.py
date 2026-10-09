@@ -105,7 +105,6 @@ class DisplayServices(BrightnessMethod):
 
         return result
 
-
     @classmethod
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         if not config.USE_PRIVATE_FRAMEWORKS:

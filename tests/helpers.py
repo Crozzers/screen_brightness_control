@@ -153,6 +153,41 @@ class BrightnessMethodTest(ABC):
             assert method.set_brightness(100, display=0) is None
 
 
+class TestGetBrightnessWithUnsupportedDisplays(BrightnessMethodTest.TestGetBrightness, ABC):
+    def test_unsupported_displays_index_mismatch(
+        self,
+        mocker: MockerFixture,
+        method: Type[BrightnessMethod]
+    ):
+        '''
+        See https://github.com/Crozzers/screen_brightness_control/issues/48
+        '''
+        # simulate the display info getting fetched but unsupported displays are excluded
+        # meaning the index prop doesn't match the list position
+        display = method.get_display_info()[0]
+        # make displays list short but set index high to force index error
+        mocker.patch.object(method, 'get_display_info', Mock(return_value=[
+            {**deepcopy(display), 'index': 5}
+        ]))
+
+        # should not raise
+        method.get_brightness(display=5)
+
+class TestSetBrightnessWithUnsupportedDisplays(BrightnessMethodTest.TestSetBrightness, ABC):
+    def test_unsupported_displays_index_mismatch(
+        self,
+        mocker: MockerFixture,
+        method: Type[BrightnessMethod]
+    ):
+        '''
+        Same as `TestGetBrightnessWithUnsupportedDisplays.test_unsupported_displays_index_mismatch`
+        '''
+        display = method.get_display_info()[0]
+        mocker.patch.object(method, 'get_display_info', Mock(return_value=[
+            {**deepcopy(display), 'index': 5}
+        ]))
+        method.set_brightness(100, display=5)
+
 # some types for `BrightnessFunctionTest`, outside the class body so that subclasses can access
 BFOpType = Literal['get', 'set', 'fade']
 '''Brightness function operation type'''
