@@ -37,3 +37,13 @@ For available values, see `.get_methods`
 
 Since `v0.23.0`
 '''
+
+USE_PRIVATE_FRAMEWORKS: bool = False
+'''
+On MacOS many brightness APIs have been moved into private, unsupported and undocumented frameworks which
+may change or break at any time.
+
+Setting this flag permits the library to use these private APIs, despite the risks.
+
+Since: `v0.28.0`
+'''

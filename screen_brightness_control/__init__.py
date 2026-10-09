@@ -828,5 +828,9 @@ elif platform.system() == 'Linux':
     from . import linux
 
     _OS_MODULE = linux
+elif platform.system() == 'Darwin':
+    from . import mac
+
+    _OS_MODULE = mac
 else:
     _logger.warning(f'package imported on unsupported platform ({platform.system()})')

@@ -10,7 +10,9 @@ dynamic = ["version"]
 dependencies = [
     "wmi ; platform_system=='Windows'",
     "pywin32 ; platform_system=='Windows'",
-    "pypiwin32 ; platform_system=='Windows'"
+    "pypiwin32 ; platform_system=='Windows'",
+    "pyobjc ; platform_system=='Darwin'",
+    "pyobjc-framework-Cocoa ; platform_system=='Darwin'",
 ]
 
 classifiers = [
