@@ -81,7 +81,7 @@ def set_brightness(
         display (.types.DisplayIdentifier): the specific display to adjust
         method: the method to use to set the brightness. See `get_methods` for
             more info on available methods
-        force: [*Linux Only*] if False the brightness will never be set lower than 1.
+        force: [*Linux/Mac Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         allow_duplicates: controls whether to filter out duplicate displays or not.
@@ -163,7 +163,7 @@ def fade_brightness(
         interval: the time delay between each step in brightness
         increment: the amount to change the brightness by per step
         blocking: whether this should occur in the main thread (`True`) or a new daemonic thread (`False`)
-        force: [*Linux Only*] if False the brightness will never be set lower than 1.
+        force: [*Linux/Mac Only*] if False the brightness will never be set lower than 1.
             This is because on most displays a brightness of 0 will turn off the backlight.
             If True, this check is bypassed
         logarithmic: follow a logarithmic brightness curve when adjusting the brightness
@@ -412,7 +412,7 @@ class Display:
                 to whatever the current brightness level for the display is
             interval: time delay between each change in brightness
             increment: amount to change the brightness by each time (as a percentage)
-            force: [*Linux only*] allow the brightness to be set to 0. By default,
+            force: [*Linux/Mac only*] allow the brightness to be set to 0. By default,
                 brightness values will never be set lower than 1, since setting them to 0
                 often turns off the backlight
             logarithmic: follow a logarithmic curve when setting brightness values.
@@ -459,7 +459,7 @@ class Display:
         display_key = frozenset((self.method, self.index))
         self._fade_thread_dict[display_key] = threading.current_thread()
         # minimum brightness value
-        if platform.system() == 'Linux' and not force:
+        if platform.system() in ('Linux', 'Darwin') and not force:
             lower_bound = 1
         else:
             lower_bound = 0
@@ -599,14 +599,14 @@ class Display:
 
         Args:
             value (.types.Percentage): the brightness percentage to set the display to
-            force: allow the brightness to be set to 0 on Linux. This is disabled by default
-                because setting the brightness of 0 will often turn off the backlight
+            force: allow the brightness to be set to 0 on Linux/Mac. This is disabled by
+                default because setting the brightness of 0 will often turn off the backlight
 
         Raises:
             ScreenBrightnessError: if brightness cannot be retrieved by any method
         '''
         # convert brightness value to percentage
-        if platform.system() == 'Linux' and not force:
+        if platform.system() in ('Linux', 'Darwin') and not force:
             lower_bound = 1
         else:
             lower_bound = 0
