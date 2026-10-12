@@ -54,3 +54,7 @@ class MaxRetriesExceededError(ScreenBrightnessError, subprocess.CalledProcessErr
         string = super().__str__()
         string += f'\n\t-> {self.message}'
         return string
+
+
+class ConfigError(ScreenBrightnessError):
+    '''Invalid configuration'''

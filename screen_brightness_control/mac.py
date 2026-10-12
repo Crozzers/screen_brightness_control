@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional
 
 from . import filter_monitors, get_methods, config
-from .exceptions import NoValidDisplayError, format_exc
+from .exceptions import ConfigError, NoValidDisplayError, format_exc
 from .helpers import BrightnessMethod, BrightnessMethodAdv, _monitor_brand_lookup
 from .types import DisplayIdentifier, Generator, IntPercentage
 
@@ -86,7 +86,7 @@ class DisplayServices(BrightnessMethod):
     def get_brightness(cls, display: Optional[int] = None) -> List[int]:
         if not config.USE_PRIVATE_FRAMEWORKS:
             cls._logger.warning('USE_PRIVATE_FRAMEWORKS is disabled')
-            return []
+            raise ConfigError('cannot get brightness with DisplayServices API when USE_PRIVATE_FRAMEWORKS is disabled')
 
         displays = cls.get_display_info()
         if display is not None:
@@ -109,7 +109,7 @@ class DisplayServices(BrightnessMethod):
     def set_brightness(cls, value: IntPercentage, display: Optional[int] = None):
         if not config.USE_PRIVATE_FRAMEWORKS:
             cls._logger.warning('USE_PRIVATE_FRAMEWORKS is disabled')
-            return []
+            raise ConfigError('cannot set brightness with DisplayServices API when USE_PRIVATE_FRAMEWORKS is disabled')
 
         displays = cls.get_display_info()
         if display is not None:

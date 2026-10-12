@@ -1,10 +1,13 @@
+from typing import Type
+
 import pytest
-from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
+from screen_brightness_control import config, mac
+from screen_brightness_control.exceptions import ConfigError
+
+from .helpers import BrightnessMethod, BrightnessMethodTest
 from .mocks import mac_mock
-from .helpers import BrightnessMethodTest
-from screen_brightness_control import mac, config
 
 
 class TestDisplayServices(BrightnessMethodTest):
@@ -29,17 +32,59 @@ class TestDisplayServices(BrightnessMethodTest):
         pass
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
-        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
-            def test_with(self):
-                pass
+        def test_private_frameworks_flag(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, method: Type[BrightnessMethod]):
+            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', True)
+            spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesGetBrightness')
+            with pytest.raises(ConfigError):
+                method.get_brightness()
+            spy.assert_not_called()
 
-            def test_without(self):
-                pass
+        class TestDisplayKwarg(BrightnessMethodTest.TestGetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
+                spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesGetBrightness')
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        method.get_brightness(display=index)
+                        spy.assert_called_once()
+                        uid = spy.call_args_list[0][0][0]
+                        assert uid == display['uid']
+                        spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
+                spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesGetBrightness')
+                method.get_brightness()
+                assert len(spy.calls) == len(freeze_display_info)
+
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        calls = [c for c in spy.call_args_list if c[0][0][0] == display['uid']]
+                        assert len(calls) == 1
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
-        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
-            def test_with(self):
-                pass
+        def test_private_frameworks_flag(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, method: Type[BrightnessMethod]):
+            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', True)
+            spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesSetBrightness')
+            with pytest.raises(ConfigError):
+                method.set_brightness(100)
+            spy.assert_not_called()
 
-            def test_without(self):
-                pass
+        class TestDisplayKwarg(BrightnessMethodTest.TestSetBrightness.TestDisplayKwarg):
+            def test_with(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
+                spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesSetBrightness')
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        method.set_brightness(100, display=index)
+                        spy.assert_called_once()
+                        uid = spy.call_args_list[0][0][0]
+                        assert uid == display['uid']
+                        spy.reset_mock()
+
+            def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
+                spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesSetBrightness')
+                method.set_brightness(100)
+                assert len(spy.calls) == len(freeze_display_info)
+
+                for index, display in enumerate(freeze_display_info):
+                    with subtests.test(index=index):
+                        calls = [c for c in spy.call_args_list if c[0][0][0] == display['uid']]
+                        assert len(calls) == 1
