@@ -33,7 +33,7 @@ class TestDisplayServices(BrightnessMethodTest):
 
     class TestGetBrightness(BrightnessMethodTest.TestGetBrightness):
         def test_private_frameworks_flag(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, method: Type[BrightnessMethod]):
-            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', True)
+            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', False)
             spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesGetBrightness')
             with pytest.raises(ConfigError):
                 method.get_brightness()
@@ -46,23 +46,23 @@ class TestDisplayServices(BrightnessMethodTest):
                     with subtests.test(index=index):
                         method.get_brightness(display=index)
                         spy.assert_called_once()
-                        uid = spy.call_args_list[0][0][0]
+                        uid = spy.call_args_list[0][0][0].value
                         assert uid == display['uid']
                         spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesGetBrightness')
                 method.get_brightness()
-                assert len(spy.calls) == len(freeze_display_info)
+                assert len(spy.mock_calls) == len(freeze_display_info)
 
                 for index, display in enumerate(freeze_display_info):
                     with subtests.test(index=index):
-                        calls = [c for c in spy.call_args_list if c[0][0][0] == display['uid']]
+                        calls = [c for c in spy.call_args_list if c[0][0].value == display['uid']]
                         assert len(calls) == 1
 
     class TestSetBrightness(BrightnessMethodTest.TestSetBrightness):
         def test_private_frameworks_flag(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, method: Type[BrightnessMethod]):
-            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', True)
+            monkeypatch.setattr(config, 'USE_PRIVATE_FRAMEWORKS', False)
             spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesSetBrightness')
             with pytest.raises(ConfigError):
                 method.set_brightness(100)
@@ -75,16 +75,16 @@ class TestDisplayServices(BrightnessMethodTest):
                     with subtests.test(index=index):
                         method.set_brightness(100, display=index)
                         spy.assert_called_once()
-                        uid = spy.call_args_list[0][0][0]
+                        uid = spy.call_args_list[0][0][0].value
                         assert uid == display['uid']
                         spy.reset_mock()
 
             def test_without(self, mocker: MockerFixture, method: Type[BrightnessMethod], freeze_display_info, subtests):
                 spy = mocker.spy(mac.DisplayServicesDLL, 'DisplayServicesSetBrightness')
                 method.set_brightness(100)
-                assert len(spy.calls) == len(freeze_display_info)
+                assert len(spy.mock_calls) == len(freeze_display_info)
 
                 for index, display in enumerate(freeze_display_info):
                     with subtests.test(index=index):
-                        calls = [c for c in spy.call_args_list if c[0][0][0] == display['uid']]
+                        calls = [c for c in spy.call_args_list if c[0][0].value == display['uid']]
                         assert len(calls) == 1
