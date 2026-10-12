@@ -1,8 +1,29 @@
 '''
 ## General FAQ
-### Why doesn't the library support Mac?
-I don't have a Mac to develop the library on so I have no way to test if the code works.
-If you have a Mac and you would like to contribute, please do not hesitate to [create a pull request](https://github.com/Crozzers/screen_brightness_control/pulls).
+### What is the support for MacOS?
+Apple Sillicon Macs are supported. Old Intel Macs are not, as I don't have one of those to test with.
+
+Currently only the display built into the device is supported as I haven't gotten I2C working yet, but
+hopefully that can be done in the future.
+
+### Why is MacOS support limited?
+Two reasons. Apple's APIs being locked down, and my access to hardware.
+
+#### Apple's APIs
+
+Windows exposes APIs to talk to your hardware, for internal displays and for external monitors over I2C.
+Linux lets you read and write to the I2C bus directly.
+Apple obfuscates this functionality. Whilst there are some very clever folks who have managed to
+figure out how to do these things, these methods are unsupported, use private Apple APIs and can change
+or break at any time.
+
+#### My access to hardware
+
+Historically this library didn't support Mac, as I didn't have access to one to test with. However, recently
+my work laptop became a Macbook, so I am able to test some things.
+
+My work laptop is Apple Sillicon, so that is what I'm able to test/develop for. Unfortunately I don't have
+access to an old Intel Mac, so can't test support for that
 
 ### Library throws exception - `NameError: name '_OS_MODULE' is not defined`
 This error is thown when attempting to use the library on unsupported platforms.

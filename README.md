@@ -1,20 +1,24 @@
 # screen_brightness_control
-A Python tool for controlling the brightness of your monitor. Supports Windows and most flavours of Linux.
+A Python tool for controlling the brightness of your monitor. Supports Windows and Linux and has partial support for MacOS.
 
 # Installation
-#### Pip:
+#### Pip
 `pip install screen-brightness-control`
 
-#### GitHub:
+#### GitHub
 ```
 git clone https://github.com/Crozzers/screen_brightness_control
 cd screen_brightness_control
 pip install .
 ```
 
-#### Linux:
+#### Linux
 Installing on Linux usually requires some extra work after installing the module.
 Please see the [installing on Linux](https://crozzers.github.io/screen_brightness_control/extras/Installing%20On%20Linux.html) documentation for more details.
+
+#### MacOS
+
+MacOS support is limited. See the [FAQ page](https://crozzers.github.io/screen_brightness_control/extras/FAQ.html) for more details
 
 
 # Usage
@@ -50,18 +54,19 @@ Full documentation for the project is also available [here](https://crozzers.git
 
 ```
 python -m screen_brightness_control --help
-> usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-v]
+> usage: screen_brightness_control [-h] [-d DISPLAY] [-s VALUE] [-g] [-f VALUE] [-m METHOD] [-l] [-a] [-v] [-V]
 >
-> optional arguments:
->   -h, --help                         show this help message and exit
->   -d DISPLAY, --display DISPLAY      the display to be used
->   -s VALUE, --set VALUE              set the brightness to this value
->   -g, --get                          get the current screen brightness
->   -f VALUE, --fade VALUE             fade the brightness to this value
->   -m METHOD, --method METHOD         specify which method to use
->   -l, --list                         list all monitors
->   -v, --verbose                      some messages will be more detailed
->   -V, --version                      print the current version
+> options:
+>   -h, --help               show this help message and exit
+>   -d, --display DISPLAY    the display to be used
+>   -s, --set VALUE          set the brightness value as a percentage or increment (eg:"+5" or "-5")
+>   -g, --get                get the current screen brightness
+>   -f, --fade VALUE         fade the brightness to this value
+>   -m, --method METHOD      the method to use
+>   -l, --list               list all monitors
+>   -a, --allow-duplicates   allow duplicate monitors
+>   -v, --verbose            some messages will be more detailed
+>   -V, --version            print the current version
 ```
 ### Contributing
 Contributions are welcome. Issues, ideas and pull requests are all appreciated. For more information [see here](https://github.com/Crozzers/screen_brightness_control/blob/main/CONTRIBUTING.md)
