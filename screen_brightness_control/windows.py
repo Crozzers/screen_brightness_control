@@ -2,9 +2,9 @@ import logging
 import re
 import time
 from contextlib import contextmanager
-from ctypes import Structure, WinError, byref, windll
+from ctypes import Structure, WinError, byref, create_string_buffer, windll
 from ctypes.wintypes import BYTE, DWORD, HANDLE, WCHAR
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pythoncom
 import pywintypes
@@ -14,7 +14,7 @@ import wmi
 
 from . import filter_monitors, get_methods
 from .exceptions import EDIDParseError, NoValidDisplayError, format_exc
-from .helpers import EDID, BrightnessMethod, __Cache, _monitor_brand_lookup
+from .helpers import EDID, BrightnessMethod, ScreenBrightnessError, __Cache, _monitor_brand_lookup
 from .types import DisplayIdentifier, Generator, IntPercentage
 
 __cache__ = __Cache()
@@ -365,6 +365,161 @@ class VCP(BrightnessMethod):
                 # we have the display we wanted, exit and cleanup
                 windll.dxva2.DestroyPhysicalMonitor(handle)
                 break
+
+    @classmethod
+    def get_vcp_feature(cls, code: int, display: Optional[int] = None, max_tries: int = 50) -> Tuple[int, int]:
+        '''
+        Reads the value of an arbitrary VCP feature from a display.
+
+        This is the low level primitive that `get_brightness` and `set_brightness`
+        are built on, exposed so that other MCCS features (EG: contrast, input source)
+        can be read too. Use `get_capabilities` to find out which feature codes a
+        display actually implements.
+
+        Args:
+            code: the VCP feature code to read (EG: `0x10` for brightness, `0x12` for contrast)
+            display: the index of the specific display to query.
+                If unspecified, the first display is queried
+            max_tries: the maximum allowed number of attempts to read the feature
+                from the display
+
+        Returns:
+            A tuple of `(current_value, maximum_value)`
+
+        Raises:
+            ScreenBrightnessError: if the value of the feature could not be read
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            current, maximum = sbc.windows.VCP.get_vcp_feature(0x12)
+            print(f'contrast: {current}/{maximum}')
+            ```
+        '''
+        code_byte = BYTE(code)
+        start = 0 if display is None else display
+
+        for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
+            current_out, max_out = DWORD(), DWORD()
+            attempt = 0  # avoid UnboundLocalError if max_tries is 0
+            for attempt in range(max_tries):
+                if windll.dxva2.GetVCPFeatureAndVCPFeatureReply(
+                    handle, code_byte, None, byref(current_out), byref(max_out)
+                ):
+                    result = (current_out.value, max_out.value)
+                    # we're exiting early so the generator won't clean up this handle for us
+                    windll.dxva2.DestroyPhysicalMonitor(handle)
+                    return result
+                time.sleep(0.02 if attempt < 20 else 0.1)
+
+            windll.dxva2.DestroyPhysicalMonitor(handle)
+            raise ScreenBrightnessError(
+                f'failed to read VCP feature {code:#04x} from display:{index} after {attempt} tries'
+            )
+
+        raise ScreenBrightnessError(f'no display found at index {start}')
+
+    @classmethod
+    def set_vcp_feature(cls, code: int, value: int, display: Optional[int] = None, max_tries: int = 50) -> None:
+        '''
+        Sets the value of an arbitrary VCP feature on a display.
+
+        Args:
+            code: the VCP feature code to set (EG: `0x10` for brightness, `0x12` for contrast)
+            value: the value to set the feature to
+            display: the index of the specific display to adjust.
+                If unspecified, the first display is adjusted
+            max_tries: the maximum allowed number of attempts to write the feature
+                to the display
+
+        Raises:
+            ScreenBrightnessError: if the feature could not be written
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            sbc.windows.VCP.set_vcp_feature(0x12, 50)  # set contrast to 50
+            ```
+        '''
+        code_byte = BYTE(code)
+        value_dword = DWORD(value)
+        start = 0 if display is None else display
+
+        for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
+            attempt = 0  # avoid UnboundLocalError if max_tries is 0
+            for attempt in range(max_tries):
+                if windll.dxva2.SetVCPFeature(handle, code_byte, value_dword):
+                    # we're exiting early so the generator won't clean up this handle for us
+                    windll.dxva2.DestroyPhysicalMonitor(handle)
+                    return
+                time.sleep(0.02 if attempt < 20 else 0.1)
+
+            windll.dxva2.DestroyPhysicalMonitor(handle)
+            raise ScreenBrightnessError(
+                f'failed to set VCP feature {code:#04x} to {value} on display:{index} after {attempt} tries'
+            )
+
+        raise ScreenBrightnessError(f'no display found at index {start}')
+
+    @classmethod
+    def get_capabilities(cls, display: Optional[int] = None) -> str:
+        '''
+        Returns the raw MCCS capabilities string reported by a display.
+
+        This is primarily a diagnostic tool. It lists the VCP feature codes that the
+        monitor actually implements, which is the quickest way to work out why a
+        display may not respond to brightness commands (if `vcp(...)` does not
+        include `10` then the display does not support brightness over DDC/CI).
+
+        Note that some displays implement this call very slowly (in the order of
+        a second or more), so avoid calling it in a hot loop.
+
+        Args:
+            display: the index of the specific display to query.
+                If unspecified, the first display is queried
+
+        Returns:
+            The capabilities string as reported by the monitor. For example:
+            `(prot(monitor)type(LCD)model(246E7QDA)cmds(01 02 03 07 0C E3 F3)vcp(...)mccs_ver(2.2))`
+
+        Raises:
+            ScreenBrightnessError: if the capabilities string could not be read
+
+        Example:
+            ```python
+            import screen_brightness_control as sbc
+
+            print(sbc.windows.VCP.get_capabilities())
+            ```
+        '''
+        start = 0 if display is None else display
+
+        for index, handle in enumerate(cls.iter_physical_monitors(start=start), start=start):
+            length_out = DWORD()
+            if not windll.dxva2.GetCapabilitiesStringLength(handle, byref(length_out)):
+                windll.dxva2.DestroyPhysicalMonitor(handle)
+                raise ScreenBrightnessError(f'failed to get capabilities string length for display:{index}')
+
+            if length_out.value == 0:
+                # monitors that don't implement MCCS at all report a zero length string
+                # (or fail the call above). This is exactly the case that makes a display
+                # look like it "should" support brightness but not respond to it.
+                windll.dxva2.DestroyPhysicalMonitor(handle)
+                raise ScreenBrightnessError(f'display:{index} does not report an MCCS capabilities string')
+
+            buffer = create_string_buffer(length_out.value)
+            if not windll.dxva2.CapabilitiesRequestAndCapabilitiesReply(handle, buffer, length_out.value):
+                windll.dxva2.DestroyPhysicalMonitor(handle)
+                raise ScreenBrightnessError(f'failed to read capabilities string for display:{index}')
+
+            capabilities = buffer.value.decode('ascii', errors='replace')
+            # we're exiting early so the generator won't clean up this handle for us
+            windll.dxva2.DestroyPhysicalMonitor(handle)
+            return capabilities
+
+        raise ScreenBrightnessError(f'no display found at index {start}')
 
 
 def list_monitors_info(

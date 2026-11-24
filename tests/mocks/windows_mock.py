@@ -14,6 +14,16 @@ FAKE_DISPLAYS = [
     {'name': 'SEC544B', 'uid': '40000', 'longname': 'Hewlett-Packard 544B', 'laptop': True},
 ]
 
+# A representative MCCS capabilities string, as reported by a real monitor
+# (trimmed example from LG/Philips displays). Used by the VCP.get_capabilities tests.
+FAKE_CAPABILITIES = (
+    '(prot(monitor)type(LCD)model(246E7QDA)cmds(01 02 03 07 0C E3 F3)'
+    'vcp(02 04 05 08 0B 0C 10 12 14(01 05 08 0B) 16 18 1A 52 54(00 01) 60(01 03 11) '
+    '62 6C 6E 70 72(05 78 FB 50 64 78 8C A0) 86(02 08) 8D(01 02) AC AE B6 C0 C6 C8 C9 '
+    'CA(01 02) CC D6(01 04 05) DC(00 02 05) DF E9(00 02) EB(00 01 02 03) F0(00 01) FF)'
+    'mswhql(1)mccs_ver(2.2))'
+)
+
 
 def instance_name(fake: dict, wmi_style=False):
     name, uid, laptop = fake['name'], fake['uid'], fake['laptop']
@@ -105,10 +115,25 @@ class FakeWinDLL:
         ):
             assert current_value_out is not None
             current_value_out._obj.value = 100
+            if max_value_out is not None:
+                max_value_out._obj.value = 100
             return 1
 
         @staticmethod
         def SetVCPFeature(handle, code, value_in):
+            return 1
+
+        @staticmethod
+        def GetCapabilitiesStringLength(handle, length_out):
+            length_out._obj.value = len(FAKE_CAPABILITIES) + 1  # include null terminator
+            return 1
+
+        @staticmethod
+        def CapabilitiesRequestAndCapabilitiesReply(handle, buffer, length):
+            encoded = FAKE_CAPABILITIES.encode('ascii')
+            for index, byte in enumerate(encoded):
+                buffer[index] = byte
+            buffer[len(encoded)] = 0
             return 1
 
 

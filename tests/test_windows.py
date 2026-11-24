@@ -10,7 +10,7 @@ import screen_brightness_control as sbc
 from screen_brightness_control.helpers import BrightnessMethod
 
 from .helpers import BrightnessMethodTest
-from .mocks.windows_mock import FAKE_DISPLAYS, FakeMSMonitor, FakeWMI, FakeWinDLL, mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init
+from .mocks.windows_mock import FAKE_CAPABILITIES, FAKE_DISPLAYS, FakeMSMonitor, FakeWMI, FakeWinDLL, mock_enum_display_devices, mock_enum_display_monitors, mock_wmi_init
 
 
 @pytest.fixture
@@ -205,3 +205,99 @@ class TestVCP(BrightnessMethodTest):
                 for index, handle in enumerate(handles):
                     with subtests.test(index=index):
                         assert spy.mock_calls[index].args[0] == handle
+
+    class TestGetVcpFeature:
+        def test_returns_current_and_max(self, patch_get_display_info, method):
+            assert method.get_vcp_feature(0x10, display=0) == (100, 100)
+
+        def test_queries_first_display_by_default(self, mocker: MockerFixture, patch_get_display_info, method):
+            spy = mocker.spy(ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply')
+            method.get_vcp_feature(0x10)
+            spy.assert_called_once()
+            assert spy.mock_calls[0].args[1].value == 0x10
+
+        def test_handle_is_cleaned_up(self, mocker: MockerFixture, patch_get_display_info, method):
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            method.get_vcp_feature(0x10, display=0)
+            assert spy.call_count == 1
+
+        @pytest.mark.parametrize('tries', [1, 2, 50])
+        def test_raises_after_max_tries(self, mocker: MockerFixture, patch_get_display_info, method, tries):
+            mock = mocker.patch.object(
+                ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply', Mock(return_value=0, spec=True)
+            )
+            # patch sleep func so tests aren't slowed down
+            mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.get_vcp_feature(0x10, display=0, max_tries=tries)
+            assert mock.call_count == tries
+
+        def test_handle_cleaned_up_when_read_fails(self, mocker: MockerFixture, patch_get_display_info, method):
+            mocker.patch.object(
+                ctypes.windll.dxva2, 'GetVCPFeatureAndVCPFeatureReply', Mock(return_value=0, spec=True)
+            )
+            mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.get_vcp_feature(0x10, display=0, max_tries=1)
+            assert spy.call_count == 1
+
+    class TestSetVcpFeature:
+        def test_sets_code_and_value(self, mocker: MockerFixture, patch_get_display_info, method):
+            spy = mocker.spy(ctypes.windll.dxva2, 'SetVCPFeature')
+            method.set_vcp_feature(0x12, 50, display=0)
+            spy.assert_called_once()
+            assert spy.mock_calls[0].args[1].value == 0x12
+            assert spy.mock_calls[0].args[2].value == 50
+
+        def test_returns_nothing(self, patch_get_display_info, method):
+            assert method.set_vcp_feature(0x12, 50, display=0) is None
+
+        def test_handle_is_cleaned_up(self, mocker: MockerFixture, patch_get_display_info, method):
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            method.set_vcp_feature(0x12, 50, display=0)
+            assert spy.call_count == 1
+
+        @pytest.mark.parametrize('tries', [1, 2, 50])
+        def test_raises_after_max_tries(self, mocker: MockerFixture, patch_get_display_info, method, tries):
+            mock = mocker.patch.object(ctypes.windll.dxva2, 'SetVCPFeature', Mock(return_value=0, spec=True))
+            mocker.patch.object(sbc.windows.time, 'sleep', Mock(auto=True))
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.set_vcp_feature(0x12, 50, display=0, max_tries=tries)
+            assert mock.call_count == tries
+
+    class TestGetCapabilities:
+        def test_returns_capabilities_string(self, patch_get_display_info, method):
+            assert method.get_capabilities(display=0) == FAKE_CAPABILITIES
+
+        def test_handle_is_cleaned_up(self, mocker: MockerFixture, patch_get_display_info, method):
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            method.get_capabilities(display=0)
+            assert spy.call_count == 1
+
+        def test_raises_when_length_query_fails(self, mocker: MockerFixture, patch_get_display_info, method):
+            mocker.patch.object(
+                ctypes.windll.dxva2, 'GetCapabilitiesStringLength', Mock(return_value=0, spec=True)
+            )
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.get_capabilities(display=0)
+
+        def test_raises_when_capabilities_query_fails(self, mocker: MockerFixture, patch_get_display_info, method):
+            mocker.patch.object(
+                ctypes.windll.dxva2, 'CapabilitiesRequestAndCapabilitiesReply', Mock(return_value=0, spec=True)
+            )
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.get_capabilities(display=0)
+
+        def test_raises_when_display_reports_no_capabilities(self, mocker: MockerFixture, patch_get_display_info, method):
+            '''A display that does not implement MCCS reports a zero length capabilities string'''
+
+            def fake_length(handle, length_out):
+                length_out._obj.value = 0
+                return 1
+
+            mocker.patch.object(ctypes.windll.dxva2, 'GetCapabilitiesStringLength', fake_length)
+            spy = mocker.spy(ctypes.windll.dxva2, 'DestroyPhysicalMonitor')
+            with pytest.raises(sbc.ScreenBrightnessError):
+                method.get_capabilities(display=0)
+            assert spy.call_count == 1
